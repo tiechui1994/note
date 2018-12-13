@@ -52,6 +52,22 @@ nginx中的server_name指令主要用于配置基于名称虚拟主机.
       ...
    }
  ```
+ 
+ 5. 默认server匹配
+ ```
+   当以上都不匹配的时候, 会选择默认的server. 默认的server只能有一个
+ 
+   server {
+     listen       80  default;
+     server_name  www.default.com;
+     ...
+   }
+ ```
+ 
+ 6. 第一个确切的server匹配
+ ```
+   以上都不匹配, 且没有默认的server的时候, 会选择监听端口号下的第一个确切的server作为匹配
+ ```
 
 # 端口转发案例
 
