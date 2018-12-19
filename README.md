@@ -5,3 +5,5 @@
 - [nginx的配置](pyredis/redis.md)
 
 - [redis的发布/订阅基础](nginx/web.md)
+
+- [mysql常用的变量](mysql/varaiables.md)

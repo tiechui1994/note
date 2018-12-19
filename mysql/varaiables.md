@@ -15,7 +15,7 @@ NO_ENGINE_SUBSTITUTION
 ```
 
 - ONLY_FULL_GROUP_BY
-```text
+```
 ONLY_FULL_GROUP_BY的语义就是确定select target list中的所有列的值都是明确语义, 简单的说来,
 在ONLY_FULL_GROUP_BY模式下, target list中的值要么是来自于聚集函数的结果, 要么是来自于group by list中的表达式的值.
 
