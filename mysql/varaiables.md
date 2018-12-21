@@ -143,6 +143,42 @@ dumped的表内容不一致.
 NO_AUTO_VALUE_ON_ZERO的语句.
 ```
 
+- NO_ENGINE_SUBSTITUTION
+```
+当CREATE TABLE 或 ALTER TABLE等语句指定禁用或未编译的存储引擎时, 控制默认存储引擎的自动替换.
+默认情况下, 启用NO_ENGINE_SUBSTITUTION.
+
+存储引擎可以在运行时插入.
+
+    1.当禁用 NO_ENGINE_SUBSTITUTION 后, 对于 CREATE TABLE, 如果所需引擎不可用,将使用默认引擎,并且发出警告,
+    创建表. 对于ALTER TABLE, 会发生警告并且不会更改表.
+    2.当启用 NO_ENGINE_SUBSTITUTION 后, 如果所需的引擎不可用, 则会发生错误并且不会创建或更改表.
+```
+
+- NO_UNSIGNED_SUBTRACTION
+```
+整数之间做减法(其中一个类型为UNSIGNED), 默认情况下会生成无符号结果.  如果结果否则为负,则会导致错误:
+
+mysql> SET sql_mode = '';
+
+mysql> SELECT CAST(0 AS UNSIGNED) - 1;
+ERROR 1690 (22003): BIGINT UNSIGNED value is out of range in '(cast(0 as unsigned) - 1)'
+
+如果启用了NO_UNSIGNED_SUBTRACTION SQL模式，则结果为负:
+
+mysql> SET sql_mode = 'NO_UNSIGNED_SUBTRACTION';
+mysql> SELECT CAST(0 AS UNSIGNED) - 1;
++-------------------------+
+| CAST(0 AS UNSIGNED) - 1 |
++-------------------------+
+|                      -1 |
++-------------------------+
+
+如果使用此类操作的结果更新UNSIGNED整数列: 
+如果禁用了NO_UNSIGNED_SUBTRACTION, 则结果将剪切为列类型的最大值, 
+如果启用了NO_UNSIGNED_SUBTRACTION, 则结果将剪切为0. 如果启用严格的SQL模式后, 会发生错误并且列保持不变.
+```
+
 ## innodb_strict_mode
 
 ```
