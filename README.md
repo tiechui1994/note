@@ -1,5 +1,7 @@
 # 开发笔记
 
+- [开发规范](design/specification.md)
+
 - [token过期解决方案](web/token.md)
 
 - [nginx的配置](pyredis/redis.md)
