@@ -63,7 +63,8 @@
     - application/x-www-form-urlencoded
 
 - 请求中任意 XMLHttpRequestUpload 对象没有注册任何事件监听器; XMLHttpRequestUpload 对象
-可以使用XMLHttpRequest.upload属性访问.
+可以使用XMLHttpRequest.upload属性访问. (XMLHttpRequestUpload 用来表示上传的进度, 这个对
+象是不透明的, 但是作为一个XMLHttpRequestEventTarget, 可以通过对其绑定事件来追踪它的进度.)
 
 - 请求中没有使用 ReadableStream 对象.
 
