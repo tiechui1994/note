@@ -46,7 +46,7 @@
     - POST
     - HEAD
 
-- CORS安全的首部字段集合, 
+- `对CORS安全的首部字段集合`, 只是改动了以下首部字段其中的0个或者多个. 对于除了以下首部字段之外的首部字段没有做任何修改, 
     - Accept
     - Accept-Language
     - Content-Language
