@@ -4,10 +4,57 @@
     <meta charset="UTF-8">
     <title>跨域请求</title>
     <script src="index.js"></script>
+    <style>
+        div {
+            width: 100%;
+            text-align: center;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+
+        button {
+            height: 40px;
+            width: 150px;
+            margin-right: 30px;
+        }
+
+        label {
+            font-size: 17px;
+            font-style: normal;
+            color: darkorange;
+        }
+    </style>
 </head>
 <body>
-<button onclick="getMethod()">简单请求</button>
-<br>
-<button onclick="switchScript()">切换脚本</button>
+
+<div>
+    <button style="color: red;" onclick="switchScript(1)">基本配置</button>
+    <button style="color: red;" onclick="switchScript(2)">通配符配置</button>
+    <button style="color: red;" onclick="switchScript(3)">指定域名配置</button>
+    <button style="color: red;" onclick="getScript()">获取配置</button>
+</div>
+
+<div>
+    <pre id="nginx-conf" style="display: none"></pre>
+</div>
+
+<div>
+    <label>简单请求</label>
+    <button onclick="postMethod()">POST</button>
+    <button onclick="getMethod()">GET</button>
+</div>
+
+<div>
+    <label>预检请求</label>
+    <button onclick="postMethod()">POST</button>
+    <button onclick="getMethod()">GET</button>
+</div>
+
+<div>
+    <label>附带身份凭证的请求</label>
+    <button onclick="postMethod()">POST</button>
+    <button onclick="getMethod()">GET</button>
+</div>
+
 </body>
 </html>

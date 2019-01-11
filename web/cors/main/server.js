@@ -36,7 +36,8 @@ function post(request, response) {
     response.writeHead(200, {
         "content-type": "application/json",
     });
-    response.end()
+    let data = {status: 200, msg: 'ok', cookie: request.cookies};
+    response.end(JSON.stringify(data))
 }
 
 function get(request, response) {
@@ -54,6 +55,10 @@ function get(request, response) {
     response.end()
 }
 
+function options(request, response) {
+    response.end()
+}
+
 function head(request, response) {
 
 }
@@ -67,7 +72,9 @@ const router = {
     "POST": post,
     "HEAD": head,
     "PUT": put,
-    "switch": nginx.switchBackend
+    "OPTIONS": options,
+    "switch": nginx.setScript,
+    "script": nginx.getScript,
 };
 
 app.use(cookieParser());
@@ -75,7 +82,11 @@ app.use(function (request, response) {
     console.log(request.url);
 
     if (request.url.indexOf("switch") != -1) {
-        return router["switch"](response);
+        return router["switch"](request, response);
+    }
+
+    if (request.url.indexOf("script") != -1) {
+        return router["script"](request, response);
     }
 
     router[request.method](request, response)
