@@ -1,0 +1,17 @@
+{
+  "name": "note",
+  "version": "1.0.0",
+  "description": "cors demo",
+  "license": "MIT",
+  "engines": {
+    "node": "6.9.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tiechui1994/note.git"
+  },
+  "dependencies": {
+    "cookie-parser": "1.4.0",
+    "express": "4.12.3"
+  }
+}
