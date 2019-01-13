@@ -1,5 +1,5 @@
 let fs = require("fs");
-const {exec} = require("child_process");
+const CONF = "/opt/local/nginx/conf/conf.d";
 const TYPE = {
     '1': 'backend_simple.conf',
     '2': 'backend_regex.conf',
@@ -9,9 +9,8 @@ const TYPE = {
 function setScript(request, response) {
     console.log(request.query, request.query['type']);
     let data = fs.readFileSync(__dirname + "/" + TYPE[request.query['type']]);
-    console.log(data.toString());
 
-    fs.writeFile("/opt/local/nginx/conf/conf.d/backend.conf", data, null, function (err) {
+    fs.writeFile(CONF + "/backend.conf", data, null, function (err) {
         response.writeHead(200, {
             "content-type": "application/json"
         });
@@ -19,7 +18,8 @@ function setScript(request, response) {
         if (err) {
             response.end(JSON.stringify(err));
         } else {
-            exec("sudo service nginx reload", (err, stdout, stderr) => {
+            const {exec} = require("child_process");
+            exec("sudo service nginx reload", (err) => {
                 if (err) {
                     response.end(JSON.stringify(err));
                 } else {
@@ -31,8 +31,8 @@ function setScript(request, response) {
 }
 
 function getScript(request, response) {
-    let data = fs.readFileSync("/opt/local/nginx/conf/conf.d/backend.conf");
-    console.log(data.toString());
+    let data = fs.readFileSync(CONF + "/backend.conf");
+    console.log(request.url, data.toString());
     response.writeHead(200, {
         "content-type": "application/json"
     });
