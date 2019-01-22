@@ -132,3 +132,31 @@ window.addEventListener('message',function(event) {
 ## Access-Control-Allow-Origin
 
 参考: [cors](./cors.md)
+
+## nginx代理跨域
+
+- 原理: 同源策略是浏览器的安全策略, 不是HTTP协议的一部分. 服务端调用HTTP接口只是使用了HTTP协议. 不会
+执行JS脚本, 不需要同源策略, 也就不存在跨域问题.
+
+- 限制: 配置比较麻烦
+
+- 思路: 前端页面的域名是frontend, api的域名是backend. 通过nginx配置一个代理服务器(域名与backend相同,
+但是端口号不同)做跳板机, 反向代理访问frontend接口, 并且可以修改cookie中的domain信息, 方便前端cookie的
+写入.
+
+案例实现:
+```
+server {
+    listen      81;
+    server_name www.backend.com;
+    
+    location / {
+        proxy_pass    http://www.backend.com:80; # 反向代理
+        proxy_cookie  www.backend.com www.frontend.com; # 修改cookie里的域名
+        index index.html, index.htm;
+        
+        add_header Access-Control-Allow-Origin http://www.backend.com;
+        add_header Access-Control-Allow-Credentials true;
+    }
+}
+```
