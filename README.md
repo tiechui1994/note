@@ -12,4 +12,4 @@
 
 - [跨域共享资源问题](web/cors.md)
 
-- [基于角色的访问控制](permission/rbac.md)
+- [基于角色的访问控制](access/rbac.md)
