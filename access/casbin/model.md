@@ -117,7 +117,77 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act
 
 matcher的强大与灵活之处在于可以在matcher中定义函数, 这些函数可以是内置函数或自定义函数:
 
+- 内置函数
+
 | 函数 | 释义 | 示例 |
 | --- | --- | --- |
-| keyMatche(arg1, arg2) | 参数arg1是一个URL路径, 例如 `/alice/data1`, 参数arg2可以是URL路径或者一个'*'模式, 例如`/alice/*`, 此函数返回arg1是否与arg2匹配 |  |
+| keyMatche(arg1, arg2) | 参数arg1是一个URL路径,例如`/alice/data1`,参数arg2可以是URL路径或者一个'*'模式,例如`/alice/*`,此函数返回arg1是否与arg2匹配 |  |
+| keyMatche2(arg1, arg2) | 参数arg1是一个URL路径,例如`/alice/data1`,参数arg2可以是URL路径或者是一个':'模式,例如`/alice/:data`.此函数返回arg 是否与arg2匹配 |  |
+| regexMatch(arg1, arg2) | 参数arg1可以是任何字符串,参数arg2是一个正则表达式.它返回arg1是否匹配arg2 |  |
+| ipMatch(arg1, arg2) | 参数arg1是一个ip地址,如`192.168.1.100`,参数arg2可以是ip地址或者CIDR,如`192.168.1.0/24`.它返回arg1是否匹配arg2 |  |
 
+
+- 自定义函数
+
+首先, 准备好一个带有参数和返回值是布尔值的函数:
+
+```
+func keyMatch(arg1 string, arg2 string) bool {
+    i := strings.Index(arg2, "*")
+    if i == -1 {
+        return arg1 == arg2
+    }
+    
+    if len(arg1) > i {
+        return args[:i] == arg2[:i]
+    }
+    
+    return arg1 == arg2[:i]
+}
+```
+
+然后, 使用interface{}类型包装此函数:
+
+```
+func KeyMatchFunc(args ...interface{}) (interface{}, error) {
+    name1 := args[0].(string)
+    name2 := args[1].(string)
+
+    return (bool)(KeyMatch(name1, name2)), nil
+}
+```
+
+最后, 将包装的函数注册到 casbin enforcer:
+
+```
+e.AddFunction("my_func", KeyMatchFunc)
+```
+
+现在, 在matcher当中使用:
+
+```
+[matchers]
+m = r.sub == p.sub && my_func(r.obj, p.obj) && r.act == p.act
+```
+
+## role 定义
+
+`[role_definition]`原语定义了RBAC中的角色继承关系.casbin支持RBAC系统的多个实例, 例如, 用户可以有角色和继承关系,
+而资源也可以有角色和继承关系. 这两个RBAC系统不会干扰.
+
+```
+[role_definition]
+g = _, _
+g2 = _, _
+```
+
+上述Role原语表示 `g` 是一个RBAC体系, `g2` 是另一个RBAC体系. `_, _` 表示角色继承关系的前项和后项, 即前项继承后项角色
+的权限. 一般来讲, 如果你需要进行角色和用户的绑定, 直接使用 `g` 即可. 当需要表示角色(或者组)与用户和资源的绑定关系时, 可以
+使用 `g` 和 `g2`这样的表现形式. 
+
+在casbin里, 我们以policy表示中实际的用户-角色映射关系(或者资源-角色映射关系), 案例:
+
+```
+p, admin, data2, read
+g, alice
+```
