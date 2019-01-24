@@ -25,5 +25,23 @@ a) 按照各语句在访问列表的顺序, 顺序查找, 一旦找到了某一�
 
 b) 如果所有语句都不匹配, 在默认情况下, 虽然看不到最后一行, 但最后总是拒绝全部流量的.
 
+## 概念
 
+- Subject, 主体,对应的是用户或者操作人
+- Action, 动作
+- Object, 资源
 
+```
+1. 主体(Subject)可以通过某个动作(Action)操作资源
+2. 主体可以是User或者Group
+```
+
+## 案例
+
+授予Dino创建文章的权限.
+
+```
+Subject: Dino
+Action: Create
+Object: Article
+```

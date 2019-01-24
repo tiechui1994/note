@@ -111,3 +111,29 @@ Reworked:
     对象 -> table==TRANSACTIONS
     条件 -> if user.region == transaction.region
 ```
+
+## 案例
+
+产品部的Dinao可以以作家的身份在2017-12-01到2017-12-31时间段内创建和更新来自台湾地区的草稿模式下的
+技术和软件类别的文章.
+
+```
+Subject:
+    Name: Dino
+    Department: Product
+    Role: Writer
+Action:
+    - create
+    - update
+Resource:
+    Type: Article
+    Tag:
+        - technology
+        - software
+    Mode:
+        - draft
+Contextual:
+    Location: Taiwan
+    StartTime: 2017-12-01
+    EndTime: 2017-12-31
+```

@@ -151,3 +151,64 @@ RBAC3, 也就是最全面的权限管理, 它是基于RBAC0的基础上, 将RBAC
 **表关系图**
 
 ![](./resource/rbac3-uml.png)
+
+
+## 案例
+
+- 1.设置名为write article和manage article的权限
+
+```
+Permission:
+    - Name: write article
+    - Operations:
+        - Object: Article
+          Action: Created
+        - Object: Article
+          Action: Updated
+        - Object: Article
+          Action: Read
+    
+    - Name: manage article
+    - Operations:
+        - Object: Article
+          Action: Delete
+        - Object: Article
+          Action: Read
+```
+
+- 2.设置名为Writer的角色, 为其写入文章权限, 以及名为Manager的角色, 为其授予管理文章权限. CEO拥有所有权限.
+
+```
+Role:
+    - Name: Writer
+      Permissions:
+        - write article
+    - Name: Manager
+      Permissions:
+        - manage article
+    - Name: CEO
+      Permissions:
+        - write article
+        - manage article
+```
+
+- 3.将Writer角色授予Dino
+
+```
+Subject: Dino
+Roles:
+    - Writer
+```
+
+- 4.Dino可以创建文章
+
+- 5.将Writer角色和Manager角色授予James
+
+```
+Subject: James
+Roles:
+    - Writer
+    - Manager
+```
+
+- 6.James可以创建和删除文章
