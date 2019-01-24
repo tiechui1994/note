@@ -1,0 +1,123 @@
+# Model语法
+
+- Model CONF至少应包含四个部分: `[request_definition]`, `[policy_definition]`, `[policy_effect]`, 
+`[matchers]`.
+
+- 如果 model 使用 RBAC, 还需要添加`[role_definition]`部分.
+
+- Model CONF 可以包含注释. 注释以`#`开头, `#`将注释整行.
+
+## request 定义
+
+`[request_definition]` 部分用于request的定义, 它明确了 `e.Enforce()` 函数中参数的含义.
+
+```
+[request_definition]
+r = sub, obj, act
+```
+
+`sub, obj, act`表示经典三元组: 访问实体(Subject), 访问资源(Object) 和 访问方法(Action).
+但是, 可以自定义自己的请求表单, 如果不需要指定特定资源, 则可以这样定义 `sub, act`, 或者如果有两个
+访问实体, 则为 `sub sub2, obj, act`
+
+## policy定义
+
+`[policy_definition]` 部分用于policy的定义, 以下文的mode配置为例:
+
+```
+[policy_definition]
+p = sub, obj, act
+p2 = sub, act
+```
+
+下面的内容是对policy规则的具体描述:
+
+```
+p, alice, data1, read
+p2, bob, write-all-objects
+```
+
+policy部分的每一行称之为策略规则, 每条策略规则通常形如p, p2的`policy_type`开头. 如果存在多个
+policy定义, 那么我们会根据前文提到的`policy_type`与具体的某条定义匹配. 上面的policy的绑定关系
+将会在matcher中使用. 罗列如下:
+
+```
+(alice, data1, read) -> (p.sub, p.obj, p.act)
+(bob, write-all-objects) -> (p2.sub, p2.act)
+```
+
+注1: 当前只支持形如 `p` 的单个policy定义, 形如 `p2` 类型的尚未支持. 通常状况下, 用户无需使用多个
+policy定义.
+
+注2: policy定义中的元素始终被视为字符串对待.
+
+
+## policy effect定义
+
+`[policy_effect]` 部分是对policy生效范围的定义, 原语定义了当多个policy rule同时匹配访问请求
+request时, 该如何对多个决策结果进行集成以实现统一决策. 以下示例展示了**一个只有一条规则生效,其余都被拒绝
+的情况:**
+
+```
+[policy_effect]
+e = some(where (p.eft == allow))
+```
+
+该effect原语表示如果存在任意一个决策结果为`allow`的匹配规则, 则最终决策结果是 `allow`, 即allow-override.
+其中`p.eft`表示策略的决策结果, 可以是`allow`或者`deny`, 当不指定规则的决策结果时, 取默认值 `allow`.
+通常情况下, policy的`p.eft`默认为`allow`, 因此前面例子中都使用了这个默认值.
+
+
+另外一个policy effect的例子:
+
+```
+[policy_effect]
+e = !some(where (p.eft == deny))
+```
+该effect的原语表示不存在任何决策结果为 `deny` 的匹配规则, 则最终决策结果是 `allow`,  即deny-override.
+
+**`some`** 量词判断是否存在一条策略规则满足匹配器. 
+**`any`** 量词判断是否所有的策略规则都满足匹配器.
+
+
+policy effect还可以利用逻辑运算符进行连接:
+
+```
+[policy_effect]
+e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
+```
+
+该effect原语表示当至少存在一个决策结果为 `allow` 的匹配规则, 且不存在决策结果为 `deny`的匹配规则时, 
+则最终决策结果为 `allow`. 这时 `allow` 授权 和 `deny`授权同时存在, 但是 `deny` 优先.
+
+
+## matchers
+
+`[matchers]`原语定义了策略规则如何与访问请求进行匹配的匹配器, 其本质是布尔表达式, 可以理解为request,
+policy 等原语定义了关于策略和请求的变量, 然后将这些变量代入matche原语中进行求值, 从而进行策略决策.
+
+一个简单的例子:
+
+```
+[matchers]
+m = r.sub == p.sub && r.obj == p.obj && r.act == p.act
+```
+
+该matchers原语表示, 访问请求request中的subject, object, action 三元组与策略规则policy rule
+中的subject, object, action 三元组分别对应相同.
+
+**`matchers`**原语支持 `+`, `-`, `*`, `/` 等数学运算, `==`, `!=`, `>`, `<`等关系运算符,
+以及 `&&`(与), `||`(或), `!`(非)等逻辑运算符.
+
+注: 虽然可以像其他原语一样的编写多个类似于 `m1`, `m2` 的 matcher, 但是当前只支持一个有效的matcher 
+`m`. 通常情况下, 可以在一个matcher中使用上文提到的逻辑运算符来实现复杂的逻辑判断.
+
+
+**matcher中的函数**
+
+matcher的强大与灵活之处在于可以在matcher中定义函数, 这些函数可以是内置函数或自定义函数:
+
+| 函数 | 释义 | 示例 |
+| --- | --- | --- |
+| keyMatche(arg1, arg2) | 参数arg1是一个URL路径, 例如 `/alice/data1`, 参数arg2可以是URL路径或者一个'*'模式, 例如`/alice/*`, 此函数返回arg1是否与arg2匹配 |  |
+

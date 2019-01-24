@@ -1,4 +1,4 @@
-# CASBIN 介绍
+# casbin 介绍
 
 ## 概述
 
