@@ -188,6 +188,61 @@ g2 = _, _
 在casbin里, 我们以policy表示中实际的用户-角色映射关系(或者资源-角色映射关系), 案例:
 
 ```
-p, admin, data2, read
-g, alice
+p, admin, data_admin, read
+g, alice, data_admin
+```
+
+上述策略规则表示`alice`继承或具有角色 `data_admin`, 这里的alice可以为具体的某个用户, 某种资源亦或是某个角色, 在casbin
+中它将被当作字符串来对待.
+
+在matchers当作, 应该以如下方式来校验角色信息:
+
+```
+[matchers]
+m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
+```
+
+它表示请求request中 `sub`必须具有policy中定义的 `sub` 角色.
+
+注:
+```
+1.casbin只存储用户角色的映射关系.
+2.casbin不验证用户是否为有效用户, 或者角色是否为有效角色. 这应该由身份验证来处理.
+3.RBAC系统中的用户名称和角色名称不应相同. 因为casbin将用户名和角色识别为字符串, 所以当前语境下
+casbin无法得出这个字面量到底指代用户 alice 还是角色 alice. 这时, 使用明确的 role_alice,
+问题便可迎刃而解.
+4.假设A具有角色B, B具有角色C,并且A有角色C, 这种传递性在当前版本会造成死循环.
+```
+
+## 域租户的角色定义
+
+在casbin中的RBAC角色可以是全局域或者基于特定域的. 特定域的角色意味着当用户处于不同的域/租户群体时,
+用户所表现的角色也不尽相同. 这对于像云服务这样的大型系统非常有用, 因为用户通常分属于不同的租户群体.
+
+域/租户的角色定义:
+
+```
+[role_definition]
+g = _, _, _
+```
+
+原语中的第三个 `_`表示域的概念, 相对应的策略规则的实例如下:
+
+```
+p, admin, tenant1, data1, read
+p, admin, tenant2, data2, read
+
+g, alice, admin, tenant1
+g, alice, user, tenant2
+```
+
+该实例表示tenant1的域内角色admin可以读取data1, alice在tenant1域中具有admin角色, 但在tenant2域中具有user角色, 
+所以alice可以有读取data1的权限. 同理, 因为alice不是tenant2的admin,所以她访问不了data2.
+
+
+接下来在matcher中,应该像下面的例子一样检查角色信息:
+
+```
+[matchers]
+m = g(r.sub, p.sub, r.dom) && r.dom == p.dom && r.obj == p.obj && r.act == p.act
 ```
