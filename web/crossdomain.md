@@ -155,10 +155,10 @@ server {
         proxy_pass    http://www.backend.com:80; # 反向代理
         proxy_cookie  www.backend.com www.frontend.com; # 修改cookie里的域名
         
-        add_header Access-Control-Allow-Origin http://www.backend.com;
-        add_header Access-Control-Allow-Credentials true;
-		add_header Access-Control-Allow-Methods "POST, GET, PUT, OPTIONS, DELETE";
-		add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
+        add_header Access-Control-Allow-Origin "http://www.backend.com";
+        add_header Access-Control-Allow-Credentials "true";
+        add_header Access-Control-Allow-Methods "POST, GET, PUT, OPTIONS, DELETE";
+        add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
     }
 }
 ```
