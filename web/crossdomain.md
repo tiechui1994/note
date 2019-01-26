@@ -151,12 +151,14 @@ server {
     server_name www.backend.com;
     
     location / {
+        index index.html, index.htm;
         proxy_pass    http://www.backend.com:80; # 反向代理
         proxy_cookie  www.backend.com www.frontend.com; # 修改cookie里的域名
-        index index.html, index.htm;
         
         add_header Access-Control-Allow-Origin http://www.backend.com;
         add_header Access-Control-Allow-Credentials true;
+		add_header Access-Control-Allow-Methods "POST, GET, PUT, OPTIONS, DELETE";
+		add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
     }
 }
 ```
