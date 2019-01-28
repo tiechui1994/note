@@ -91,6 +91,13 @@ mysql树类型的表的设计, 通常有以下四种:
 
 一旦为每个节点分配了这些数值, 就可以使用它们来找到给定节点的祖先节点和后代.
 
+计算案例如下:
+
+![](./resource/nested-sets-cal.png)
+
+
+![](./resource/nested-sets-stats.png)
+
 例如: 获取id为4的所有后代
 
 ```sql
