@@ -93,10 +93,10 @@ mysql树类型的表的设计, 通常有以下四种:
 
 计算案例如下:
 
-![](./resource/nested-sets-cal.png)
+![](./resource/nested_cal.png)
 
 
-![](./resource/nested-sets-stats.png)
+![](./resource/nested_stats.png)
 
 例如: 获取id为4的所有后代
 
@@ -121,8 +121,136 @@ WHERE t1.id = 6;
 
 缺点:
 
-- 获取一个节点的直接祖先或者直接后代, 在嵌套集的设计中会变得比较复杂. 在嵌套集中, 如果
-需要查询一个节点的直接祖先, 做法: 给定节点node的直接祖先是这个节点的一个祖先, 且这两个
-节点之间不应该有任何其他节点, 因此,可以使用递归的外联结来查询一个节点x, 它既是node的祖
-先, 也同时是另外一个y节点的后代, 随后让y=x并继续查找, 直到查询返回空, 即不存在这样的节
-点, 此时y便是c的直接祖先节点.
+- 获取一个节点的直接祖先或者直接后代, 在嵌套集的设计中会变得比较复杂. 
+
+```
+在嵌套集中, 如果需要查询一个节点的直接祖先, 思路: 给定节点node的直接祖先是这个节点的一个
+祖先, 且这两个节点之间不应该有任何其他节点, 因此,可以使用递归的外联结来查询一个节点x, 它
+既是node的祖先, 也同时是另外一个y节点的后代, 随后让y=x并继续查找, 直到查询返回空, 即不
+存在这样的节点, 此时y便是c的直接祖先节点.
+```
+
+
+具体案例:
+
+嵌套集中, 使用新的视角看待树状结构. **不是使用节点或行, 而是使用嵌套容器**, 结构如下图
+所示:
+
+![](./resource/nested_categories.png)
+
+
+- 数据结构: category
+
+```sql
+CREATE TABLE category (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20),
+    left INT,
+    right INT
+);
+
+#插入元素
+INSERT INTO category VALUES(1,'ELECTRONICS',1,20),(2,'TELEVISIONS',2,9),
+(3,'TUBE',3,4), (4,'LCD',5,6),(5,'PLASMA',7,8),(6,'PORTABLE ELECTRONICS',10,19),
+(7,'MP3 PLAYERS',11,14), (8,'FLASH',12,13),(9,'CD PLAYERS',15,16),
+(10,'2 WAY RADIOS',17,18);
+```
+
+```
++----+----------------------+------+-------+
+| id | name                 | left | right |
++----+----------------------+------+-------+
+| 1  | ELECTRONICS          |   1  |  20   |
+| 2  | TELEVISIONS          |   2  |   9   |
+| 3  | TUBE                 |   3  |   4   |
+| 4  | LCD                  |   5  |   6   |
+| 5  | PLASMA               |   7  |   8   |
+| 6  | PORTABLE ELECTRONICS |  10  |  19   |
+| 7  | MP3 PLAYERS          |  11  |  14   |
+| 8  | FLASH                |  12  |  13   |
+| 9  | CD PLAYERS           |  15  |  16   |
+| 10 | 2 WAY RADIOS         |  17  |  18   |
++----+----------------------+------+-------+
+```
+
+下面是插入数据进行编号图:
+
+![](./resource/nested_numbered.png)
+
+这种设计可以使用树状结构展示:
+
+![](./resource/nested_numbered_tree.png)
+
+说明: 构建这种树需要从左向右, 每次一层的向下遍历其子节点, 对于叶子节点则指定其右值并移动到
+其右边的兄弟节点. 这种算法: **深度优先遍历**
+
+- 遍历树
+
+基于这样一个前提遍历整个树: 一个节点的左值总数处于父节点的左值和右值之间:
+
+```sql
+SELECT node.name
+FROM category AS node, category AS parent
+WHERE node.left BETWEEN parent.left AND parent.right AND parent.name='ELECTRONICS'
+ORDER BY node.left;
+```
+
+- 找出所有的叶子节点
+
+叶子节点的左值和右值永远是连续的．
+
+```sql
+SELECT name 
+FROM category
+WHERE right=left+1;
+```
+
+- 查询单一路径
+
+```sql
+SELECT parent.name
+FROM category AS node, category AS parent
+WHERE node.left BETWEEN parent.left AND parent.right AND node.name='FLASH'
+ORDER BY parent.left;
+```
+
+- 获取节点深度
+
+```sql
+SELECT node.name, (COUNT(parent.name)-1) AS depth
+FROM category AS node, category AS parent
+WHERE node.left BETWEEN parent.left AND parent.right
+GROUP BY node.name
+ORDER BY node.left;
+```
+
+使用depth结合CONCAT以及REPEAT函数来在前面添加空格:
+
+```sql
+SELECT CONCAT(REPEAT(' ', COUNT(parent.name)-1), node.name) AS name
+FROM category AS node, category AS parent
+WHERE node.left BETWEEN parent.left AND parent.right
+GROUP BY node.name
+ORDER BY node.left;
+```
+
+- 子树的深度
+
+```sql
+SELECT node.name (COUNT(parent.name) - (sub_tree.depth+1)) AS depth
+FROM category AS node, 
+     category AS parent, 
+     category AS sub_parent,
+     (
+        SELECT node.name, (COUNT(parent.name)-1) AS depth
+        FROM category AS node, category AS parent
+        WHERE node.left BETWEEN parent.left AND parent.right AND node.name='PORTABLE ELECTRONICS'
+        GROUP BY node.name
+        ORDER BY node.left
+     ) AS sub_tree
+WHERE node.left BETWEEN parent.left AND parent.right AND 
+      node.left BETWEEN sub_parent.left AND sub_parent.right AND 
+      sub_parent.name = sub_tree.name
+GROUP BY node.name
+ORDER BY node.left;
+```
