@@ -4,7 +4,7 @@ mysql树类型的表的设计, 通常有以下四种:
 
 - Adjacency List(邻接表): 每一条记录保存其 `parent_id`.
 - Path Enumerations(路径枚举): 每一条记录保存整个tree path经过的node枚举.
-- Nested Sets(嵌套集, 实质为双向链表): 每一条记录保存left和right节点.
+- Nested Sets(嵌套集, 实质为双向链表): 每一条记录保存nleft和nright节点.
 - Closure Table(闭包表): 维护一个表, 所有的tree path作为记录进行保存.
 
 **操作代价对比:**
@@ -71,23 +71,23 @@ mysql树类型的表的设计, 通常有以下四种:
 ## Nested Sets (嵌套集)
 
 嵌套集解决方案是存储子孙节点的相关信息, 而不是节点的直接祖先. 使用两个数字来编码每个节点,
-从而表示这一信息, 可以将这两个数字成为left和right.
+从而表示这一信息, 可以将这两个数字成为nleft和nright.
 
 表结构设计:
 ```
 {
     id: int(10) unsigned primary key,
-    left: int,
-    right: int,
+    nleft: int,
+    nright: int,
     ...
 }
 ```
 
-每个节点通过如下方式确定left和right的值: left的数值小于该节点所有后代的id, 同时right
+每个节点通过如下方式确定nleft和nright的值: nleft的数值小于该节点所有后代的id, 同时nright
 的值大于该节点所有后代的id.
 
-确定这三个值(left, id, right)的简单方法是对树进行一次深度优先遍历, 再逐层深入的过程中
-依次分配left的值, 并在返回时依次递增地分配right的值.
+确定这三个值(nleft, id, nright)的简单方法是对树进行一次深度优先遍历, 再逐层深入的过程中
+依次分配nleft的值, 并在返回时依次递增地分配nright的值.
 
 一旦为每个节点分配了这些数值, 就可以使用它们来找到给定节点的祖先节点和后代.
 
@@ -102,7 +102,7 @@ mysql树类型的表的设计, 通常有以下四种:
 
 ```sql
 SELECT t2.*
-FROM t as t1 JOIN t as t2 ON t2.left BETWEEN t1.left AND t1.right
+FROM t as t1 JOIN t as t2 ON t2.nleft BETWEEN t1.nleft AND t1.nright
 WHERE t1.id = 4;
 ```
 
@@ -110,7 +110,7 @@ WHERE t1.id = 4;
 
 ```sql
 SELECT t2.*
-FROM t as t1 JOIN t as t2 ON t1.left BETWEEN t2.left AND t2.right
+FROM t as t1 JOIN t as t2 ON t1.nleft BETWEEN t2.nleft AND t2.nright
 WHERE t1.id = 6;
 ```
 
@@ -145,8 +145,8 @@ WHERE t1.id = 6;
 CREATE TABLE category (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(20),
-    left INT,
-    right INT
+    nleft INT,
+    nright INT
 );
 
 #插入元素
@@ -158,7 +158,7 @@ INSERT INTO category VALUES(1,'ELECTRONICS',1,20),(2,'TELEVISIONS',2,9),
 
 ```
 +----+----------------------+------+-------+
-| id | name                 | left | right |
+| id | name                 | nleft | nright |
 +----+----------------------+------+-------+
 | 1  | ELECTRONICS          |   1  |  20   |
 | 2  | TELEVISIONS          |   2  |   9   |
@@ -191,8 +191,8 @@ INSERT INTO category VALUES(1,'ELECTRONICS',1,20),(2,'TELEVISIONS',2,9),
 ```sql
 SELECT node.name
 FROM category AS node, category AS parent
-WHERE node.left BETWEEN parent.left AND parent.right AND parent.name='ELECTRONICS'
-ORDER BY node.left;
+WHERE node.nleft BETWEEN parent.nleft AND parent.nright AND parent.name='ELECTRONICS'
+ORDER BY node.nleft;
 ```
 
 - 找出所有的叶子节点
@@ -202,7 +202,7 @@ ORDER BY node.left;
 ```sql
 SELECT name 
 FROM category
-WHERE right=left+1;
+WHERE nright=nleft+1;
 ```
 
 - 查询单一路径
@@ -210,8 +210,8 @@ WHERE right=left+1;
 ```sql
 SELECT parent.name
 FROM category AS node, category AS parent
-WHERE node.left BETWEEN parent.left AND parent.right AND node.name='FLASH'
-ORDER BY parent.left;
+WHERE node.nleft BETWEEN parent.nleft AND parent.nright AND node.name='FLASH'
+ORDER BY parent.nleft;
 ```
 
 - 获取节点深度
@@ -219,9 +219,9 @@ ORDER BY parent.left;
 ```sql
 SELECT node.name, (COUNT(parent.name)-1) AS depth
 FROM category AS node, category AS parent
-WHERE node.left BETWEEN parent.left AND parent.right
+WHERE node.nleft BETWEEN parent.nleft AND parent.nright
 GROUP BY node.name
-ORDER BY node.left;
+ORDER BY node.nleft;
 ```
 
 使用depth结合CONCAT以及REPEAT函数来在前面添加空格:
@@ -229,9 +229,9 @@ ORDER BY node.left;
 ```sql
 SELECT CONCAT(REPEAT(' ', COUNT(parent.name)-1), node.name) AS name
 FROM category AS node, category AS parent
-WHERE node.left BETWEEN parent.left AND parent.right
+WHERE node.nleft BETWEEN parent.nleft AND parent.nright
 GROUP BY node.name
-ORDER BY node.left;
+ORDER BY node.nleft;
 ```
 
 - 子树的深度
@@ -244,13 +244,126 @@ FROM category AS node,
      (
         SELECT node.name, (COUNT(parent.name)-1) AS depth
         FROM category AS node, category AS parent
-        WHERE node.left BETWEEN parent.left AND parent.right AND node.name='PORTABLE ELECTRONICS'
+        WHERE node.nleft BETWEEN parent.nleft AND parent.nright AND node.name='PORTABLE ELECTRONICS'
         GROUP BY node.name
-        ORDER BY node.left
+        ORDER BY node.nleft
      ) AS sub_tree
-WHERE node.left BETWEEN parent.left AND parent.right AND 
-      node.left BETWEEN sub_parent.left AND sub_parent.right AND 
+WHERE node.nleft BETWEEN parent.nleft AND parent.nright AND 
+      node.nleft BETWEEN sub_parent.nleft AND sub_parent.nright AND 
       sub_parent.name = sub_tree.name
 GROUP BY node.name
-ORDER BY node.left;
+ORDER BY node.nleft;
+```
+
+- 查找一个节点的直属子节点
+
+```sql
+SELECT node.name, (COUNT(parent.name) - (sub_tree.depth + 1)) AS depth
+FROM category AS node,
+        category AS parent,
+        category AS sub_parent,
+        (
+                SELECT node.name, (COUNT(parent.name) - 1) AS depth
+                FROM category AS node,
+                        category AS parent
+                WHERE node.nleft BETWEEN parent.nleft AND parent.nright
+                        AND node.name = 'PORTABLE ELECTRONICS'
+                GROUP BY node.name
+                ORDER BY node.nleft
+        )AS sub_tree
+WHERE node.nleft BETWEEN parent.nleft AND parent.nright
+        AND node.nleft BETWEEN sub_parent.nleft AND sub_parent.nright
+        AND sub_parent.name = sub_tree.name
+GROUP BY node.name
+HAVING depth <= 1
+ORDER BY node.nleft;
+```
+
+- 添加节点
+
+在 `TELEVISIONS` 和 `PORTABLE ELECTRONICS` 节点之间添加一个新的节点, 这个新的节点
+的左值是10, 右值是11, 而它右边所有节点的值都应该加2.
+
+存储过程:
+```sql
+LOCK TABLE category WRITE;
+
+SELECT @r := nright FROM category WHERE name='TELEVISIONS';
+
+UPDATE category SET nright = nright + 2 WHERE nright > @r;
+UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > @r;
+
+INSERT INTO category (name, nleft, nright) VALUES('GAME CONSOLES', @r+1, @r+2);
+
+UNLOCK TABLES;
+```
+
+给 `2 WAY RADIOS` 添加一个叶子节点 `FRS`.
+
+存储过程:
+```sql
+LOCK TABLE category WRITE;
+
+SELECT @l := nleft FROM category WHERE name='2 WAY RADIOS';
+
+UPDATE category SET nright = nright + 2 WHERE nright > @l;
+UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > @l;
+
+INSERT INTO category (name, nleft, nright) VALUES('FRS', @l+1, @l+2);
+
+UNLOCK TABLES;
+```
+
+- 删除节点
+
+删除节点的行为取决于被删除节点在树状结构所处的层级, 删除叶子节点比删除子节点容易, 因为不需要考虑孤儿节点
+的问题.
+
+删除叶子节点:
+```sql
+LOCK TABLE category WRITE;
+
+SELECT @l := nleft, @r := nright, @w := nright - nleft + 1
+FROM category
+WHERE name = 'GAME CONSOLES';
+
+DELETE FROM category WHERE nleft BETWEEN @l AND @r;
+
+UPDATE category SET nright = nright - @w WHERE nright > @r;
+UPDATE category SET nleft  = nleft  - @w WHERE nleft  > @r;
+
+UNLOCK TABLES;
+```
+
+删除非叶子节点及其子节点:
+```sql
+LOCK TABLE category WRITE;
+
+SELECT @l := nleft, @r := nright, @w := nright - nleft + 1
+FROM category
+WHERE name = 'MP3 PLAYERS';
+
+DELETE FROM category WHERE nleft BETWEEN @l AND @r;
+
+UPDATE category SET nright = nright - @w WHERE nright > @r;
+UPDATE category SET nleft  = nleft  - @w WHERE nleft  > @r;
+
+UNLOCK TABLES;
+```
+
+删除非叶子节点, 保留其子节点:
+```sql
+LOCK TABLE category WRITE;
+
+SELECT @l := nleft, @r := nright, @w := nright - nleft + 1
+FROM category
+WHERE name = 'PORTABLE ELECTRONICS';
+
+DELETE FROM category WHERE nleft = @l;
+
+UPDATE category SET nright = nright - 1, nleft = nleft - 1 WHERE nleft BETWEEN @l AND @r;
+UPDATE category SET nright = nright - 2 WHERE nright > @r;
+UPDATE category SET nleft = nleft - 2 WHERE nleft > @r;
+
+UNLOCK TABLES;
 ```
