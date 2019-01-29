@@ -284,7 +284,7 @@ ORDER BY node.nleft;
 在 `TELEVISIONS` 和 `PORTABLE ELECTRONICS` 节点之间添加一个新的节点, 这个新的节点
 的左值是10, 右值是11, 而它右边所有节点的值都应该加2.
 
-存储过程:
+(添加兄弟节点)存储过程:
 ```sql
 LOCK TABLE category WRITE;
 
@@ -298,9 +298,10 @@ INSERT INTO category (name, nleft, nright) VALUES('GAME CONSOLES', @r+1, @r+2);
 UNLOCK TABLES;
 ```
 
+
 给 `2 WAY RADIOS` 添加一个叶子节点 `FRS`.
 
-存储过程:
+(添加孩子节点)存储过程:
 ```sql
 LOCK TABLE category WRITE;
 
@@ -312,6 +313,53 @@ UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > @l;
 INSERT INTO category (name, nleft, nright) VALUES('FRS', @l+1, @l+2);
 
 UNLOCK TABLES;
+```
+
+
+**添加节点, 展示树的存储过程:**
+
+```sql
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addChild;
+CREATE PROCEDURE addChild(in parent varchar(64), in child varchar(64))
+  BEGIN
+    DECLARE l INT;
+    START TRANSACTION;
+      SET l = (SELECT nleft FROM category WHERE name=parent);
+      UPDATE category SET nright = nright + 2 WHERE nright > l;
+      UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > l;
+      INSERT INTO category (name, nleft, nright) VALUES(child, l+1, l+2);
+    COMMIT;
+  END $$
+DELIMITER ;
+
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addBrother;
+CREATE PROCEDURE addBrother(in parent varchar(64), in child varchar(64))
+  BEGIN
+    DECLARE r INT;
+    START TRANSACTION;
+      SET r = (SELECT nright FROM category WHERE name=parent);
+      UPDATE category SET nright = nright + 2 WHERE nright > r;
+      UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > r;
+      INSERT INTO category (name, nleft, nright) VALUES(child, r+1, r+2);
+    COMMIT;
+  END $$
+DELIMITER ;
+
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS showTree;
+CREATE PROCEDURE showTree()
+  BEGIN
+    SELECT CONCAT(REPEAT('  ', COUNT(parent.name)-1), node.name) AS name
+    FROM category AS node, category AS parent
+    WHERE node.nleft BETWEEN parent.nleft AND parent.nright
+    GROUP BY node.name
+    ORDER BY node.nleft;
+  END $$
+DELIMITER ;
 ```
 
 - 删除节点
