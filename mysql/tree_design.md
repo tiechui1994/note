@@ -131,7 +131,7 @@ WHERE t1.id = 6;
 ```
 
 
-具体案例:
+## 嵌套集具体案例:
 
 嵌套集中, 使用新的视角看待树状结构. **不是使用节点或行, 而是使用嵌套容器**, 结构如下图
 所示:
@@ -320,31 +320,52 @@ UNLOCK TABLES;
 
 ```sql
 DELIMITER $$
-DROP PROCEDURE IF EXISTS addChild;
-CREATE PROCEDURE addChild(in parent varchar(64), in child varchar(64))
+DROP PROCEDURE IF EXISTS addNoChild;
+CREATE PROCEDURE addNoChild(in parent varchar(64), in child varchar(64))
   BEGIN
-    DECLARE l INT;
-    START TRANSACTION;
+    DECLARE l INT DEFAULT 0; /** 参数l **/
+    DECLARE error INT;
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET error=1; /** sql异常, 出错处理 **/
+
+    /** 事物操作 **/
+    SET autocommit = 0;
       SET l = (SELECT nleft FROM category WHERE name=parent);
       UPDATE category SET nright = nright + 2 WHERE nright > l;
       UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > l;
       INSERT INTO category (name, nleft, nright) VALUES(child, l+1, l+2);
-    COMMIT;
+
+      IF error=1 THEN
+        ROLLBACK;
+      ELSE
+        COMMIT;
+      END IF;
+    SET autocommit = 1;
+
   END $$
 DELIMITER ;
 
 
 DELIMITER $$
-DROP PROCEDURE IF EXISTS addBrother;
-CREATE PROCEDURE addBrother(in parent varchar(64), in child varchar(64))
+DROP PROCEDURE IF EXISTS addExistChild;
+CREATE PROCEDURE addExistChild(in parent varchar(64), in child varchar(64))
   BEGIN
-    DECLARE r INT;
-    START TRANSACTION;
+    DECLARE r INT DEFAULT 0; /** 参数r **/
+    DECLARE error INT;
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION SET error=1; /* sql异常, 出错处理 */
+
+    /** 事物操作 **/
+    SET autocommit = 0;
       SET r = (SELECT nright FROM category WHERE name=parent);
       UPDATE category SET nright = nright + 2 WHERE nright > r;
       UPDATE category SET nleft  = nleft  + 2 WHERE nleft  > r;
       INSERT INTO category (name, nleft, nright) VALUES(child, r+1, r+2);
-    COMMIT;
+
+      IF error=1 THEN
+        ROLLBACK;
+      ELSE
+        COMMIT;
+      END IF;
+    SET autocommit = 1;
   END $$
 DELIMITER ;
 
@@ -415,3 +436,6 @@ UPDATE category SET nleft = nleft - 2 WHERE nleft > @r;
 
 UNLOCK TABLES;
 ```
+
+## Closure Table(闭包表)
+
