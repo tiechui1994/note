@@ -1,4 +1,4 @@
-# nginx 配置
+# nginx 多个虚拟主机的实现
 
 ## server_name参数说明
 

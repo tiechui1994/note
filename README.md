@@ -4,9 +4,7 @@
 
 - [token过期解决方案](web/token.md)
 
-- [nginx的配置](pyredis/redis.md)
-
-- [redis的发布/订阅基础](nginx/web.md)
+- [redis的发布/订阅基础](pyredis/redis.md)
 
 - [mysql常用的变量](mysql/varaiables.md)
 
@@ -19,3 +17,8 @@
 - [访问权限列表](access/acl.md)
 
 - [mysql树结构设计](mysql/tree_design.md)
+
+- nginx的配置
+    - [虚拟主机配置](nginx/virtual.md)
+    - [rewrite指令使用](nginx/rewrite.md)
+    - [文件路径配置](nginx/path.md)
