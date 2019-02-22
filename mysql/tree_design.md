@@ -93,3 +93,30 @@ mysql树类型的表的设计, 通常有以下四种:
 
 ## Closure Table(闭包表)
 
+闭包表的思路和路径枚举类似, 都是空间换时间.
+
+Closure Table, 一种更为彻底的全路径结构, 分别记录路径上相关结点的全展开形式, 能明晰任意两结点关系
+而无须多余查询, 级联删除和结点移动也很方便. 但是它的存储开销会大一些, 除了表示结点的Meta信息, 还需
+要一张专用的关系表.
+
+表结构设计如下
+
+主表(node): 存储节点的信息
+```
+{
+	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR (255),
+}
+```
+
+关系表(relation): 存储节点之间的关系
+```
+{
+    ancestor INT NOT NULL, // 祖先节点
+    child INT NOT NULL, // 后代节点
+    distance INT NOT NULL, // 距离
+    PRIMARY KEY (ancestor, child)
+}
+```
+
+[**具体详情参考**](./tree/tree_closure_table.md)
