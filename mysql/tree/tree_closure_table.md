@@ -108,6 +108,11 @@ select * from relation;
 +----------+-------+----------+
 ```
 
+**树状图**
+
+![](../resource/closer_table_tree.jpg)
+
+
 ## 查询节点
 
 - **查询所有子节点: (以Fruit为例)**
