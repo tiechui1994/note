@@ -34,6 +34,16 @@ st: 从虚拟内存加载到内存花费的时间
 ```
 
 KiB Mem: 系统内存使用情况(总量, 未使用, 已使用, 缓存)
+```
+total: 总安装内存(从操作系统来看, OS的物理内存)
+free: 可用量(从操作系统来看, OS还有可用的物理内存)
+used: 使用量(从操作系统来看, OS使用了的物理内存)
+
+buff/cached: 被OS cached的内存
+avail Mem: 可用内存(从用户角度来看, 系统可用使用的内存)
+```
+
+其中可用内存计算公式: **can use = free + buff/cached + avail Mem**
 
 KiB Swap: 系统交换空间使用情况
 
