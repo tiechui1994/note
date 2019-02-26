@@ -4,16 +4,20 @@ import (
 	"github.com/casbin/casbin"
 	"github.com/kataras/iris"
 	"router/middleware"
+	"os"
 )
 
 var (
 	enforcer      *casbin.Enforcer
-	defaultModel  = "/home/user/workspace/rbac/src/model.conf"
-	defaultPolicy = "/home/user/workspace/rbac/src/policy.csv"
+	defaultModel  string
+	defaultPolicy string
 )
 
 func Init(params ...string) {
 	if len(params) < 2 {
+		dir, _ := os.Getwd()
+		defaultModel = dir + "/src/model.conf"
+		defaultPolicy = dir + "/src/policy.csv"
 		enforcer = casbin.NewEnforcer(defaultModel, defaultPolicy, false)
 		return
 	}
@@ -37,8 +41,6 @@ func GetCompatibleApp() *iris.Application {
 	app.Use(rbca.ServeHTTP) // 兼容模式中间件
 
 	// 路由
-	app.Get("/", hi)
-
 	app.Any("/data1/{p:path}", hi)
 	app.Get("/data1/res1", hi)
 

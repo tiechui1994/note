@@ -5,11 +5,14 @@ import (
 	"github.com/kataras/iris/httptest"
 	"router"
 	"testing"
+	"fmt"
+	"path/filepath"
 )
 
 func TestCasbinMiddleware(t *testing.T) {
-	model := "/home/user/workspace/rbac/src/test/conf/comp_model.conf"
-	policy := "/home/user/workspace/rbac/src/test/conf/comp_policy.csv"
+	fmt.Println()
+	model, _ := filepath.Abs("./conf/comp_model.conf")
+	policy, _ := filepath.Abs("./conf/comp_policy.csv")
 	router.Init(model, policy)
 	app := router.GetCompatibleApp()
 	e := httptest.New(t, app, httptest.Debug(false))
