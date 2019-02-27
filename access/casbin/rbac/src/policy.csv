@@ -1,8 +1,0 @@
-p, alice, /data1/*, GET
-p, alice, /data1/res1, GET
-p, bob, /data2/res1, *
-p, bob, /data2/res2, GET
-p, bob, /data2/fold/*, GET
-p, data1_admin, /data1/*, *
-g, cathrin, data1_admin
-p, cathrin, /data2/res2, GET

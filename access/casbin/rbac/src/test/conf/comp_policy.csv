@@ -1,5 +1,0 @@
-p, alice, /data1/*, *
-p, alice, /data1/res2, GET
-p, bob, /data2/res1, *
-p, bob, /data2/res2, GET
-p, bob, /data2/fold/*, POST

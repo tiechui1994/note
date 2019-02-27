@@ -1,4 +1,2 @@
 .idea/
 web/cors/node_modules/
-access/casbin/rbac/pkg/
-access/casbin/rbac/.idea/
