@@ -224,13 +224,40 @@ location /server/ {
 *off*当前作用域下所有的proxy_redirect指令配置全部无效.
 
 
-
 ### proxy_intercept_errors
 
-### proxy_headers_hash_max_size
+**proxy_intercept_errors指令**用于配置一个状态是开启还是关闭. 在开启该状态时, 如果被代理的服务器
+返回的HTTP状态码是400或者大于400, 则nginx服务器使用自己定义的错误页面(使用error_page指令); 如果是
+关闭状态, nginx服务器直接将被代理服务器返回的HTTP状态返回给客户端.
 
-### proxy_headers_hash_bucket_size
+```
+proxy_intercept_errors on|off;
+```
+
 
 ### proxy_next_upstream
 
+在配置nginx服务器反向代理功能时, 如果使用upstream指令配置了一组服务器作为被代理服务器, 服务器组中各个服务
+器的请求规则遵循upstream指令配置的轮训规则, *同时可以使用该指令在发生异常状况时, 将请求顺次交由下一个组内
+的服务器处理*
+
+```
+proxy_next_upstream STATUS ...;
+```
+*STATUS*是设置的服务器返回的状态, 可以是一个或者多个, 这些状态包括:
+- error, 在建立连接, 向被代理的服务器发生请求或者读取响应头时服务器发生连接错误.
+- timeout, 在建立连接, 向被代理的服务器发生请求或者读取响应头时服务器发生连接超时.
+- invalid_header, 被代理的服务器返回的响应头为空或者无效
+- http_500|http_502|http_503|http_504|http_404, 被代理服务器返回500,502,503,504,或者404状态码
+- off, 无法将请求发生给被代理的服务器.
+
+
 ### proxy_ssl_session_reuse
+
+**proxy_ssl_session_reuse指令**配置是否使用基于SSL安全协议的会话连接(https)被代理的服务器.
+
+```
+proxy_ssl_session_reuse on|off;
+```
+默认设置为开启(on)状态. 如果在错误日志中发生"SSL3_GET_FINSHED:digest check failed"的状况, 可以将该
+指令配置为关闭(off)状态.
