@@ -51,8 +51,8 @@ proxy_buffers 8 4k|8k;
 
 ### proxy_buffer_size
 
-**proxy_buffer_size指令**配置 *从被代理服务器获取的第一部分响应数据的大小*, 该数据一般包含了HTTP
-响应头.
+**proxy_buffer_size指令** 配置 *从被代理服务器获取的第一部分响应数据的大小, 该数据一般只包含了HTTP
+响应头.*
 
 ```
 proxy_buffer_size SIZE;
@@ -61,14 +61,21 @@ proxy_buffer_size SIZE;
 置得更小.
 
 
-### proxy_busy_buffers_size
+### proxy_busy_buffers_size (难理解)
 
-**proxy_busy_buffers_size指令**限制同时处于BUSY状态的Proxy Buffer的总大小.
+BUSY状态: 每个Proxy Buffer装满数据后, 从 *开始向客户端发送* 一直到 *Proxy Buffer中的数据全
+部传输给客户端* 的整个过程中, 它都处于BUSY状态.
+
+在BUSY状态, nginx一定会向客户端发送响应, 直到缓冲小于此值. **proxy_busy_buffers_size指令**
+用来设置此值. **同时, 剩余的缓冲区可以用于接收响应.**
+
+**proxy_busy_buffers_size指令**限制处于BUSY状态的Proxy Buffer的总大小.
 
 ```
 proxy_busy_buffers_size  SIZE;
 ```
-*SIZE*为处于BUSY状态的缓存区总大小. 默认设置为8KB或者16KB
+*SIZE*为处于BUSY状态的缓存区总大小. 该大小默认是proxy_buffer_size和proxy_buffers
+指令设置单块缓冲大小的两倍. 即默认设置为8KB或者16KB. 
 
 ### proxy_temp_path
 
