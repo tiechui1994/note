@@ -32,3 +32,67 @@ nginx还提供了另外一种将被代理服务器数据缓存到本地的方法
 代理服务器的响应数据, 尤其是**静态数据**只进行简单的缓存, 不支持缓存过期更新, 内存索引建立等功能, 但支持设
 置用户或者用户组对缓存数据的访问权限.
 
+
+### proxy_cache
+
+**proxy_cache指令**配置一块公用的内存管理区域的名称, *在该区域可以存放缓存的索引数据*. 这些数据在nginx
+服务器启动时由 **缓存索引重建进程** 负责建立, 在nginx服务器的整个运行过程中由 **缓存管理进程** 负责定时
+检查过期数据, 检索等管理工作.
+
+```
+proxy_cache ZONE|off;
+```
+*ZONE*, 设置用于存放缓存索引的内存区域名称
+*off*, 关闭Proxy Cache功能, 是默认的设置.
+
+>从nginx 0.7 开始,Proxy Cache开启后会检查被代理服务器响应数据HTTP头中的"Cache-Control","Expires"
+头域. 当"Cache-Control"头域的值是"no-cache", "no-store", "private" 或者 "max-age"赋值为0或
+无意义时, 当"Expires"头域包含一个过期的时间时,该响应数据不被nginx服务器缓存. 目的是为了避免私有的数据被其
+他客户端得到.
+
+
+### proxy_cache_bypass
+
+**proxy_cache_bypass指令** 配置 *nginx服务器向客户端发生响应数据时, 不从缓存中获取的条件*. 这些条件支持
+nginx配置的常用变量.
+
+```
+proxy_cache_bypass STRING ...;
+```
+*STRING*, 条件变量, 支持配置多个, 当至少有一个字符串指令不为空或者不等于0时, 响应数据不从缓存中获取.
+
+案例:
+```
+proxy_cache_bypass $cookie_nocache $arg_nocache $arg_comment $http_pargma $http_authorization
+```
+其中 `$cookie_nocache $arg_nocache $arg_comment $http_pargma $http_authorization` 都
+是nginx配置文件的变量.
+
+
+### proxy_cache_key
+
+**proxy_cache_key指令** 设置nginx服务器在内存中为缓存数据建立索引使用的关键字
+
+常用的配置:
+```
+proxy_cache_key $schema$proxy_host$uri$is_args$args
+```
+
+
+### proxy_cache_lock
+
+### proxy_cache_lock_timeout
+
+### proxy_cache_min_uses
+
+### proxy_cache_path
+
+### proxy_cache_use_stale
+
+### proxy_cache_valid
+
+### proxy_no_cache
+
+### proxy_store
+
+### proxy_store_access
