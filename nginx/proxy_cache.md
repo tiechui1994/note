@@ -81,18 +81,148 @@ proxy_cache_key $schema$proxy_host$uri$is_args$args
 
 ### proxy_cache_lock
 
+**proxy_cache_lock指令**设置是否开启缓存的锁功能. 在缓存中, 某些数据项可以同时被多个请求返回的响应
+数据填充. 开启该功能之后, nginx服务器同时只能有一个请求填充缓存中的某一个数据项. 
+
+```
+proxy_cache_lock on|off;
+```
+nginx 1.1.2之后才可以使用. 默认的关闭状态.
+
+
 ### proxy_cache_lock_timeout
+
+**proxy_cache_lock_timeout指令**设置缓存的锁功能开启以后锁的超时时间. 
+
+```
+proxy_cache_lock_timeout TIME;
+```
+默认是5s.
+
 
 ### proxy_cache_min_uses
 
+**proxy_cache_min_uses指令**设置客户端请求发送的次数, 当客户端向被代理服务器发送相同请求达到该指令
+设置的次数后, nginx服务器才对该请求的响应数据做缓存. 合理设置该值可以有效地降低硬盘生缓存数据的数量,并
+提高缓存的命中率.
+
+```
+proxy_cache_min_uses N;
+```
+默认设置是1.
+
+
 ### proxy_cache_path
+
+**proxy_cache_path指令**设置nginx服务器存储缓存数据的路径以及和缓存索引相关的内容.
+
+```
+proxy_cache_path PATH [levels=LEVEL] key_zone=NAME:SIZE [inactive=TIME]
+[max_size=SIZE] [loader_files=N] [loader_sleep=TIME] [loader_threshold=TIME]
+```
+
+*PATH*, 设置缓存数据存放的根路径, 该路径应该是预先存在于磁盘上的.
+
+*levels*, 设置相对于PATH指定目录的第几级hash目录中缓存数据. levels=1, 表示一级hash目录
+levels=1:2 表示两级.
+
+*key_zone*, nginx服务器的缓存索引重建进程在内存中为缓存数据建立索引, 这一对变量用来设置存
+放缓存索引的内存区域名称和大小.
+
+*inactive*, 设置强制更新缓存数据的是,当硬盘上的缓存数据在设定是时间内没有被访问时,nginx服
+务器强制从硬盘上将其删除, 下次客户端访问数据时重新缓存. 默认是10s.
+
+*max_size*, 设置硬盘中缓存数据的大小限制. 硬盘中的缓存数据由nginx服务器的缓存管理进程进行
+管理, 当缓存的大小超过该变量的设置时, 缓存管理进程将根据最近最少被访问的策略删除缓存.
+
+*loader_files*, 设置缓存索引重建进程每次加载的数据元素的数量上限. 在重建缓存索引的过程中,
+进程通过一系列的递归遍历读取硬盘上的缓存数据目录及缓存数据文件, 对每个数据文件中的缓存数据在
+内存中建立对应的索引, 我们称每建立一个索引为加载一个数据元素. 进程在每次遍历的过程中可以同时
+加载多个数据元素, **该值限制了每次遍历中同时加载的数据元素的数量**. 默认是100
+
+*loader_sleep*, 设置缓存索引重建进程在一次遍历结束, 下次遍历开启之间的暂停时长. 默认是50ms
+
+*loader_threshold*, 设置遍历一次硬盘缓存数据的时间的上限. 默认是200ms
+
+> 注: 该指令只能放在http块中
+
 
 ### proxy_cache_use_stale
 
+如果nginx在访问被代理服务器过程中出现被代理服务器无法方法访问或者访问出错等现象时. nginx服务
+器使用历史缓存响应客户端的请求.
+
+```
+proxy_cache_use_stale error|timeout|invalid_header|updating|http_500|http_502|
+http_503|http_504|http_404|off ...;
+```
+该指令和proxy_next_upstream指令类似. 默认设置是off
+
+
 ### proxy_cache_valid
+
+**proxy_cache_valid指令**针对不同的HTTP响应状态设置不同的缓存时间.
+
+```
+proxy_cache_valid [ CODE ... ] TIME; 
+```
+*CODE*设置HTTP响应的状态码. 可选, 默认是200,301,302
+*TIME*, 设置缓存时间.
+
+案例:
+```
+proxy_cache_valid 200 302 10m;
+proxy_cache_valid 301 1h;
+proxy_cache_valid any 1m;
+```
+
 
 ### proxy_no_cache
 
+**proxy_no_cache指令**配置 *在什么状况下不使用缓存*.
+
+```
+proxy_no_cache STRING ...;
+```
+*STRING*, 可以是一个或者多个变量. **当STRING的值不为空或者不为"0"时, 不启用缓存**.
+
+
 ### proxy_store
 
+**proxy_store指令**配置是否在本地磁盘缓存来自被代理服务器的响应数据. 这个nginx提供了另
+一种缓存数据的方法, 但是该功能相对Proxy Cache简单, 不提供缓存过期更新, 内存索引建立等功
+能, 不占用内存空间, 对静态数据的效果比较好.
+
+```
+proxy_store on | off | PATH ;
+```
+*on|off*, 设置是否开启Proxy Store功能. 如果开启, 缓存文件会存放到alias指令或者root指
+令设置的本地路径下. 默认是off
+
+*PATH*, 自定义缓存文件的存放路径.
+
+
 ### proxy_store_access
+
+*proxy_store_access指令**设置用户或用户组对Proxy Store缓存的数据的访问权限.
+
+```
+proxy_store_access USER:PERM ... ;
+```
+*USER*, 可以设置为user, group或者all
+*PERM*, 设置权限.
+
+案例:
+```
+location /images/ {
+    root /data/www;
+    error_page 404 = /fetch$uri;
+}
+
+location /fetch/ {
+    proxy_pass http://backend;
+    proxy_store on;
+    proxy_store_access user:rw group:rw all:r;
+    root /data/www;  # 缓存数据路径
+}
+```
