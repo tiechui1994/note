@@ -52,7 +52,7 @@
 
 - [https配置](nginx/https_config.md)
 
-- [不同开发语言的代理服务器配置](nginx/nginx.md)
+- [不同开发语言的代理服务器配置](nginx/nginx_config.md)
 
 - [反向代理配置](nginx/reverse_proxy.md)
 
