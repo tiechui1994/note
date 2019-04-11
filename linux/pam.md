@@ -70,6 +70,41 @@ requisite 或 sufficient)**, 运行的模块的路径和参数.
 
 - pam_listfile 提供根据一个配置文件的内容允许或拒绝服务的另一种方法.
 
+```
+配置参数:
+pam_listfile.so 
+    item=[tty|user|rhost|ruser|group|shell] 
+    sense=[allow|deny] 
+    file=/path/filename 
+    onerr=[succeed|fail] 
+    [apply=[user|@group]]
+
+item: 配置文件的内容, 即需要检查的内容
+sense: 当在配置文件当中找到内容的时候执行的动作.
+file: 配置文件路径
+onerr: 当发生错误的时候执行的动作.
+apply: 限制用户类别. 注意, 对于item=[user|ruser|group]内容, 此参数没有意义. 但是对于item=[tty|
+rhost|shell] 它有意义.
+
+item说明:
+user -- 用户名
+tty -- 产生请求的终端的名称
+rhost -- 产生请求的主机名称
+ruser -- 产生请求的主机登录的用户名
+
+#
+# deny ftp-access to users listed in /etc/ftpusers
+#
+auth    required pam_listfile.so \
+        onerr=succeed item=user sence=deny file=/etc/ftpusers
+
+#
+# permit login to users listed in /etc/loginusers
+#
+auth    required pam_listfile.so \
+        onerr=fail item=user sence=allow file=/etc/loginusers
+```
+
 - pam_mail 检查用户是否有未处理的邮件.
 
 - pam_motd 向用户显示 "message of the day" 文件. 
@@ -87,6 +122,27 @@ requisite 或 sufficient)**, 运行的模块的路径和参数.
 
 - pam_userdb 根据一个 Berkeley 数据库执行身份验证.
 
-- pam_warn 在系统日志中记录信息.
+- pam_warn 在系统日志(syslog)中记录信息(service, terminal, user, remote user, remote ip).
 
 - pam_wheel 只向 `wheel` 组的成员提供根访问权; 必需的行是 **auth required pam_wheel.so**
+
+```
+参数配置:
+pam_wheel.so 
+    [debug] 
+    [deny] 
+    [group=name] 
+    [root_only] 
+    [trust]
+
+debug: 打印debug信息
+deny: 授权的反向操作. 如果用户尝试获取root权限并且这个用户属于wheel组(或者这个用户是group配置的组的成员), 拒绝访问.
+如果用户尝试获取root权限并且不属于wheel组(或者这个用户也不是group配置的组的成员), 返回PAM_IGNORE(如果trust选项被
+指定, 此时返回PAM_SUCCESS)
+
+group: 替换要检查的wheel组或者root组. 使用"name"组去执行授权验证.
+
+root_only: 仅仅对wheel组的成员进行检查.
+
+trust: 如果user是wheel组的成功, 返回PAM_SUCCESS, 而不是PAM_IGNORE(免密码的关键)
+```
