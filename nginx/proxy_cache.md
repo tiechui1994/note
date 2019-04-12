@@ -146,6 +146,12 @@ levels=1:2 表示两级.
 
 > 注: 该指令只能放在http块中
 
+### proxy_cache_revalidate
+
+**proxy_cache_revalidate指令**: 使用带有"If-Modified-Since"和"If-None-Match"头域
+来刷新缓存.
+
+>注: 1.5.7之后版本使用
 
 ### proxy_cache_use_stale
 
