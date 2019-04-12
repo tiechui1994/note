@@ -48,11 +48,15 @@ requisite 或 sufficient)**, 运行的模块的路径和参数.
 >注意: 第二个字段可以更复杂; 另外, 可以使用include规则以包含其他文件中的规则,比如 auth include common-account.
 
 
+**验证流程如下:**
+
+![img](resource/pam.jpg)
+
 ## 常用的PAM
 
 在所有的发行版都包含以下模块中的大多数. 请检查模块的 `/lib/security` 或 `/usr/lib/security` 目录, 对
-于 `64` 位操作系统, 用 lib64替换 lib. 如果需要更多信息, 可以尝试执行 **man the.name.of.the.module**,
-而不要直接执行它; PAM 不是可执行的二进制代码.
+于 `64` 位操作系统, `/lib/x86_64-linux-gnu/security`. 
+如果需要更多信息, 可以尝试执行 **man the.name.of.the.module**, 而不要直接执行它; PAM 不是可执行的二进制代码.
 
 - pam_access 根据 `/etc/security/access.conf` 文件允许或拒绝访问.
 
@@ -116,7 +120,12 @@ auth    required pam_listfile.so \
 
 - pam_succeed_if 检查账户的特定属性, 比如是否是某个组的成员.
 
+- pam_securetty 模块用于控制root用户登录系统的时候所使用的终端. 限定管理员只能通过安全的tty登录.
+`/etc/securetty` tty就是传统终端.
+
 - pam_time 可以根据 `/etc/security/time.conf` 中的规则限制对服务的访问.
+
+- pam_tally2 登录次数统计
 
 - pam_unix(或pam_unix2) 提供基于 `/etc/passwd` 和 `/etc/shadow` 文件的传统 UNIX 身份验证.
 
