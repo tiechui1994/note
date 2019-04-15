@@ -90,17 +90,22 @@ http {
 ```
 
 
-### keepalive
-
-**keepalive指令**用于控制网络连接保持功能. 通过该指令, 能够保持nginx服务器的工作进程为服务器组打开一部分
-网络连接, 并且将数量控制在一定的范围之内.
-
-```
-keepalive CONNECTIONS;
-```
-
 其中, *CONNECTIONS*为服务器的每一个工作进程允许该服务器组保持的空闲网络连接数的上限值. 如果超过该值, 工作
 进程将采用**最近最少使用**的策略关闭网络连接.
+
+
+### **hash(策略)**
+
+**hash指令**: 使用hash算法调度.
+
+>注: nginx 1.7.2 以上的版本
+
+```
+hash KEY [consistent];
+```
+*KEY*, 包含文本, 变量及其组合.
+如果指定了 **consistent** 参数, 则将使用ketama一致性哈希算法. *该方法确保在向组添加服务器或从组中删除服
+务器时, 只有少数密钥将重新映射到不同的服务器*. 这有助于为缓存服务器实现更高的缓存命中率.
 
 
 ### **least_conn(策略)**
@@ -111,4 +116,24 @@ keepalive CONNECTIONS;
 
 ```
 least_conn;
+```
+
+### **random(策略)**
+
+random模式 提供了一个参数 `two`, 当这个参数被指定时, nginx会先随机地选择两个服务器(考虑**weight**),
+然后用以下几种方法选择其中的一个服务器:
+
+```
+least_conn: 最少连接
+least_time=header: 接收到 response header的最短平均时间($upstream_header_time, nginx plus版本)
+least_time=last_byte: 接收到完整response的最短平均时间($upstream_response_time, nginx plus版本)
+```
+
+### keepalive
+
+**keepalive指令**用于控制网络连接保持功能. 通过该指令, 能够保持nginx服务器的工作进程为服务器组打开一部分
+网络连接, 并且将数量控制在一定的范围之内.
+
+```
+keepalive CONNECTIONS;
 ```
