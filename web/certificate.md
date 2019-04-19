@@ -94,3 +94,62 @@ keytool -export \
 # key.pem 是私钥, my.csr是证书签名请求
 openssl req -newkey rsa:2048 -new -nodes -keyout key.pem -out my.csr
 ```
+
+## 生成密钥,证书
+
+- 第一步, 为服务器端和客户端准备公钥, 私钥
+
+```bash
+# 生成服务器端私钥
+openssl genrsa -out server.key 1024
+# 生成服务器端公钥
+openssl rsa -in server.key -pubout -out server.pem
+
+
+# 生成客户端私钥
+openssl genrsa -out client.key 1024
+# 生成客户端公钥
+openssl rsa -in client.key -pubout -out client.pem
+```
+
+- 第二步, 生成 CA 证书 (CA机构)
+
+CA (Catificate Authority), 它的作用就是提供证书(即服务器证书, 由域名,公司信息,序列号和签名信息组成), 加
+强服务端和客户端之间信息交互的安全性, 以及证书运维相关服务. 任何个体/组织都可以扮演 `CA` 的角色, 只不过难以得
+到客户端的信任, 能够受浏览器默认信任的 `CA` 大厂商有很多, 其中 `TOP5` 是 `Symantec, Comodo, Godaddy, 
+GolbalSign 和 Digicert`.
+
+```bash
+# 生成 CA 私钥
+openssl genrsa -out ca.key 1024
+
+# X.509 Certificate Signing Request (CSR) Management.
+openssl req -new -key ca.key -out ca.csr
+
+# X.509 Certificate Data Management.
+openssl x509 -req -in ca.csr -signkey ca.key -out ca.crt
+```
+
+- 第三步, 生成服务器端证书和客户端证书
+
+```bash
+# 服务器需要向CA机构申请签名证书, 在签名证书之前依然是创建自己的CSR文件
+# 需要输入服务器的相关内容(Country, Provence, City, Organization, Organization Unit, 
+# SERVER FQDN, Email, Optional Pwd)
+openssl req -new -key server.key -out server.csr
+
+# CA机构签名, 需要CA的证书和私钥参与, 最终颁发一个带有CA签名的证书
+# ca.crt ca.key 是CA独有的内容
+# server.csr server端的签名证书请求
+# server.crt 生成的签名证书
+openssl x509 -req -CA ca.crt -CAkey ca.key -CAcreateserial -in server.csr -out server.crt
+```
+
+
+## 证书使用
+
+签名操作是 `发送方` 用私钥进行签名, `接受方` 用发送方证书来验证签名;
+
+加密操作是 `发送方` 用接受方的证书进行加密, `接受方` 用自己的私钥进行解密.
+
+因此, 如果说数字证书是电子商务应用者的网上数字身份证话, 那么证书相应的私钥则可以说是用户的私章或公章.
