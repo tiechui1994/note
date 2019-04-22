@@ -28,6 +28,8 @@
 
 - [websocket数据帧](web/websocket.md)
 
+- [https证书](web/certificate.md)
+
 
 
 ## Redis相关
@@ -46,7 +48,7 @@
 
 
 
-## nginx的配置
+## Nginx配置
 
 - [正向代理配置](nginx/forward_proxy.md)
 
@@ -69,14 +71,20 @@
 - [文件路径配置](nginx/uri_path.md)
 
 
-## git
+## Git
 
 - [git tag的使用](git/git_tag.md)
 
 
 
-## linux
+## Linux
 
 - [linu启动](linux/init.md)
 
 - [服务指标](linux/qps.md)
+
+
+
+## dns
+
+- [dns配置](dns/dns_name.md)
