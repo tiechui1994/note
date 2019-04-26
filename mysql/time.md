@@ -1,8 +1,8 @@
-# mysql 时间类型解析
+# MySQL 时间类型解析
 
-MySQL 表示时间值的日期和时间类型是`DATE`, `TIME`, `DATETIME`, `TIMESTAMP` 和 `YEAR`. 每个时间类型
-都有一系列有效值, 以及当遇到了 MySQL *无法表示的无效值* 时可以使用的"零"值. `TIMESTAMP` 类型具有特殊的自
-动更新行为, 稍后将对此进行描述.
+MySQL 表示时间值的日期和时间类型是`DATE`, `TIME`, `DATETIME`, `TIMESTAMP`. 每个时间类型都有一系列有
+效值, 以及当遇到了 MySQL *无法表示的无效值* 时可以使用的"零"值. `TIMESTAMP` 类型具有特殊的自动更新行为, 
+稍后将对此进行描述.
 
 ## 使用日期和时间类型时, 一般注意事项
 
@@ -44,7 +44,6 @@ Web表单中)以供将来处理时, 这非常有用. 在此模式下, MySQL *仅
 | TIME | '00:00:00' |
 | DATETIME | '0000-00-00 00:00:00 |
 | TIMESTAMP | '0000-00-00 00:00:00 |
-| YEAR | 0000 |
 
 
 ## DATE, DATETIME, TIMESTAMP 类型
@@ -129,4 +128,104 @@ MySQL以多种格式识别 `TIME` 值, 其中一些格式可包括精确到 *微
 身是一个有效的 `TIME` 值, 所以无法从表中存储的 `00:00:00` 值中判断原始值是否指定为 `00:00:00` 或是否无效.
 
 要对无效 `TIME` 值进行更严格的处理, 请启用严格SQL模式以导致错误发生.
+
+
+## TIMESTAMP 和 DATETIME 的自动初始化和更新
+
+`TIMESTAMP` 和 `DATETIME` 列可以自动初始化并更新为当前日期和时间(即当前时间戳).
+
+对于表中的任何 `TIMESTAMP` 或 `DATETIME` 列, 可以将当前时间戳分配为默认值, 自动更新值或两者:
+
+1. 在插入一行数据的时候, 如果自动初始化列没有指定值, 会被设置为当前时间戳.
+
+2. 当行中任何其他列的值从其当前值更改时, 自动更新列将自动更新为当前时间戳. 如果所有其他列都设置为其当前值, 则自动更
+新列保持不变. 要防止在其他列更改时更新自动更新列, 请将其明确设置为其当前值. 要更新自动更新的列, 即使其他列未更改,也
+要将其显式设置为应具有的值(例如, 将其设置为 `CURRENT_TIMESTAMP`).
+
+
+此外, 如果禁用了 `explicit_defaults_for_timestamp` 系统变量, 则可以通过为其分配 `NULL` 值来初始化或更新任何
+`TIMESTAMP` (但不是 `DATETIME`) 列到当前日期和时间, 除非已使用 `NULL` 属性定义以允许 `NULL` 值.
+
+
+要指定自动属性, 请在列定义中使用 `DEFAULT CURRENT_TIMESTAMP` 和 `ON UPDATE CURRENT_TIMESTAMP` 子句. 语句
+的顺序无关紧要. 如果两者都存在于列定义中, 任何一个都可以先执行. `CURRENT_TIMESTAMP` 的任何同义词与 `CURRENT_TIMESTAMP`
+具有相同的含义. 这些是 `CURRENT_TIMESTAMP()`, `NOW()`, `LOCALTIME`, `LOCALTIME()`, `LOCALTIMESTAMP`
+和 `LOCALTIMESTAMP()`.
+
+
+使用 `DEFAULT CURRENT_TIMESTAMP` 和 `ON UPDATE CURRENT_TIMESTAMP` 只能限定于 `TIMESTAMP` 和 `DATETIME`
+类型. `DEFAULT` 子句也可用于指定常量(非自动)默认值; 例如, `DEFAULT 0` 或 `DEFAULT '2000-01-01 00:00:00'`.
+
+> 以下示例使用 `DEFAULT 0`, 这是一个默认值, 可能产生警告或错误, 具体取决于是否启用了严格的SQL模式或 `NO_ZERO_DATE` 
+SQL模式. 注意, `TRADITIONAL` SQL模式包括严格模式和 `NO_ZERO_DATE`.
+
+
+### 使用方法
+
+`TIMESTAMP` 或 `DATETIME` 列定义可以指定默认值和自动更新值的当前时间戳, 对于一个而不是另一个, 或两者都不指定. 
+不同的列可以具有不同的自动属性组合. 以下规则描述了可能性:
+
+- 使用 `DEFAULT CURRENT_TIMESTAMP` 和 `ON UPDATE CURRENT_TIMESTAMP` 时, 该列具有其默认值的当前时间戳,
+并自动更新为当前时间戳.
+
+```sql
+CREATE TABLE t1 (
+  ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  dt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+- 使用 `DEFAULT` 子句但没有 `ON UPDATE CURRENT_TIMESTAMP` 子句时, 该列具有给定的默认值, 并且不会自动更新
+为当前时间戳.
+
+缺省值取决于 `DEFAULT` 子句是指定 `CURRENT_TIMESTAMP` 还是常量值. 使用 `CURRENT_TIMESTAMP`, 默认值是当
+前时间戳.
+
+```sql
+CREATE TABLE t1 (
+  ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  dt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+使用常量, 默认值是给定值. 在这种情况下, 该列根本没有自动属性.
+
+```sql
+CREATE TABLE t1 (
+  ts TIMESTAMP DEFAULT 0,
+  dt DATETIME DEFAULT 0
+);
+```
+
+- 使用 `ON UPDATE CURRENT_TIMESTAMP` 子句和常量 `DEFAULT`子句, 该列将自动更新为当前时间戳并具有给定的常量
+默认值.
+
+```sql
+CREATE TABLE t1 (
+  ts TIMESTAMP DEFAULT 0 ON UPDATE CURRENT_TIMESTAMP,
+  dt DATETIME DEFAULT 0 ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+- 使用 `ON UPDATE CURRENT_TIMESTAMP` 子句但没有 `DEFAULT` 子句时, 该列会自动更新为当前时间戳, 但没有当前时
+间戳作为其默认值.
+
+在这种情况下, 默认值取决于类型. 除非使用 `NULL` 属性定义, 否则 `TIMESTAMP` 的默认值为0, 在这种情况下, 默认值为
+`NULL`.
+
+```sql
+CREATE TABLE t1 (
+  ts1 TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,     -- default 0
+  ts2 TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP -- default NULL
+);
+```
+
+除非使用`NOT NULL`属性定义, 否则 `DATETIME` 的默认值为 `NULL`, 在这种情况下, 默认值为0.
+
+```sql
+CREATE TABLE t1 (
+  dt1 DATETIME ON UPDATE CURRENT_TIMESTAMP,         -- default NULL
+  dt2 DATETIME NOT NULL ON UPDATE CURRENT_TIMESTAMP -- default 0
+);
+```
 
