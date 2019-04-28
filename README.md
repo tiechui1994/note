@@ -46,6 +46,8 @@
 
 - [mysql性能注意点](mysql/performance.md)
 
+- [mysql时间类型详解](mysql/time.md)
+
 
 
 ## Nginx配置
