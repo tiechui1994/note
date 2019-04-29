@@ -205,3 +205,197 @@ job_name:
 | before_script	| 否 | 覆写全局的before_script命令 |
 | after_script | 否	| 覆写全局的after_script命令 |
 | environment | 否 | 定义当前构建完成后的运行环境的名称 |
+| retry	| 否 | 定义job失败后的自动重试次数 |
+
+- script
+
+`script` 命令需要被包在双引号或者单引号之间. 例如, 包含符号 `:` 的命令都需要写在引号中, 这样 
+`ymal` 的解析器才能正确的解析. 在使用包含以下符号的命令要特别小心:
+
+`:`, `{`, `}`, `[`, `]`, `,`, `&`, `*`, `#`, `?`, `|`, `-`, `<`, `>`, `=`, `!`, `%`, `@`, ```
+
+
+- only 和 except
+
+`only` 和 `except` 参数说明了job什么时候将会被创建.
+
+`only` 设置了需要被构建的 branches 和 tags 的名称.
+
+`except` 设置了不需要被构建的 branches 和 tags的名称.
+
+使用 refs 策略的规则:
+
+```
+1. only 和 except 是可以相互包含的. 如果一个 job 中 only 和 except 都被定义了, ref 会同时被 only, except 过滤.
+2. only 和 except 支持正则表达式.
+3. only 和 except 可以使用这几个关键字: branches, tags, triggers
+4. only 和 except 允许使用指定的仓库地址, 但是不forks仓库.
+```
+
+`only` 和 `except` 允许使用特殊关键字:
+
+| 值 | 描述 |
+| --- | --- |
+| branches | 当一个分支被push上来 |
+| tags | 当一个打了tag的分支被push上来 |
+| api | 当一个pipline被piplines api所触发调起, [详见piplines api](https://docs.gitlab.com/ce/api/pipelines.html) |
+| external | 当使用了GitLab以外的CI服务 |
+| pipelines | 针对多项目触发器而言, 当使用CI_JOB_TOKEN并使用gitlab所提供的api创建多个pipelines的时候 | 
+| pushes | 当pipeline被用户的git push操作所触发的时候 | 
+| schedules | 针对预定好的pipline而言 | 
+| triggers | 用token创建piplines的时候 |
+| web | 在GitLab页面上Pipelines标签页下,你按了run pipline的时候 |
+
+
+案例: 
+
+`job` 将会值在 `issue-` 开头的 `refs` 下执行, 反之则其他所有分支被跳过:
+
+```yaml
+job:
+    only:
+      - /^issue-.*$/
+    except:
+      - branches
+```
+
+`job` 只会在打了 `tag` 的分支, 或者被 `api` 所触发, 或者每日构建任务上运行:
+
+```yaml
+job:
+    only:
+      - tags
+      - triggers
+      - schedules
+```
+
+- when
+
+`when` 参数是确定该 `job` 在失败或者没失败的时候是否执行的参数.
+
+`when` 支持以下几个值之一:
+
+```
+on_success 只有在之前场景执行的所有作业成功的时候才执行当前job, 这个就是默认值, 我们用最小配置的时候他默认就是这个值,
+所以失败的时候pipeline会停止执行后续任务.
+
+on_failure 只有在之前场景执行的任务中至少有一个失败的时候才执行.
+
+always 不管之前场景阶段的状态, 总是执行.
+
+manual 手动执行job的时候触发(webui上点的).
+```
+
+- environment
+
+`environment` 是用于定义一个 `job` (作业)部署到某个具名的环境, 如果 `environment` 被指定, 但是没有叫该名的
+`environment` 存在, 一个新的 `environment` 将会被自动创建(实际上这个环境并不是指向真实环境, 设置这条会将相应
+`job` 显示在 `CI` 面板, `environments` 视图上, 然后可以反复操作相关 `job`)
+
+
+- artifacts
+
+`artifacts` 被用于在 `job` 作业成功后将制定列表里的文件或文件夹附加到 `job` 上, 传递给下一个 `job`, 如果要在
+两个不同的 `job` 之间传递 `artifacts`, 必须设置 `dependencies`.
+
+传递所有`binaries` 和 `.config`:
+
+```yaml
+job1:
+    script: make build
+    artifacts:
+      paths:
+        - binaries/
+        - .config
+
+job2:
+    script: make test:osx
+    dependencies:
+      - job1
+```
+
+`artifacts:name` 允许对 `artifacts` 压缩包重命名, 这样可以为每个 `artifact` 压缩包指定一个特别的名字.
+`artifacts:name` 的值可以使用任何预定义的变量, 它的默认值是 `artifacts`. 如果不设置, 在 `gitlab` 上看
+到 `artifacts.zip` 的下载名.
+
+```yaml
+job:
+  script: make
+  artifacts:
+    name: "$CI_JOB_NAME"
+```
+
+
+`artifacts:when` 用于 `job` 失败或者未失败时使用.
+
+`artifacts:when` 能设置以下值:
+
+```
+on_success 这个值是默认的, 当job成功时上传artifacts
+on_failure 当job执行失败时, 上传artifacts
+always 不管失败与否, 都上传
+```
+
+```yaml
+job:
+  script; make
+  artifacts:
+    when: on_failure
+```
+
+
+`artifacts:expire_in` 用于设置 `artifacts` 上传包的失效时间. 如果不设置, `artifacts` 的打包是永远存在于
+`gitlab` 上的. 过期之后, 用户将无法访问到 `artifacts` 包, `artifacts` 将会在每小时执行的定时任务里被清除.
+
+```yaml
+job:
+  artifacts:
+    expire_in: 1 week
+```
+
+- dependencies
+
+该特性需要和 `artifacts` 一起使用, 是用于将 `artifacts` 在两个 `job` 之间(主要是两个不同stage的job之间) 传
+递的.
+
+为了使用该特性,  需要在 `job` 上下文中定义 `dependencies` 并且列出所有运行本作业之前的作业(包涵 `artifacts` 
+下载设置的). 只能在需要传递的 `job` 的前一个 `job` (上一个 `stage` 状态）里定义. 如果在定义了 `artifacts` 
+的 `job` 里或者该 `job` 后面的 `job` 里定义 `dependencies`, `runner` 会扔出一个错误. 如果想阻止下载
+`artifacts`, 需要设置一个 `空数组` 来跳过下载, 当使用 `dependencies` 的时候, 前一个 `job` 不会因为 `job` 
+执行失败或者手动操作的阻塞而报错.
+
+```yaml
+build:osx:
+  stage: build
+  script: make build:osx
+  artifacts:
+    paths:
+      - binaries/
+
+build:linux:
+  stage: build
+  script: make build:linux
+  artifacts:
+    paths:
+      - binaries/
+
+test:osx:
+  stage: test
+  script: make test:osx
+  dependencies:
+    - build:osx
+
+test:linux:
+  stage: test
+  script: make test:linux
+  dependencies:
+    - build:linux
+
+deploy:
+  stage: deploy
+  script: make deploy
+```
+
+> 这里定义了两个job有artifacts, 分别是: `build:osx` 和 `build:linux`. 当 `test:osx` 的作业被执行的时候,
+> 从 `build:osx` 来的 `artifacts` 会被下载并解压缩出来, 同样的事情发生在 `test:linux` 上. \
+> deploy job 会下载所有的 artifacts. 因为它的优先级最高.
