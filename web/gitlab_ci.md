@@ -1,5 +1,7 @@
 # gitlab-ci.yml 配置说明
 
+## 全局配置
+
 一个 `yaml` 文件定义了一组各不相同的 `job`, 并定义了它们应该怎么运行. 这组 `jobs` 会被定义为 `yaml`
 文件的顶级元素, 并且每个 `job` 的子元素中总有一个名为 `script` 的节点.
 
@@ -52,9 +54,12 @@ job1:
 
 - 保留字
 
+这些单词不能被用于命名job.
+
+
 | 保留字 | 必填 | 说明 |
 | --- | --- | --- |
-| iamge | 否 | 构建使用的Docker镜像名称, 使用Docker作为Excutor时有效 |
+| image | 否 | 构建使用的Docker镜像名称, 使用Docker作为Excutor时有效 |
 | services | 否 | 使用的Docker服务, 使用Docker作为Excutor时有效 |
 | stages | 否 | 定义构建的stages | 
 | types | 否 | stages的别名 |
@@ -94,3 +99,109 @@ stages:
 > 2.如果一个job没有定义stage属性, 则它的stage属性默认为test.
 
 - variables 
+
+`GitlabCI` 允许在 `.gitlab-ci.yml` 文件当中设置构建环境的环境变量. 这些变量会被存储在 `git` 仓库中并用于
+记录不敏感的项目配置信息.
+
+```yaml
+variables:
+    DATABASE_URL: "mysql://root@root/data"
+```
+
+这些变量会在之后被用于执行所有的命令和脚本. `yaml` 配置的变量同样会被设置为所有被建立的 `service` 容器中, 这
+可以让使用更加方便. 
+
+除了用户自定义的变量外, 同样有Runner自动配置的变量. 比如 `CI_BUILD_REF_NAME`, 这个变量定义了正在构建的 `git`
+仓库的 `branch` 或者 `tag` 的名称.
+
+
+- cache 
+
+用于定义一系列需要在构建时被缓存的文件或者目录. 只能定义在项目工作环境中的目录或者文件.
+
+默认情况下缓存功能是对每个 `job` 和 每个 `branch` 都开启的.
+
+如果 `cache` 在 `job` 元素之外被替换, 这意味着全局设置, 并且所有的 job 会使用这个设置.
+
+cache 案例: 
+
+缓存所有 `bin` 目录下的文件和 `.config` 文件:
+
+```yaml
+rspec:
+    script: test
+    cache: 
+      paths:
+        - bin/
+        - .config
+```
+
+缓存所有 `git` 未追踪的文件 和 `bin` 目录下的文件:
+
+```yaml
+rspec:
+    script: test
+    cache:
+      untracked: true
+      paths:
+        - bin/
+```
+
+> `job` 级别定义的 `cache` 设置会覆盖全局级别的 `cache` 配置.
+
+覆盖案例:
+
+```yaml
+cache:
+    paths:
+      - files/
+
+rspec:
+    script: test
+    cache:
+      paths:
+        - bin/
+```
+
+
+## Jobs 配置
+
+`.gitlab-ci.yml` 允许配置无限个 `job`. 每个 `job` 必须有唯一的名称.
+
+一个 `job` 由一系列定义构建行为的参数组成.
+
+```yaml
+job_name:
+  script:
+    - rake spec
+    - coverage
+  stage: test
+  only:
+    - master
+  except:
+    - develop
+  tags:
+    - ruby
+    - postgres
+  allow_failure: true
+```
+
+| 关键字 | 必填 | 说明 |
+| --- | --- | --- |
+| script | 是 | 定义了Runner会执行的脚本命令 |
+| image | 否 | 使用Docker镜像 |
+| services | 否 | 使用Docker服务 |
+| stage | 否 | 定义构建的stage(默认是: `test`) | 
+| type | 否 | stage的别名 |
+| variables | 否 | 定义job级别的环境变量 |
+| only | 否 | 定义一组构建会创建的git refs |
+| except | 否 | 定义一组构建不会创建的 git refs |
+| tags | 否 | 定义一组tags用于选择合适的Runner |
+| allow_failure | 否 | 运行构建失败. 失败的构建不会影响提交状态 |
+| when | 否 | 定义什么时候执行构建. 可选: on_success, on_failure, always, manual |
+| dependencies | 否 | 定义当前够你依赖的其他构建, 然后可以在它们直接传递artifacts |
+| artifacts | 否 | 定义一组构建artifact |
+| cache | 否 | 定义一组可以缓存以在随后的工作中共享的文件 |
+| before_script	| 否 | 覆写全局的before_script命令 |
+| after_script | 否	| 覆写全局的after_script命令 |
+| environment | 否 | 定义当前构建完成后的运行环境的名称 |
