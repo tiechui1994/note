@@ -24,12 +24,19 @@
 
 - [token过期解决方案](web/token.md)
 
-- [web安全](web/web_security.md)
+- [web安全头](web/web_security.md)
 
 - [websocket数据帧](web/websocket.md)
 
-- [https证书](web/certificate.md)
+- [x.509证书](web/x509.md)
 
+- [https证书格式及使用](web/certificate.md)
+
+- [时间格式问题](web/time_format.md)
+
+- [nginx安全防护](web/nginx_security.md)
+
+- [gitlab ci编写](web/gitlab_ci.md)
 
 
 ## Redis相关
