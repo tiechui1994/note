@@ -59,6 +59,47 @@ show full columns from sys_config;
 +----------+--------------+-----------------+------+-----+-------------------+-----------------------------+---------------------------------+---------+
 ```
 
+## 创建 TABLE 的时候指定列信息
+
+格式:
+
+```
+# 针对 str 类型
+column DATATYPE [CHARSET charset COLLATE collation]
+                [GENERATED ALWAYS] AS (expr)
+                [VIRTUAL | STORED]
+                [NOT NULL | NULL] [DEFAULT value]
+                [UNIQUE [KEY]] [[PRIMARY] KEY]
+                [COMMENT 'comment']
+                [reference_definition]
+
+
+# 针对 nonstr 类型
+column DATATYPE [NOT NULL | NULL] [DEFAULT value]
+                [UNIQUE [KEY]] [[PRIMARY] KEY]
+                [COMMENT 'comment']
+                [COLUMN_FORMAT {FIXED|DYNAMIC|DEFAULT}]
+                [STORAGE {DISK|MEMORY}]
+                [reference_definition]
+
+reference_definition:
+    [REFERENCES table (key_part, ...)
+        [MATCH FULL | MATCH PARTIAL | MATHCH SIMPLE]
+        [ON DELETE option]
+        [ON UPDATE option]
+                    
+reference_option:
+    RESTRICT | CASCADE | SET NULL | NO ACTION | SET DEFAULT
+```
+
+
+```sql
+CREATE TABLE sys(
+  variable VARCHAR(128) CHARSET utf8 COLLATE utf8_general_ci NOT NULL PRIMARY KEY,
+  value VARCHAR(128) CHARSET utf8 COLLATE utf8_general_ci NULL 
+)
+```
+
 ## MySQL 信息查看命令
 
 - 查看创建TABLE语句

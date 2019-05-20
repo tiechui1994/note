@@ -41,6 +41,8 @@ COLLATE 中 `ci` (Case Insensitive) 后缀, 即大小写无关.  `ca` (Case Sens
 ```sql
 CREATE DATABASE db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE DATABASE db DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE DATABASE db DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
@@ -60,8 +62,10 @@ CREATE TABLE t(
 
 ```sql
 CREATE TABLE t (
-  c VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  
+  c1 VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  c2 VARCHAR(32) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   ...   
 ) ...
 ```
+
+> 说明: `CHARACTER SET` 和 `CHARSET` 是等价的
