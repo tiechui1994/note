@@ -55,3 +55,50 @@ Host-Only模式其实就是NAT模式去除了虚拟NAT设备, 然后使用 `VMwa
 1.Host-Only模式通过主机的虚拟网卡 `VMware Network Adapter Vmnet1` 来连接虚拟交换机 `VMnet1`, 从而达到与虚拟机
 通信的目的. 如果想要在Host-Only模式下联网, 可以将能联网的主机网卡共享给 `VMware Network Adapter Vmnet1`, 这样就实
 现虚拟机联网.
+
+
+## VirtualBox 下三种模式的配置
+
+- Bridge (桥接模式)
+
+- NAT (网络地址转换模式)
+
+根据最新版本6.08版本的VirtualBox的操作
+
+1. 添加NAT Network
+
+`工具` -> `全局设定` -> `网络`, 添加一个网络
+
+2. 设置虚拟机的网卡
+
+到 `设置` -> `网络` 当中, 连接方式选择 `NAT网络`, 界面名称选择上一步添加的NAT Network
+
+3. 配置虚拟机的网卡
+
+下面是以Ubuntu为例.
+
+网卡配置,设置静态ip(非必须), 配置文件 /etc/network/interface
+
+```
+auto eth0               # 添加网卡
+iface eth0 inet static  # 选择静态IP分配方式
+address 10.0.2.4        # 指定需要的IP
+gateway 10.0.2.1        # 默认网关
+netmask 255.255.255.0   # 掩码 
+```
+
+DNS配置(非必须), /etc/resolve.conf
+
+```
+nameserver 192.168.0.1
+```
+
+- Host-Only (仅主机模式)
+
+1. 创建 Host-Only Network
+
+在 `管理` -> `主机网络管理器` 当中, 添加一个仅主机网络.
+
+2. 设置虚拟机的网卡
+
+到 `设置` -> `网络` 当中, 连接方式选择 `仅主机(Host-Only)网络`, 界面名称选择上一步添加的Host-Only Network.
