@@ -18,11 +18,29 @@
 当我们定义策略的时候, 要分别定义多条功能, 其中: 定义数据包运行或者不允许的策略, filter过滤的功能, 而定义地址
 转换的功能则是NAT选项. 为了让这些功能交替工作, 制定出了"表"的定义, 来定义, 区分各种不同工作功能和处理方式.
 
-常用的"表":
+常用的功能:
 
 - filter, 定义允许或者不允许, 作用的链: INPUT, FORWARD, OUTPUT
 - nat, 定义地址转换的, 作用的链: PREROUTION, OUTPUT, POSTROUTING
-- mangle, 修改报文原始数据, 作用的链: PREROUNTING, INPUT, FORWARD
+- mangle, 修改报文原始数据, 作用的链: PREROUNTING, INPUT, FORWARD, OUTPUT, POSTROUTING
+
+表名:
+
+- raw: 高级功能, 如: 网址过滤
+- mangle: 数据包修改(QOS), 用于实现服务质量
+- nat: 地址转换, 用于网关路由器
+- filter: 包过滤, 用于防火墙规则
+
+动作包括:
+
+- ACCPET: 接收数据包
+- DROP: 丢弃数据包
+- REDIRECT: 重定向, 映射, 透明代理
+- SNAT: 源地址转换
+- DNAT: 目标地址转换
+- MASQUERADE: IP伪装(NAT), 用于ADSL
+- LOG: 日志记录
+
 
 ```
                              ┏╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍┓
