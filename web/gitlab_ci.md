@@ -338,7 +338,7 @@ always 不管失败与否, 都上传
 
 ```yaml
 job:
-  script; make
+  script: make
   artifacts:
     when: on_failure
 ```
