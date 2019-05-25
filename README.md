@@ -14,13 +14,13 @@
 
 ## 软件开发
 
-- [开发规范](design/program_spec.md)
+- [开发规范](software/spec.md)
 
 
 
 ## Web开发
 
-- [跨域共享资源问题](web/cors.md)
+- [跨域共享资源问题](web/web_cors.md)
 
 - [token过期解决方案](web/token.md)
 
@@ -34,15 +34,10 @@
 
 - [时间格式问题](web/time_format.md)
 
-- [nginx安全防护](web/nginx_security.md)
-
-- [gitlab ci编写](web/gitlab_ci.md)
-
 
 ## Redis相关
 
 - [redis的发布/订阅基础](pyredis/redis.md)
-
 
 
 ## MySQL相关
@@ -80,19 +75,20 @@
 
 - [文件路径配置](nginx/uri_path.md)
 
+- [nginx安全防护](nginx/nginx_security.md)
+
 
 ## Git
 
 - [git tag的使用](git/git_tag.md)
 
-
+- [gitlab ci编写](git/gitlab_ci.md)
 
 ## Linux
 
 - [linu启动](linux/init.md)
 
 - [服务指标](linux/qps.md)
-
 
 
 ## dns
