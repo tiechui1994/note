@@ -1,4 +1,4 @@
-## `后端服务器组`指令
+## 后端服务器组指令
 
 ### upstream
 
@@ -53,7 +53,7 @@ down, 将组内的某台服务器标记为永久的无效状态, 通常与ip_has
 ```
 
 
-### **ip_hash(策略)**
+### ip_hash(策略)
 
 **ip_hash指令**用于实现会话保持功能, 将某个客户端的多次请求定向到组内同一台服务器上, 保证客户端与服务器之间建
 立稳定的会话. 只有当该服务器处于无效(down)状态时, 客户端请求才会被下一个服务器接收和处理.
@@ -62,7 +62,7 @@ down, 将组内的某台服务器标记为永久的无效状态, 通常与ip_has
 ip_hash;
 ```
 
-注意:
+> 注意:
 首先, **ip_hash指令**不能与*server指令中的weight变量*一起使用. 其次, 由于ip_hash技术主要根据客户端IP地址
 分配服务器, 因此在整个系统中, Nginx服务器应该是处于最前段的服务器, 这样才能获取到客户端的IP地址, 否则它得到的
 IP地址将是位于它前面服务器地址, 从而产生问题.
@@ -94,7 +94,7 @@ http {
 进程将采用**最近最少使用**的策略关闭网络连接.
 
 
-### **hash(策略)**
+### hash(策略)
 
 **hash指令**: 使用hash算法调度.
 
@@ -107,8 +107,18 @@ hash KEY [consistent];
 如果指定了 **consistent** 参数, 则将使用ketama一致性哈希算法. *该方法确保在向组添加服务器或从组中删除服
 务器时, 只有少数密钥将重新映射到不同的服务器*. 这有助于为缓存服务器实现更高的缓存命中率.
 
+案例:
 
-### **least_conn(策略)**
+```
+upstream backend {
+    hash $request_uri consisent; # 使用请求uri hash
+    server backend1.example.com;
+    server backend2.example.com;
+}
+```
+
+
+### least_conn(策略)
 
 **least_conn指令**用于配置nginx服务器使用负载均衡策略为为网络连接分配服务器组内的服务器. 该指令在功能上实
 现了**最少连接负载均衡算法**, 在选择组内的服务器时, 考虑各服务器权重的同时,每次选择的都是当前网络连接最少的那
@@ -118,7 +128,18 @@ hash KEY [consistent];
 least_conn;
 ```
 
-### **random(策略)**
+案例:
+
+```
+upstream backend {
+    least_conn;
+    server backend1.example.com;
+    server backend2.example.com;
+}
+```
+
+
+### random(策略)
 
 random模式 提供了一个参数 `two`, 当这个参数被指定时, nginx会先随机地选择两个服务器(考虑**weight**),
 然后用以下几种方法选择其中的一个服务器:
