@@ -57,10 +57,25 @@ condition可以是下面的内容:
 **全局变量**
 
 - `$args`: 这个变量等于请求URI中的参数, 同`$query_string`
-- `$content_type`: 请求头当作的Content-Type字段
 - `$http_cookie`: 客户端cookie信息
-- `$request_method`: 客户端请求方法
-- `$remote_addr`: 客户端IP地址
+- `$schema`: 所有的协议, 比如http或者https.
+
+- `$content_type`: 请求头当作的Content-Type字段
+- `$content_length`: 请求Content-Length字段
+- `$host`: 请求Host字段
+- `$http_referer`: 请求Referer字段, 引用地址
+- `$http_user_agent`: 请求User-Agent字段, 客户端代理
+- `$http_origin`: 请求头当中的Origin
+
+- `$remote_addr`: 客户端地址
+- `$remote_port`: 客户端端口号
+- `$remote_user`: 客户端用户名, 认证使用
+
+- `$request`: 用户请求
+- `$request_method`: 客户端请求方法, POST, GET, PUT, OPTIONS等
 - `$request_uri`: 包含请求参数的原始URI, 不包含主机名
+- `$request_filename`: 当前请求的文件路径名
 - `$uri`: 不包含请求参数的URI, 也不包含主机名
+
+- `$body_bytes_sent`: 已发送的消息体字节数
 

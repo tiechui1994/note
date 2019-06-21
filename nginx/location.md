@@ -45,7 +45,7 @@ location / {
 (location =) > (location 完整路径) > (location ^~ 路径) > (location ~, ~* 路径) > (location 部分路径) > 
 (location /)
 
-
+---
 
 ## nginx 文件路径
 
@@ -65,6 +65,8 @@ nginx指定文件路径的方式: root 和 alias
 语法: root path
 可以配置的位置: location
 ```
+
+---
 
 ## alias 与 root 区别
 
