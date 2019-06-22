@@ -131,7 +131,7 @@ window.addEventListener('message',function(event) {
 
 ## Access-Control-Allow-Origin
 
-参考: [cors](./cors.md)
+参考: [cors](./web_cors.md)
 
 ## nginx代理跨域
 
