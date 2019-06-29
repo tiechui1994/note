@@ -15,26 +15,23 @@
 
 ## Web开发
 
-- [x.509证书](web/x509.md)
-- [证书格式及使用](web/certificate.md)
-
 - [QPS概念](web/web_qps.md)
 
 - [web安全头](web/web_security.md)
 
 - [websocket数据帧](web/websocket.md)
 
-- [时间格式问题](web/time_format.md)
+- [时间格式](web/timezone.md)
 
-- [跨域共享资源问题](web/web_cors.md)
-- [跨域解决方案](web/cors_solution.md)
+- [跨域共享方案](web/crossDomainShare.md)
+- [跨域解决方案](web/crossDomianMethod.md)
 
 - [token过期解决方案](web/token.md)
 
 
 ## Redis相关
 
-- [redis的发布/订阅基础](pyredis/redis.md)
+- [redis的发布/订阅基础](redis/redis.md)
 
 
 ## MySQL相关
