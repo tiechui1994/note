@@ -43,3 +43,32 @@ from => to
 list-...-commands 或 no-XXX本身)
 
 
+### STANDARD COMMANDS
+
+- ca, CA (Certificate Authority) Management.
+
+- ciphers, Cipher Suite Description(密码套件描述列表, 查询)
+
+- cms, CMS(Cryptographic Message Syntax) (加密消息语法)
+
+- clr, CLR(Certificate Revocation List) Management (证书撤销)
+
+- dgst, Message Digest Calculation
+
+- dh, Diffie-Hellman Parameter Manage
+
+- dhparam, Generation and Management of Diffie-Hellman Parameters. 支持genpkey和pkeyparam
+
+- dsa, DSA Data Management
+
+- ec, EC(Elliptic Curve) key processing (椭圆曲线)
+
+- enc, Encoding with Ciphers
+
+- gendh, 
+
+- gendsa
+
+- genrsa
+
+- genpkey, Generation of Private Key or Parameters
