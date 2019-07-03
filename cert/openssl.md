@@ -55,20 +55,80 @@ list-...-commands 或 no-XXX本身)
 
 - dgst, Message Digest Calculation
 
-- dh, Diffie-Hellman Parameter Manage
-
-- dhparam, Generation and Management of Diffie-Hellman Parameters. 支持genpkey和pkeyparam
-
-- dsa, DSA Data Management
-
 - ec, EC(Elliptic Curve) key processing (椭圆曲线)
 
 - enc, Encoding with Ciphers
 
-- gendh, 
 
-- gendsa
+- gendh, 生成DH秘钥
 
-- genrsa
+参数:
+```
+openssl gendh [args] [numbits]
+-out file, key的文件
+numbits, 大质数的位数
+```
 
-- genpkey, Generation of Private Key or Parameters
+- dsaparam, 生成DSA的参数文件
+
+参数:
+```
+openssl dsaparam [args] [bits] 
+
+-inform arg, input格式, DER,PEM
+-outform arg, output格式, DER,PEM
+-in file, input文件
+-out file, output文件
+-C, 输出C代码
+-genkey, 生成一个DSA的key.(如果指定此参数, out当中包含了parameters和private key, 否则out中只有parameters)
+bits, 生成private key的长度
+```
+
+- gendsa, 生成DSA秘钥
+
+参数:
+```
+openssl gendsa [args] dsaparam-file
+
+-out file, 秘钥文件,PEM格式
+
+-des, 在cbc模式下使用DES加密生成的密钥(带密码)
+-des3, 在ede cbc模式下使用DES加密生成的密钥(带密码)
+-seed, 在cbc模式下使用SEED加密秘钥文件(带密码)
+-aes128,-aes192,-aes256, 在cbc aes模式下使用AES加密秘钥文件(带密码)
+
+dsaparam-file, 使用dsaparam生成的文件
+```
+
+- genrsa, 生成RSA秘钥
+
+参数:
+```
+openssl genrsa [args] [bits]
+
+-out file, 秘钥文件,PEM格式
+
+-des, 在cbc模式下使用DES加密生成的密钥(带密码)
+-des3, 在ede cbc模式下使用DES加密生成的密钥(带密码)
+-seed, 在cbc模式下使用SEED加密秘钥文件(带密码)
+-aes128,-aes192,-aes256, 在cbc aes模式下使用AES加密秘钥文件(带密码)
+
+bits, 秘钥位数
+```
+
+- genpkey, 生成秘钥
+
+参数:
+```
+openssl genpkey [args]
+
+-out file, 秘钥文件
+-outform arg, output格式, DER或PEM
+
+-<cipher> 使用<cipher>算法加密私钥(带密码), 例如des, des3, aes128, aes192, aes256, seed等
+-algorithm alg, 公钥的算法, rsa, dsa, dh, ecc等
+-paramfile file, 参数文件, dsa就需要参数文件
+```
+
+- req  PKCS#10 X.509 Certificate Signing Request (CSR, 证书签名请求) Management.
+
