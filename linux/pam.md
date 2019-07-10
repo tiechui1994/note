@@ -115,7 +115,7 @@ auth    required pam_listfile.so \
 
 - pam_nologin 如果 `/etc/nologin` 文件存在, pam_nologin 阻止所有登录.
 
-- pam_rootok 允许根用户访问, 不执行进一步检查. `/etc/pam.d/su` 中常常包含这个模块; 必需的行是 
+- pam_rootok 允许root用户访问, 不执行进一步检查. `/etc/pam.d/su` 中常常包含这个模块; 必需的行是 
 **auth sufficient pam_rootok.so**. 根用户可以作为任何用户操作, 不需要提供密码.
 
 - pam_succeed_if 检查账户的特定属性, 比如是否是某个组的成员.
