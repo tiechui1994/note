@@ -25,7 +25,7 @@ InnoDB支持多个粒度锁定, 允许在整个表上共存行级锁和锁. 为�
 - 意图shared(IS): 事务T打算S在表中的单个行上设置锁t.
 - 意向exclusive(IX): 事务T打算X在这些行上设置锁.
 
-例如, SELECT ... LOCK IN SHARE MODE设置IS锁定, SELECT ... FOR UPDATE设置IX锁定.
+例如, `SELECT ... LOCK IN SHARE MODE` 设置IS锁定, `SELECT ... FOR UPDATE` 设置IX锁定.
 
 意向锁定协议如下:
 - 在一个事物可以获得一个表中一行的共享锁之前, 它必须首先获得这张表的IS锁或这张表的更强的锁.
@@ -97,13 +97,12 @@ InnoDB 中的间隙锁定是"purely inhibitive(纯粹的抑制)", 这意味着�
 一个事务占用的间隙锁定不会阻止另一个事务在同一个间隙上进行间隙锁定. 共享和独占间隙锁之间没有区别. 它们彼此不冲突, 它们执行
 相同的功能.
 
-可以明确禁用间隙锁定, 如果将事务隔离级别更改为 `READ COMMITTED` 或 启用 `innodb_locks_unsafe_for_binlog`系统变
-量(现已弃用,5.7), 则会发生这种情况. 在这些情况下, 对于搜索和索引扫描禁用间隙锁定, 并且间隙锁定仅用于外键约束检查和重复键
-检查.
+可以明确禁用间隙锁定, 如果将事务隔离级别更改为 `READ COMMITTED` 或启用innodb_locks_unsafe_for_binlog系统变量(现
+已弃用,5.7), 则会发生这种情况. 在这些情况下, 对于搜索和索引扫描禁用间隙锁定, 并且间隙锁定仅用于外键约束检查和重复键检查.
 
-使用 `READ COMMITTED` 隔离级别或启用 `innodb_locks_unsafe_for_binlog` 还有其他影响. 在MySQL评估WHERE条件后,
-将释放不匹配行的记录锁. 对于UPDATE语句, InnoDB执行"semi-consistent(半一致)"读取, 以便将最新提交的版本返回给MySQL,
-以便MySQL可以确定该行是否与 UPDATE 的 WHERE条件匹配.
+使用 `READ COMMITTED` 隔离级别或启用innodb_locks_unsafe_for_binlog还有其他影响. 在MySQL评估WHERE条件后,将释放
+不匹配行的记录锁. 对于UPDATE语句, InnoDB执行"semi-consistent(半一致)"读取, 以便将最新提交的版本返回给MySQL, 以便
+MySQL可以确定该行是否与 UPDATE 的 WHERE条件匹配.
 
 
 ## Next-Key Locks (下一键锁定)
@@ -167,7 +166,7 @@ mysql> START TRANSACTION;
 mysql> INSERT INTO child (id) VALUES (101);
 ```
 
-插入意图锁的事务数据 `SHOW ENGINE INNODB STATUS` 和 `InnoDB` 监视器输出中的以下内容类似:
+插入意图锁的事务数据 `SHOW ENGINE INNODB STATUS` 和InnoDB监视器输出中的以下内容类似:
 ```
 RECORD LOCKS space id 31 page no 3 n bits 72 index `PRIMARY` of table `test`.`child`
 trx id 8731 lock_mode X locks gap before rec insert intention waiting
@@ -220,26 +219,208 @@ SELECT语句, 则这些SELECT语句也相互一致.
 
 ## READ COMMITTED
 
+即使在同一事务中, 每个一致的读取也会设置和读取自己的新快照.
+
+对于锁定读取(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的SELECT), UPDATE 语句和DELETE语句, InnoDB仅锁定索引记录, 而不锁
+定它们之前的间隙, 因此允许在锁定记录旁边自由插入新记录. 间隙锁定仅用于外键约束检查和重复键检查.
+
+由于禁用了间隙锁定, 因此可能会出现幻像问题, 因为其他会话可以在间隙中插入新行.
+
+READ COMMITTED 隔离级别仅支持基于行的二进制日志记录. 如果对binlog_format=MIXED使用READ COMMITTED, 则服务器会自
+动使用基于行的日志记录.
+
+使用READ COMMITTED还有其他影响:
+- 对于UPDATE或DELETE语句, InnoDB仅为其更新或删除的行保留锁定. MySQL评估WHERE条件后, 将释放不匹配行的记录锁. 这大大
+降低了死锁的可能性, 但它们仍然可以发生.
+
+- 对于UPDATE语句, 如果一行已被锁定, InnoDB将执行"semi-consistent(半一致)"读取, 将最新提交的版本返回给MySQL, 以便
+MySQL可以确定该行是否与 UPDATE 的 WHERE 条件匹配. 如果行匹配(必须更新), MySQL再次读取该行, 这次InnoDB将其锁定或等
+待锁定.
+
+案例:
+```
+CREATE TABLE t (a INT NOT NULL, b INT) ENGINE=InnoDB;
+INSERT INTO t VALUES (1,20, (2,3), (3,2), (4,3), (5,2);
+COMMIT;
+```
+
+在这种情况下, 表没有索引, 因此搜索和索引扫描使用隐藏的聚簇索引进行记录锁定而不是索引列.
+
+假设一个会话使用以下语句执行UPDATE:
+```
+# Session A
+START TRANSACTION;
+UPDATE t SET b=5 WHERE b=3;
+```
+
+假设第二个会话通过执行第一个会话的语句后执行UPDATE:
+```
+# Session B
+UPDATE t SET b=4; WHRER b=2;
+```
+
+当InnoDB执行每个UPDATE时, 它首先为它读取的每一行获取一个排他锁, 然后确定是否修改它. 如果InnoDB没有修改该行, 它将释放
+锁. 否则, InnoDB会保留锁定, 直到事物结束. 这会影响事务处理, 如下所示.
+
+使用默认的 `REPEATABLE READ` 隔离级别时, 第一个UPDATE在它读取的每一行上获取一个X锁, 并且不释放它们中的任何一个:
+```
+x-lock(1,2); retain x-lock
+x-lock(2,3); update(2,3) to (2,5); retain x-lock
+x-lock(3,2); retain x-lock
+x-lock(4,3); update(4,3) to (4,5); retain x-lock
+x-lock(5,2); retain x-lock
+```
+
+第二个UPDATE一旦尝试获取任何锁就会阻塞(因为第一次更新已保留所有行的锁), 并且在第一次UPDATE提交或回滚之前不会继续:
+```
+x-lock(1,2); block and wait for first UPDATE to commit or roll back
+```
+
+如果使用 `READ COMMITTED`, 则第一个UPDATE会在其读取的每一行上获取一个X锁, 并释放那些不会修改的行:
+```
+x-lock(1,2); unlock(1,2)
+x-lock(2,3); update(2,3) to (2,5); retain x-lock
+x-lock(3,2); unlock(3,2)
+x-lock(4,3); update(4,3) to (4,5); retain x-lock
+x-lock(5,2); unlock(5,2)
+```
+对于第二个UPDATE, InnoDB执行"semi-consistent(半一致)"读取, 返回它读取到MySQL的每一行的最新提交版本,以便MySQL可以
+确定该行是否与UPDATE的WHERE条件匹配:
+```
+x-lock(1,2); update(1,2) to (1,4); retain x-lock
+x-lock(2,3); unlock(2,3)
+x-lock(3,2); update(3,2) to (3,4); retain x-lock
+x-lock(4,3); unlock(4,3)
+x-lock(5,2); update(5,2) to (5,4); retain x-lock
+```
+
+但是, 如果WHERE条件包含索引列, 并且InnoDB使用索引, 则在获取和保留记录锁时仅考虑索引列. 在下面的示例中, 第一个UPDATE在
+每个b=2的行上获取并保留X锁定. 第二个UPDATE在尝试获取相同记录的X锁时阻塞, 因为它还使用在列b上定义的索引.
+```
+CREATE TABLE t (a INT NOT NULL, b INT, c INT, INDEX (b)) ENGINE = InnoDB;
+INSERT INTO t VALUES (1,2,3),(2,2,4);
+COMMIT;
+
+# Session A
+START TRANSACTION;
+UPDATE t SET b = 3 WHERE b = 2 AND c = 3;
+
+# Session B
+UPDATE t SET b = 4 WHERE b = 2 AND c = 4;
+```
+
+使用 `READ COMMITTED` 隔离级别的效果与启用不推荐使用的innodb_locks_unsafe_for_binlog配置选项相同, 但有以下例外:
+
+- 启用innodb_locks_unsafe_for_binlog是一个全局设置, 会影响所有会话, 而隔离级别可以为所有会话全局设置, 也可以为每个
+会话单独设置.
+
+- innodb_locks_unsafe_for_binlog只能在服务器启动时设置, 而隔离级别可以在启动时设置或在运行时更改.
+
+因此, `READ COMMITTED` 提供比innodb_locks_unsafe_for_binlog更精细和更灵活的控制.
+
+## READ UNCOMMITED
+
+SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此, 使用此隔离级别, 此类读取不一致. 这也称为脏读. 否则, 此隔离级
+别与 `READ COMMITTED` 类似.
+
+## SERIALIZABLE
+
+此级别与 `REPEATABLE READ` 类似, 如果禁用自动提交, InnoDB将隐式地将所有普通 SELECT 语句转换为 
+`SELECT ... LOCK IN SHARE MODE`. 如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作
+为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. (要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
+
+---
+
+# 读取
+
+## 一致性非锁定读取
+
+一致的读取意味着InnoDB使用多版本控制在某个时间点向查询提供数据库的快照. 查询将查看在该时间点之前提交的事务所做的更改, 并
+且不会对以后或未提交的事务所做的更改进行更改. 
+
+此规则的例外是查询查看同一事务中早期语句所做的更改. 此异常导致以下异常: 如果更新表中的某些行, SELECT 将查看更新行的最新
+版本, 但它也可能会看到任何行的旧版本. 如果其他会话同时更新同一个表, 则异常意味着可能会看到该表处于从未存在于数据库中的状态.
+
+如果事务隔离级别是 `REPEATABLE READ`(默认级别), 则同一事务内的所有一致性读取将读取该事务中第一次读取所创建的快照. 你
+可以通过提交当前事务并在发出新查询之后为查询获取更新的快照.
+
+使用 `READ COMMITTED` 隔离级别, 事务中的每个一致读取都会设置并读取其自己的新快照.
+
+一致性读取是 InnoDB 在 `READ COMMITTED`和 `REPEATABLE READ` 隔离级别中处理SELECT语句的默认模式. 一致读取不会对
+其访问的表设置任何锁定, 因此其他会话可以在对表执行一致读取的同时自由修改这些表.
+
+假设你正在以默认的 `REPEATABLE READ` 隔离级别运行. 当你发出一致读取(即普通SELECT语句)时, InnoDB 会为你的事务提供一
+个时间点, 你的查询将根据该时间点查看数据库. 如果另一个事务删除了一行并在分配了你的时间点后提交, 则你不会将该行视为已删除.
+插入和更新的处理方式类似.
+
+> 数据库状态的快照适用于事务中的SELECT语句, 不一定适用于DML语句. 如果插入或修改某些行然后提交该事务, 则从另一个并发
+`REPEATABLE READ` 事务发出的DELETE或UPDATE语句可能会影响那些刚刚提交的行, 即使会话无法查询它们. 如果事务确实更新或
+删除了由其他事务提交的行, 则这些更改将对当前事务可见. 例如, 可能会遇到如下情况:
+
+```
+SELECT COUNT(c1) FROM t1 WHERE c1 = 'xyz';
+-- Returns 0: no rows match.
+DELETE FROM t1 WHERE c1 = 'xyz';
+-- Deletes several rows recently committed by other transaction.
+
+SELECT COUNT(c2) FROM t1 WHERE c2 = 'abc';
+-- Returns 0: no rows match.
+UPDATE t1 SET c2 = 'cba' WHERE c2 = 'abc';
+-- Affects 10 rows: another txn just committed 10 rows with 'abc' values.
+SELECT COUNT(c2) FROM t1 WHERE c2 = 'cba';
+-- Returns 10: this txn can now see the rows it just updated.
+```
 
 
+你可以通过提交事务, 然后再执行另一个SELECT 或 `START WITH ACACENT WITH SNAPSHOT` 来提高您的时间点.
+这称为多版本并发控制.
+
+在以下示例中, 会话A仅在 "B已提交插入" 且 "A已提交" 时才看到由B插入的行, 以便时间点超过B的提交.
+```
+             Session A              Session B
+
+           SET autocommit=0;      SET autocommit=0;
+time
+|          SELECT * FROM t;
+|          empty set
+|                                 INSERT INTO t VALUES (1, 2);
+|
+v          SELECT * FROM t;
+           empty set
+                                  COMMIT;
+
+           SELECT * FROM t;
+           empty set
+
+           COMMIT;
+
+           SELECT * FROM t;
+           ---------------------
+           |    1    |    2    |
+           ---------------------
+```
+
+如果要查看数据库的"最新"状态, 请使用 `READ COMMITTED` 隔离级别或锁定读取: `SELECT * FROM t FOR SHARE;`
+
+使用 `READ COMMITTED` 隔离级别, 事务中的每个一致读取都会设置并读取其自己的新快照. 使用 `LOCK IN SHARE MODE`时,
+会发生锁定读取: SELECT阻塞, 直到包含最新行的事务结束.
+
+一致的读取对某些DDL语句不起作用:
+
+- 一致读取不适用于 `DROP TABLE`, 因为MySQL无法使用已删除的表并且InnoDB会破坏该表.
+
+- 一致性读取不适用于 `ALTER TABLE`, 因为该语句生成原始表的临时副本, 并在构建临时副本时删除原始表. 在事务中重新发出一致
+读取时, 新表中的行不可见, 因为在执行事务快照时这些行不存在. 在这种情况下, 事务返回错误: ER_TABLE_DEF_CHANGED, 
+"Table definition has changed, please retry transaction".
 
 
+读取类型因 `INSERT INTO ... SELECT`, `UPDATE ... (SELECT)` 和 `CREATE TABLE ... SELECT` 等子句中的选择而异,
+不指定 `FOR UPDATE` 或 `LOCK IN SHARE MODE`:
 
+- 默认情况下, InnoDB使用更强的锁定, SELECT部分​​的作用类似于`READ COMMITTED`, 即使在同一事务中, 每个一致的读取也会设
+置和读取自己的新快照.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- 要在这种情况下使用一致读取, 请启用innodb_locks_unsafe_for_binlog选项并将事务的隔离级别设置为 `READ UNCOMMITTED`,
+`READ COMMITTED` 或 `REPEATABLE READ` (即SERIALIZABLE以外的任何其他内容). 在这种情况下, 不会对从所选表中读取的行
+设置锁定.
 
