@@ -548,6 +548,87 @@ UPDATE操作还会在受影响的辅助索引记录上执行共享锁定.
 
 如果发生重复键错误, 则设置重复索引记录上的共享锁. 如果有多个会话尝试插入同一行, 如果另一个会话已经具有独占锁, 则使用共享
 锁可能导致死锁. 如果另一个会话删除该行, 则会发生这种情况. 假设InnoDB表t1具有以下结构:
+```
+CREATE TABLE t1 (i INT, PRIMARY KEY (i)) ENGINE = InnoDB;
+```
+
+现在假设三个会话按顺序执行以下操作:
+Session 1:
+```
+START TRANSACTION;
+INSERT INTO t1 VALUES(1);
+```
+
+Session 2:
+```
+START TRANSACTION;
+INSERT INTO t1 VALUES(1);
+```
+
+Session 3:
+```
+START TRANSACTION;
+INSERT INTO t1 VALUES(1);
+```
+
+Session 1:
+```
+ROLLBACK;
+```
+
+会话1的第一个操作获取该行的排他锁. 会话2和3的操作都会导致重复键错误, 并且它们都请求该行的共享锁. 当会话1回滚时, 它会释放
+对该行的独占锁定, 并且会话2和3的排队共享锁请求被授予. 此时, 会话2和3死锁: 由于另一个持有共享锁, 因此都不能为该行获取排它
+锁.
 
 
+如果表已包含键值为1的行并且三个会话按顺序执行以下操作, 则会出现类似情况:
+Session 1:
+```
+START TRANSACTION;
+DELETE FROM t1 WHERE i = 1;
+```
 
+Session 2:
+```
+START TRANSACTION;
+INSERT INTO t1 VALUES(1);
+```
+
+Session 3:
+```
+START TRANSACTION;
+INSERT INTO t1 VALUES(1);
+```
+
+Session 1:
+```
+COMMIT;
+```
+
+会话1的第一个操作获取该行的排他锁. 会话2和3的操作都会导致重复键错误, 并且它们都请求该行的共享锁. 当会话1提交时, 它会释放
+对该行的独占锁定, 并且会话2和3的排队共享锁定请求被授予. 此时, 会话2和3死锁: 由于另一个持有共享锁, 因此都不能为该行获取排
+它锁.
+
+- `INSERT ... ON DUPLICATE KEY UPDATE` 与简单的INSERT的不同之处在于, 当发生重复键错误时, 在要更新的行上放置独占
+锁而不是共享锁. 对重复的主键值采用独占索引记录锁定. 对于重复的唯一键值, 采用独占的下一键锁定.
+
+- 如果唯一键上没有冲突, REPLACE就像INSERT一样完成. 否则, 将在要替换的行上设置独占的下一键锁.
+
+- `INSERT INTO T SELECT ... FROM S WHERE ...` 在插入T的每一行上设置一个独占索引记录锁(没有间隙锁). 如果事务隔离
+级别为`READ COMMITTED`, 或者启用了innodb_locks_unsafe_for_binlog且事务隔离级别不是SERIALIZABLE, InnoDB将S上
+的搜索作为一致读取(无锁). 否则, InnoDB在来自S的行上设置共享的下一键锁. 在后一种情况下, InnoDB必须设置锁: 在使用基于语
+句的二进制日志的前滚恢复期间, 每个SQL语句必须以与它完全相同的方式执行.
+
+`CREATE TABLE ... SELECT ...` 执行带有共享下一键锁定的SELECT或作为一致读取, 与 `INSERT ... SELECT` 一样.
+
+当在构造中使用 `SELECT REPLACE INTO t SELECT ... FROM s WHERE ...` 或 `UPDATE t ... WHERE col IN (SELECT 
+... FROM s ...)`时, InnoDB设置共享的下一键锁表中的行.
+
+- 在初始化表上的先前指定的AUTO_INCREMENT列时, InnoDB在与AUTO_INCREMENT列关联的索引的末尾设置独占锁. 在访问自动增量
+计数器时, InnoDB使用特定的AUTO-INC表锁定模式, 其中锁定仅持续到当前SQL语句的末尾, 而不是整个事务的结束. 在保持AUTO-INC
+表锁时, 其他会话无法插入表中;
+
+InnoDB在不设置任何锁定的情况下获取先前初始化的AUTO_INCREMENT列的值.
+
+- 如果在表上定义了FOREIGN KEY约束, 任何需要检查约束条件的插入,更新或删除都会在其查看的记录上设置 "共享记录级锁" 定以检
+查约束. 在约束检查失败的情况下, InnoDB还是会设置这些锁.
