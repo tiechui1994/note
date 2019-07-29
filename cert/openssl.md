@@ -45,8 +45,6 @@ list-...-commands 或 no-XXX本身)
 
 ### STANDARD COMMANDS
 
-- ca, CA (Certificate Authority) Management.
-
 - ciphers, Cipher Suite Description(密码套件描述列表, 查询)
 
 - cms, CMS(Cryptographic Message Syntax) (加密消息语法)
@@ -132,3 +130,68 @@ openssl genpkey [args]
 
 - req  PKCS#10 X.509 Certificate Signing Request (CSR, 证书签名请求) Management.
 
+参数:
+```
+openssl req [arg]
+
+-outform arg    输出格式(DER, PEM)
+-out arg        输出文件
+
+# 输出格式控制
+-text          以文本格式输出REQ
+-noout         不输出REQ
+-x509          输出以x509结构代替的cert. req.
+
+注意事项:
+    当只有-text参数, 表示打印REQ
+    当只有-noout参数, 表示不输入任何内容
+    当同时具有-text和-noout参数, 只是打印REQ的Certificate Request部分. REQ是由(Certificate Request, 证书结构
+    体格式; CERTIFICATE REQUEST, 证书请求base64编码的格式)
+
+-pubkey        输出证书的公钥(默认是没有的)
+-subject       输出证书请求的subject(默认在是没有的)
+
+
+# 加密密码控制
+-nodes         不需要加密的密码(默认是需要设置加密的密码)
+
+-key fike      使用文件当中的私钥(如果私有有加密密码, 需要输入加密密码; 否则不需要任何密码)
+-keyform arg   key文件的格式
+
+-newkey rsa:bits  生成一个加密的RSA私钥文件, 并使用该私钥加密证书请求
+-newkey das:file  生成一个加密的DSA私有文件, 并使用该私钥加密证书请求
+-newkey ec:file   生成一个加密的DSA私有文件, 并使用该私钥加密证书请求
+
+
+注意事项:
+    -nodes  不设置加密的密码
+    -key    通过外部的私有key文件设置加密的密码
+
+
+-new           new request(必须参数)
+-verify        验证REQ上的签名
+-days          -x509生成的证书有效的天数.
+
+-config file   证书请求的配置文件.
+```
+
+- ca, CA (Certificate Authority) Management.
+
+参数:
+```
+openssl ca [args]
+
+-config file   配置文件, 默认为/usr/lib/ssl/openssl.cnf
+-gencrl        生成一个新的CRL
+-days arg      证书有效的天数
+-md arg        md2, md5, sha, sha1 签名算法
+-keyfile file  私钥文件
+-keyform arg   私钥格式(PEM, ENGINE)
+-key arg       如果私钥文件是加密的, 此值是解密密码
+-cert file     CA的证书
+-selfsign      使用与之关联的密钥签署证书
+-in file       输入PEM证书请求文件
+-out file      输出文件
+-subj arg      使用arg替代请求的subject
+-utf8          输入字符集是UTF8(默认是ASCII)
+```

@@ -174,3 +174,76 @@ User_List由一个或多个用户名, 用户ID(前缀为"#"), 系统组名称和
 非Unix组名称和ID(分别以'%:'和'%:#'为前缀)和User_Aliases. 每个列表项可以以零个或多个"!"运算符为前缀. 奇数个"!"运算
 符否定了该项的值; 一个偶数只是相互取消. 用户网络组仅使用用户和域成员进行匹配; 匹配时不使用主机成员.
 
+用户名, uid, group, gid, netgroup, nonunix_group或nonunix_gid可以用双引号括起来, 以避免转义特殊字符. 
+或者, 可以在转义十六进制模式中指定特殊字符, 例如, \x20代表空间. 使用双引号时, 引号内必须包含任何前缀字符.
+
+实际的nonunix_group和nonunix_gid语法取决于底层的组提供程序插件. 例如, QAS AD插件支持以下格式:
+  · 在同一域中的组:"%:组名"
+
+  · 在任何域中的组:"%:组名@FULLY.QUALIFIED.DOMAIN"
+
+  · Group SID: "%:S-1-2-34-5678901234-5678901234-5678901234-567"
+
+> 请注意, 组名的引号是可选的. 不带引号的字符串必须使用反斜杠('\')来转义空格和特殊字符.
+
+Runas_List ::= Runas_Member |
+               Runas_Member ',' Runas_List
+
+Runas_Member ::= '!'* user name |
+                 '!'* #uid |
+                 '!'* %group |
+                 '!'* %#gid |
+                 '!'* %:nonunix_group |
+                 '!'* %:#nonunix_gid |
+                 '!'* +netgroup |
+                 '!'* Runas_Alias
+
+Runas_List类似于User_List. 注意, 用户名和组被作为字符串进行匹配. 换句话说, 具有相同uid(gid)的两个用户(组)被认为是不
+同的. 如果希望将所有用户名与相同的uid(例如root和toor)匹配, 则可以使用uid(在给出的示例中为#0).
+
+Host_List ::= Host |
+              Host ',' Host_List
+
+Host ::= '!'* host name |
+         '!'* ip_addr |
+         '!'* network(/netmask)? |
+         '!'* +netgroup |
+         '!'* Host_Alias
+
+
+Host_List由一个或多个主机名, IP地址, network, netgroup(以"+"为前缀)和其他别名组成. 同样, 使用'!'运算符可以取消项
+的值. 
+
+netgroup使用主机(合格和非合格)和域成员进行匹配; 匹配时不使用用户成员. 如果指定不带网络掩码的network, sudo将查询每个本
+地主机的网络接口, 如果network对应于其中一个主机的网络接口, 则将使用该接口的网络掩码.
+
+网络掩码可以用标准IP地址表示法(例如255.255.255.0或ffff:ffff:ffff:ffff::)或CIDR表示法(比特数, 例如24或64)来指定. 
+
+主机名可能包含shell样式的通配符, 但除非计算机上的主机名命令返回完全限定的主机名, 否则需要使用通配符的fqdn选项才能使用. 
+
+注意, sudo只检查实际的网络接口;这意味着IP地址127.0.0.1(localhost)永远不会匹配. 此外, 主机名"localhost"仅匹配实际
+主机名, 这通常仅适用于非联网系统.
+
+
+### Defaults
+
+某些配置选项可能会在运行时通过一个或多个Default_Entry行从其默认值更改. 这些可能会影响任何主机上的所有用户, 特定主机上的
+所有用户, 特定用户, 特定命令或作为特定用户运行的命令.
+
+注意, 每个命令条目可能不包含命令行参数. 如果需要指定参数, 请定义Cmnd_Alias并改为引用它.
+
+Default_Type ::= 'Defaults' |
+                 'Defaults' '@' Host_List |
+                 'Defaults' ':' User_List |
+                 'Defaults' '!' Cmnd_List |
+                 'Defaults' '>' Runas_List
+
+Default_Entry ::= Default_Type Parameter_List
+
+Parameter_List ::= Parameter |
+                   Parameter ',' Parameter_List
+
+Parameter ::= Parameter '=' Value |
+              Parameter '+=' Value |
+              Parameter '-=' Value |
+              '!'* Parameter
