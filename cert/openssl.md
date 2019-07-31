@@ -181,17 +181,50 @@ openssl req [arg]
 ```
 openssl ca [args]
 
+# 必要的参数
+-in file       输入PEM证书请求文件(csr)
+
+-keyfile file  私钥文件(CA自己的)
+-keyform arg   私钥格式(PEM, DER)
+-key arg       如果私钥文件是加密的, 此值是解密密码
+
+-cert file     CA自己的证书(crt)
+
+-out file      输出PEM证书文件(crt)
+
+# 其他参数
 -config file   配置文件, 默认为/usr/lib/ssl/openssl.cnf
 -gencrl        生成一个新的CRL
 -days arg      证书有效的天数
 -md arg        md2, md5, sha, sha1 签名算法
--keyfile file  私钥文件
--keyform arg   私钥格式(PEM, ENGINE)
--key arg       如果私钥文件是加密的, 此值是解密密码
--cert file     CA的证书
+
 -selfsign      使用与之关联的密钥签署证书
--in file       输入PEM证书请求文件
--out file      输出文件
 -subj arg      使用arg替代请求的subject
 -utf8          输入字符集是UTF8(默认是ASCII)
+```
+
+- x509, X.509 Certificate Data Management
+
+参数:
+```
+-inform arg
+-outform arg 
+-CAform arg
+-CAkeyform arg
+
+-in arg
+-out arg 
+-CA arg
+-CAkey arg
+
+-passin arg         私钥密码
+-pubkey             输出公钥
+-alias              输出证书的alias
+-noout              不输出任何内容
+-trustout           输出"trusted"证书
+
+-days arg           证书的有效时间, 默认是30天
+-signkey arg        使用arg自签名证书
+-x509toreq          输出证书请求对象
+-req                输入一个证书请求, 签名, 并输出
 ```
