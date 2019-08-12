@@ -109,3 +109,162 @@ add_executable(hello ${SOURCE_FILES})
 target_link_libraries(hello math)
 ```
 
+
+
+## 常用函数
+
+- cmake_minimum_required
+
+指定CMake的最低版本.
+
+语法: 
+```
+cmake_minimum_required(VSERSION major[.minor[.patch[.tweak]]]  [FALT_ERROR])
+```
+
+cmake_minimum_required(VSERSION 3.0)
+
+- aux_source_directory
+
+将dir目录下所有源文件的名称保存再变量var中
+
+语法:
+```
+aux_source_directory(<dir> <var>)
+```
+
+aux_source_directory(. DIR_SRC)
+
+
+- add_executable
+
+用于指定从一组源文件source1, source2... sourceN编译出一个可执行文件且命名为name
+
+语法:
+```
+add_executable(<name> [WIN32] [MACOS_BUNDLE] [EXCLUDE_FROM_ALL] source1 source2 ...)  
+```
+
+- add_libiary
+
+用于指定从一组源文件source1, source2... sourceN编译出一个库文件且命名为name
+
+语法:
+```
+add_libiary(<name> [STATIC|SHARED|MOUDLE] [EXCLUDE_FROM_ALL] source1 source2 ...)  
+```
+
+- add_dependencies
+
+用于指定某个目标(可执行文件或者库文件)依赖于其他的目录. 这里的目标必须是add_executable, add_library, add_custom_target
+命令创建的目标
+
+语法:
+```
+add_dependencies(target-name denpend-target1 denpend-target2 ...)
+```
+
+
+- add_subdirectory
+
+用于添加一些需要进行构建的子目录
+
+语法:
+```
+add_subdirectory(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
+```
+
+add_subdirectory(lib)
+
+
+- target_link_libraries
+
+用于指定target需要链接 item1 item2 ..., 这里的target必须已经被创建, 链接的item可以是已经存在的target(依赖关系会自
+动添加)
+
+语法:
+```
+target_link_libraries(<target> item1 item2 ... [debug|optimized|general])
+```
+
+- message
+
+输出信息
+
+语法:
+```
+message([STATUS | WARNING | AUTHOR_WARNING | FATAL_ERROR | SEND_ERROR] "message")
+```
+
+- include_directories
+
+用于设置目录, 这些设定的目录被编译器用于查找include文件
+
+语法:
+```
+include_directories([AFTER | BEFORE] [SYSTEM] dir1 dir2 ...)
+```
+
+- find_path
+
+用于查找包含文件name1的路径, 如果找到则将路径保存到VAR(此路径为一个绝对路径), 如果没有找到则结果为<VAR>-NOTFOUND.
+默认情况下, VAR会被保存再Cache中, 这时候我们需要清除VAR才可以进行下一次查询
+
+语法:
+```
+find_path(<VAR> name1 [path1 path2 ...])
+```
+
+find_path(LUA_INCLUDE_PATH lua.h ${LUA_INCLUDE_FIND_PATH})
+if(NOT LUA_INCLUDE_PATH)
+    message(SEND_ERROR "Header file lua.h not found")
+endif()
+
+
+- find_library
+
+用于查找库文件name1的路径, 如果找到则将路径保存在VAR中(此路径为一个绝对路径), 如皋没有找到则结果为<VAR>-NOTFOUND. 一
+个类似的命令link_directories已经不太建议使用了.
+
+语法:
+```
+find_library(<VAR> name1 [path1 path2 ..])
+```
+
+> 注意: find_path 和 find_library 如果提供了path路径, 只有name1在提供的路径(作为父级目录)才算找到.
+
+- add_definitions
+
+用于添加编译器命令行标志(选项), 通常的情况下我们使用其来添加预处理器定义
+
+```
+add_definitions(-DFOO -DBAR ...)
+```
+
+- file
+
+丰富的文件和目录的相关操作
+
+a. 目录的遍历
+b. GLOB用于产生一个文件(目录)路径列表并保存再var中
+c. 文件路径列表中的每个文件的文件名都能匹配globbing expressions(非正则表达式, 但是类似)
+d. 如果指定了 REVATIVE 路径, 那么返回的文件路径列表中的路径相对于 REVATIVE 的路径
+
+```
+file(GLOB var [RELVATIVE path] [globbing expressions] ...)
+```
+
+file(GLOB VAR RELATIVE ${PROJECT_BINARY_DIR} "${PROJECT_BINARY_DIR}/*/*.c")
+
+
+## 常用的变量
+
+CMAKE_SIZEOF_VOID_P 表示void*的大小(例如4或者8), 可以使用其来判断当前构建为32位还是64位
+
+CMAKE_CURRENT_LIST_DIR 表示正则处理的CMakeLists.txt文件所在的目录的绝对路径
+
+CMAKE_ARCHIVE_OUTPUT_DIRECTORY 用于设置ARCHIVE目标的输出路径
+
+CMAKE_LIBRARY_OUTPUT_DIRECTORY 用于设置LIBRARY目标的输出路径
+
+CMAKE_RUNTIME_OUTPUT_DIRECTORY 用于设置RUNTIME目标的输出路径
