@@ -1,8 +1,20 @@
 # TCP/IP 卷一: 协议
 
+## 数据链路层
+
 - IEEE802.2/802.3 (RFC 1042) 和 以太网 (RFC 894)的封装格式
 
-[!image](./resouces/RFC1042(IEEE802)-RFC894(Ethernet).png)
+![img](./resouces/RFC1042(IEEE802)-RFC894(Ethernet).png)
+
+- SLIP (Serial Line IP, 串行线路IP). 一种在串行线路上对IP数据报进行封装的简单形式
+
+- PPP
+
+![img](./resouces/PPP.png)
 
 
-- 
+## 网络层
+
+- IP(旧版本)
+
+![img](./resouces/IP.png)
