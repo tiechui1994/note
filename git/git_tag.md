@@ -20,7 +20,7 @@ git tag -v <tagname>...
   -d/-l/-v 参数分别对应 **`删除tag`**, **`列出tag`**, 和 **`验证tag`**
     
 - 如果指定了-a, -s或-u <keyid>其中之一, 则该命令会创建标记对象,**并且需要标记消息**. 除非给出
-  -m <msg> 或-F <file>, 否则将启动编辑器以供用户键入标记消息.
+  -m <msg> 或 -F <file>, 否则将启动编辑器以供用户键入标记消息.
 
 - 如果给出-m <msg>或-F <file>, 但是**`缺少-a, -s和-u <keyid>其中之一`**, 则隐式使用**`-a`**参数.
 
@@ -56,4 +56,6 @@ git tag -v <tagname>...
 
 - -F <file>, --file=<file> 从给定文件中获取标记消息. 即:从标准输入中读取消息
 
-## tag相关其他问题
+## tag 推送
+
+git push origin <tag>, 这样在gitlab当中的tag才会出现设置的tag
