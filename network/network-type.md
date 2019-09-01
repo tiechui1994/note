@@ -4,35 +4,54 @@ Bridge, 802.1.q, VLAN device, VETH, TAP
 
 ## Bridge
 
-Bridge(网桥)是Linux上用来做TCP/IP二层协议转换的设备, 与现实世界中的交换机功能类似.
+Bridge是Linux上工作在内核协议栈二层的虚拟交换机. 虽然是软件实现的, 但它与普通的二层物理交换机功能一样. 可以添加若干个网
+络设备(em1,eth0,tap,..)到Bridge上(brctl addif)作为其接口, 添加到Bridge上的设备被设置为只接受二层数据帧并且转发所有
+收到的数据包到Bridge中(bridge内核模块), 在Bridge中会进行一个类似物理交换机的查MAC端口映射表,转发,更新MAC端口映射表这
+样的处理逻辑, 从而数据包可以被转发到另一个接口/丢弃/广播/发往上层协议栈, 由此Bridge实现了数据转发的功能. 如果使用tcpdump
+在Bridge接口上抓包, 是可以抓到桥上所有接口进出的包.
 
-![image](resource/type-bridge.jpg)
+跟物理交换机不同的是, 运行Bridge的是一个Linux主机, Linux主机本身也需要IP地址与其它设备通信. 但被添加到Bridge上的网卡
+是不能配置IP地址的, 他们工作在数据链路层, 对路由系统不可见. 
 
-Bridge设备实例可以和Linux上其他网络设备实例连接, 即attach一个从设备. 当有数据到达时, Bridge会根据报文中的MAC信息进行
-广播, 转发, 丢弃处理.
+不过Bridge本身可以设置IP地址, 可以认为当使用brctl addbr br0新建一个br0网桥时, 系统自动创建了一个同名的隐藏br0网络设备.
+br0一旦设置IP地址, 就意味着br0可以作为路由接口设备, 参与IP层的路由选择(可以使用route -n查看最后一列Iface). 因此只
+有当br0设置IP地址时, Bridge才有可能将数据包发往上层协议栈.
 
-Bridge的功能主要在内核里实现. 
 
-当一个从设备被attach到Bridge上时,想在在内核程序里, netdev_rx_handler_register()被调用, 一个用于接受数据的回调函数
-被注册. 以后**每当这个从设备收到数据时** 都会调用这个函数可以把数据转发到Bridge上.
+- Bridge工作过程
 
-当Bridge接收到此数据后, br_handle_frame()被调用, 进行一个和现实世界中的交换机类似的处理过程: 判断包的类别(广播/单点),
-查询内部MAC端口映射表, 定位目标端口号, 将数据转发到目标端口或丢弃, 自动更新内部MAC端口映射表以自我学习.
+![image](resource/type-bridge.png)
 
----
+介绍: 主机有em1和em2两块网卡, 网桥br0.  用户空间进程app1, app2等是普通网络应用, OpenVPN进程P1, 以及一台或多台kvm
+虚拟机P2(kvm虚拟机实现为主机上的一个qemu-kvm进程, 下文使用qemu-kvm进程表示虚拟机). 
 
-- Bridge VS 二层交换机
+**Bridge处理数据包流程**
 
-数据可以直接发送到Bridge上, 而不是从一个端口接收. 这种状况可以看做Bridge自己有一个MAC可以主动发送报文, 或者说Bridge
-自带了隐藏端口和寄主Linux系统自动连接, Linux上的程序可以直接从这个端口向Bridge上的其他端口发数据. 所以当一个Bridge拥
-有了一个网络设备时, 如bridge0加入了eth0时, 实际上bridge0拥有了两个有效MAC地址, 一个是bridge0, 一个是eth0, 它们直接
-可以通讯.
+br0有N个**TAP**类型的接口(tap0, ..., tapN), TAP设备名称可能不同, 例如:`tap45400fa0-9c`, `vnet*`, 但都是TAP设
+备.  一个"隐藏"的br0接口(可设置IP), 以及物理网卡em2的一个**VLAN**子设备em2.100(简单看做有一个网卡桥接到br0上), 它们
+都是工作在链路层(Link Layer).
 
-比较有趣的是, Bridge可以设置IP地址. 通常来说IP地址是三层协议的内容, 不应该出现在二层设备Bridge上. 但是Linux里Bridge
-是通用网络抽象的一种, 只要是网络设备就能够设定IP地址.
+数据从外部网络(A)发往虚拟机(P2)qume-kvm的过程: 首先数据包从em2(B)物理网卡进入, 之后em2将数据包转发给其VLAN子设备
+em2.100, 经过`Bridge check`(L)发现子设备em2.100属于网桥接口设备, 因此数据包不会发往协议栈上层(T), 而是进入Bridge
+代码处理逻辑, 从而数据包从em2.100接口(C)进入br0, 经过`Bridging decision`(D)发现数据包应当从tap0(E)接口发出, 此时
+数据包离开主机网络协议栈(G), 发往被用户空间进程qemu-kvm打开的字符设备`/dev/net/tun`(N), qemu-kvm进程执行系统调用
+read()从字符设备读取数据. (A->B->L->C->D->E->M->P2)
 
-当一个Bridge拥有IP后, Linux便可以通过路由表或者IP表规则在三层定位Bridge. 此时相当于Linux拥有了另外一个隐藏的虚拟网卡
-和Bridge的隐藏端口相连.
+在这个过程中, 外部网络A发出的数据包是不会也没必要进入主机上层协议栈的, 因为A是与主机网的P2虚拟机通讯, **主机只是起到一个
+网桥转发的作用**
+
+如果是从网卡em1(M)进入主机的数据包, 经过`Bridge Check`(L)后, 发现em1非网桥接口, 则数据包会直接发往(T)协议栈IP层, 从
+而在`Routine decision`环节决定数据包的去向(A->M->T->K)
+
+
+**Bridging decision**
+
+网桥br0收到数据包后, 根据数据包目的MAC的不同, `Bridging decision`环节(D)对数据包的处理有以下几种:
+a)包的目的MAC为Bridge本身的MAC地址(当br0设置有IP地址), 从MAC地址一层来看, 收到发往主机自身的数据包, 交给上层协议栈(D->J)
+b)广播包, 转发到Bridge上所有接口(br0,tap0,tap1,...)
+c)单播且存在MAC端口映射表, 查表直接转发到对应接口(比如D->E)
+d)单播且不存在MAC端口映射表, 泛洪到Bridge连接的所有接口(br0,tap0,tap1,...)
+e)数据包目的地址接口不是网桥接口, 网桥不处理, 交给上层协议栈(D->J)
 
 ---
 
@@ -46,6 +65,9 @@ Bridge的实现当前有一个限制: 当一个设备被attach到Bridge上时, �
 数据流的方向. 对于一个被attach到Bridge上的设备来说, 只有它收到数据时, 此包数据才会被转发到Bridge上, 进而完成查表广播等
 后续操作. 当请求是发送类型时, 数据是不会转发到Bridge上的, 它会寻找下一个发送出口. 用户在配置网络时经常忽略这一点从而造成
 网络故障.
+
+
+
 
 ## VLAN 802.1.q
 
