@@ -33,8 +33,26 @@ postgres=# CREATE DATABASE exampledb OWNER admin;
 postgres=# GRANT ALL PRIVILEGES ON DATABASE exampledb TO admin;
 ```
 
+- 授予admin用户super权限
+```sql
+ALTER ROLE admin WITH SUPERUSER;
+```
+
 - 使用命令 `\q` 退出psql:
 
 ```
 postgres=# \q
+```
+
+
+## DB导出为CSV格式
+
+- 导出csv, 必须使用`SUPERUSER`权限的用户
+```sql
+COPY(select * from torder_stus) to '/tmp/tank.csv' with csv header;
+```
+
+- 导入csv
+```sql
+COPY tanktab from '/tmp/tank.csv' with csv header;
 ```
