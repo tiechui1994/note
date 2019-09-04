@@ -54,5 +54,5 @@ COPY(select * from torder_stus) to '/tmp/tank.csv' with csv header;
 
 - 导入csv
 ```sql
-COPY tanktab from '/tmp/tank.csv' with csv header;
+COPY torder_stus from '/tmp/tank.csv' with csv header;
 ```

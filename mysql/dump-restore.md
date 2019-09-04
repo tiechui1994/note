@@ -95,3 +95,45 @@ mssql, db2, maxdb, no_key_options, no_table_options或no_field_options. 要使�
      
 - --xml, -X
 转储为xml格式
+
+
+# MySQL导入导出excel
+
+## 导出excel
+
+- sql语句, (MySQL Server动需要带设置--secure-file-priv=/path/to/dir/, 或者修改my.cnf在 `[mysqld]` 内加入
+secure_file_priv=/path/to/dir/)
+```sql
+SELECT * INTO outfile '/tmp/xxx.xlsx' FROM t_table WHERE xx;
+```
+
+- shell语句
+```bash
+mysql DATABASE -u USER [-h IP] -p -e "SELECT * FROM t_table WHERE xxx" > /tmp/xxx.xlsx
+```
+
+## 导入excel
+
+- sql语句
+```sql
+LOAD DATA LOCAL infile '/tmp/xxx.xlsx' INTO TABLE t_table FIELDS TERMINATED BY "\t" LINES TERMINATED BY "\n";
+```
+
+可能出现的问题: `(1148, 'The used command is not allowed with this MySQL version')`
+
+解决方法:
+1.确保MySQL Server的local_infile是开启的.
+```sql
+SHOW GLOBAL VARIABLES LIKE '%local_infile';
+```
+
+2.确保MySQL Client的连接的local_infile是开启的.
+```bash
+mysql -u root --local-file -p
+```
+
+或者在my.cnf当中添加如下选项.
+```
+[client]
+loose-local-infile=1
+```
