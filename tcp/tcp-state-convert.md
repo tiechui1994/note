@@ -2,7 +2,7 @@
 
 TCP的状态转换图:
 
-![img](./resouces/tcp-state.jpeg)
+![img](./resouces/tcp-state.jpg)
 
 
 TCP 状态转换的两条主线:
@@ -49,8 +49,8 @@ FIN_WAIT_2 状态有时仍可以用 netstat 看到.
 
 
 **FIN-WAIT-2** - 上面已经解释了这种状态的由来, 实际上 FIN_WAIT_2 状态下的 SOCKET 表示半连接, 即有一方调用close() 
-主动要求关闭连接. 注意: FIN_WAIT_2 是没有超时的 (不像 TIME_WAIT 状态), 这种状态下如果对方不关闭(不配合完成 4 次挥手
-过程), 那这个 FIN_WAIT_2 状态将一直保持到系统重启, 越来越多的 FIN_WAIT_2 状态会导致内核崩溃.
+主动要求关闭连接. 注意: `FIN_WAIT_2 是没有超时的 (不像 TIME_WAIT 状态), 这种状态下如果对方不关闭(不配合完成 4 次挥手
+过程), 那这个 FIN_WAIT_2 状态将一直保持到系统重启, 越来越多的 FIN_WAIT_2 状态会导致内核崩溃.`
 
 
 **CLOSE-WAIT** - 表示正在等待关闭. 当对方 close() 一个 SOCKET 后发送 FIN 报文给自己, 你的系统毫无疑问地将会回应一
