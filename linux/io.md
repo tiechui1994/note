@@ -1,6 +1,6 @@
 # Linux IO模式及 select、poll、epoll详解
 
-## 用户空间 和 内核空间
+## 用户空间与内核空间、内核态与用户态
 
 现在操作系统都是采用虚拟存储器, 那么对32位操作系统而言, 它的寻址空间(虚拟存储空间)为4G(2的32次方).
 
@@ -9,8 +9,20 @@
 为了保证用户进程不能直接操作内核(kernel), 保证内核的安全, 操作系统将虚拟空间划分为两部分, 一部分为内核空间,
 一部分为用户空间.
 
-针对linux操作系统而言, 将最高的1G字节(从虚拟地址0xC0000000到0xFFFFFFFF), 供内核使用, 称为内核空间,
-而将较低的3G字节(从虚拟地址0x00000000到0xBFFFFFFF), 供各个进程使用, 称为用户空间.
+- 将最高的1G字节(从虚拟地址0xC0000000到0xFFFFFFFF), 供内核使用, 称为内核空间,
+
+- 将较低的3G字节(从虚拟地址0x00000000到0xBFFFFFFF), 供各个进程使用, 称为用户空间.
+
+每个进程都可以通过系统调用进入内核, 因此, Linux内核由系统内的所有进程共享. 于是, 从具体进程的角度来看, 每个进程
+可以拥有4GB的虚拟空间.
+
+- 当一个任务(进程)执行系统调用而陷入内核代码中执行时, 称进程处于内核运行态(内核态). 此时处理器处于特权级最高的(0级)
+内核代码中执行. 当进程处于内核态时, 执行的内核代码会使用当前进程的内核栈, 每个进程都有自己的内核栈.
+
+- 当进程在执行用户自己的代码时, 则称其处于用户运行态(用户态). 此时处理器在特权级最低的(3级别)用户代码中运行. 当正在
+执行用户进程而突然被中断程序中断时, 此时用户程序也可以象征性地称为处于进程的内核态. 因为中断处理程序将使用当前进程的内
+核栈.
+
 
 ## 文件描述符fd
 
@@ -130,14 +142,127 @@ IO multiplexing 相对 blocking IO并没有太大的不同, 事实上, 还更差
 Linux提供了AIO库函数实现异步, 但是用的很少. 目前有很多开源的异步IO库, 例如libevent, libev, libuv.
 
 
+**blocking和non-blocking的区别**
+
+调用blocking IO会一直block住对应的进程直到操作完成, 而non-blocking IO在kernel还准备数据的情况下会立刻返回.
+
+
+**synchronous IO和asynchronous IO的区别**
+
+POSIX的定义:
+
+- A synchronous I/O operation causes the requesting process to be blocked until that I/O operation 
+completes;
+
+- An asynchronous I/O operation does not cause the requesting process to be blocked;
 
 
 
+### select
 
 
+```
+int select (
+    int n, 
+    fd_set *readfds, 
+    fd_set *writefds, 
+    fd_set *exceptfds, 
+    struct timeval *timeout
+);
+```
+
+select 函数监视的 fd 分3类, 分别是writefds, readfds和exceptfds. 调用后select函数会阻塞, 直到有fd就绪(有数据
+"可读", "可写",或者有except), 或者超时(timeout指定等待时间, 如果立即返回设为null即可), 函数返回. 当select函数返
+回后, 可以通过遍历fdset, 来找到就绪的fd.
+
+select 目前几乎在所有的平台上支持, 其良好跨平台支持也是它的一个优点. select的一个最大的缺陷就是单个进程对打开的fd是有
+一定限制的, 它由FD_SETSIZE限制, 默认值是1024, 如果修改的话, 就需要重新编译内核, 不过这会带来网络效率的下降.
+
+select和poll另一个缺陷就是随着fd数目的增加, 可能只有很少一部分socket是活跃的, 但是select/poll每次调用时都会线性扫
+描全部的集合, 导致效率呈现线性的下降.
+
+### poll
+
+```
+int poll (
+    struct pollfd *fds, 
+    unsigned int nfds, 
+    int timeout
+);
 
 
+struct pollfd {
+    int fd;        /* file descriptor */
+    short events;  /* requested events to watch */
+    short revents; /* returned events witnessed */
+};
+```
 
+poll本质上和select没有区别, 它将用户传入的数组拷贝到内核空间, 然后查询每个fd对应的设备状态, 如果设备就绪则在设备
+等待队列中加入一项并继续遍历, 如果遍历完所有fd后没有发现就绪设备, 则挂起当前进程, 直到设备就绪或者主动超时, 被唤醒
+后它又要再次遍历fd. 这个过程经历了多次无谓的遍历.
+
+它没有最大连接数的限制, 原因是它是基于链表来存储的, 但是同样以下两个缺点:
+
+- 大量的fd的数组被整体复制于用户态和内核地址空间之间;
+
+- poll还有一个特点是[水平触发], 如果报告了fd后, 没有被处理, 那么下次poll时会再次报告该fd; fd增加时, 线性扫描导致
+性能下降.
+
+
+### epoll
+
+```
+int epoll_create(int size); // 创建一个epoll的句柄, size用来告诉内核这个监听的数目一共有多大.
+
+int epoll_ctl(
+    int epfd, 
+    int op, 
+    int fd, 
+    struct epoll_event *event
+);
+
+int epoll_wait(
+    int epfd, 
+    struct epoll_event *events, 
+    int maxevents, 
+    int timeout
+);
+```
+
+1.int epoll_create(int size);
+创建一个epoll的句柄, size用来告诉内核这个监听的数目一共有多大, 这个参数不同于select()中的第一个参数, 
+给出最大监听的fd+1的值, 参数size并不是限制了epoll所能监听的描述符最大个数, 只是对内核初始分配内部数据结构的一个建议.
+
+当创建好epoll句柄后, 它就会占用一个fd值, 在linux下如果查看/proc/进程id/fd/, 是能够看到这个fd的, 所以在使用完epoll
+后, 必须调用close()关闭, 否则可能导致fd被耗尽.
+
+2.int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+函数是对指定描述符fd执行op操作.
+
+- epfd: 是epoll_create()的返回值.
+- op: 表示op操作, 用三个宏来表示: 添加EPOLL_CTL_ADD, 删除EPOLL_CTL_DEL, 修改EPOLL_CTL_MOD. 分别添加, 删除和
+修改对fd的监听事件.
+- fd: 是需要监听的fd(文件描述符)
+- epoll_event: 是告诉内核需要监听什么事, struct epoll_event结构如下:
+
+```
+struct epoll_event {
+  __uint32_t events;  /* Epoll events */
+  epoll_data_t data;  /* User data variable */
+};
+
+// events可以是以下几个宏的集合:
+EPOLLIN : 表示对应的文件描述符可以读(包括对端SOCKET正常关闭);
+EPOLLOUT: 表示对应的文件描述符可以写；
+EPOLLPRI: 表示对应的文件描述符有紧急的数据可读(这里应该表示有带外数据到来);
+EPOLLERR: 表示对应的文件描述符发生错误;
+EPOLLHUP: 表示对应的文件描述符被挂断;
+
+EPOLLET: 将EPOLL设为边缘触发(Edge Triggered)模式, 这是相对于水平触发(Level Triggered)来说的.
+EPOLLONESHOT: 只监听一次事件, 当监听完这次事件之后, 如果还需要继续监听这个socket的话, 需要再次把这个socket加入到
+EPOLL队列里.
+```
 
 
 
