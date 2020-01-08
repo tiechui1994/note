@@ -238,11 +238,10 @@ message VarintMsg {
     uint64 argUI64 = 4;
     sint32 argSI32 = 5;
     sint64 argSI64 = 6;
-    repeated bool argBool = 7;
-    AuctionType argEnum = 8;
 }
 ```
 
+code:
 ```
 var varintMsg = &pb.VarintMsg{
     ArgI32:  0x41,
@@ -335,25 +334,12 @@ sint32 argSI32 = 5; // **sint32 和 sint64 使用了Zigzag算法(无论正数或
 还原varint编码
 00000000 1100111 = 0xc7 = 199
 
-7.第7个字段
-
-repeated bool argBool = 7; // **repeated值表示: 元素类型|元素个数, 元素的值**
-
-3a 02 01 00
-
-字节3a表示: 7<<3 | 2 = 58 = 0x3a
-
-字节02 01 00
-
-字节02元素的类型和元素的个数: 0|2 = 2 = 0x02
-字节01: 表示true
-字节00: 表示false
-
 
 ---
 
 
 bit64:
+
 
 ```proto
 syntax="proto3";
@@ -365,6 +351,7 @@ message Bit64 {
 }
 ```
 
+code:
 ```
 var bit64 = &pb.Bit64{
     ArgFixed64:  0x123456,
@@ -414,95 +401,77 @@ double argDouble = 3;
 
 ---
 
-其他类型:
+
+repeated类型解析:
 
 ```proto
-syntax="proto3";
+message Simple {
+    int32 argI32 = 1;
+    uint32 argUI32 = 2;
+    bool argBool = 3;
+}
 
-message LenPayload {
-    repeated string argStrList = 1;
-    map<string, int32> argMap = 2;
-    string argStr = 3;
-    bytes argBytes = 4;
-    VarintMsg argVarintMsg = 5;
-    Bit64 argBit64 = 6;
-    Bit32 argBit32 = 7;
+message Repeat {
+    repeated bool argBoolList = 1;
+    repeated int32 argI32List = 2;
+    repeated uint32 argUI32List = 3;
+    repeated sint32 argSI32List = 4;
+    repeated string argStrList = 5;
+    repeated bytes argByList = 6;
+    repeated Simple argSimple = 7;
 }
 ```
 
+code:
 ```
-var payload = &pb.LenPayload{
-    ArgStrList:   []string{"String1.", "String2."},
-    ArgMap:       map[string]int32{"A": 1, "B": 2},
-    ArgStr:       "Hello",
-    ArgBytes:     []byte("Hello"),
-    ArgVarintMsg: varintMsg,
-    ArgBit64:     bit64,
-    ArgBit32:     bit32,
+var bit32 = &pb.Bit32{
+    ArgFixed32:  0x1234,
+    ArgSFixed32: -10,
+    ArgFloat:    3.1415,
+}
+
+var repeat = &pb.Repeat{
+    ArgBoolList: []bool{true, false},
+    ArgI32List:  []int32{0x0108, 0x02},
+    ArgUI32List: []uint32{0x01, 0x0201},
+    ArgSI32List: []int32{0x0106, 0x02},
+    ArgStrList:  []string{"AA", "BB", "ABC", "BCD"},
+    ArgByList:   [][]byte{[]byte("Hello"), []byte("ABCD")},
+    ArgSimple: []*pb.Simple{
+        {
+            ArgI32:  0x00,
+            ArgUI32: 0x00,
+            ArgBool: true,
+        },
+        {
+            ArgI32:  0x0101,
+            ArgUI32: 0x0202,
+            ArgBool: true,
+        },
+    },
 }
 ```
 
 data: 
 ```
-00000000  0a 08 53 74 72 69 6e 67  31 2e 0a 08 53 74 72 69  |..String1...Stri|
-00000010  6e 67 32 2e 12 05 0a 01  41 10 01 12 05 0a 01 42  |ng2.....A......B|
-00000020  10 02 1a 05 48 65 6c 6c  6f 22 05 48 65 6c 6c 6f  |....Hello".Hello|
-00000030  2a 1e 08 41 10 f8 ac d1  91 01 18 91 c4 cc 01 20  |*..A........... |
-00000040  f7 90 e6 04 28 c7 01 30  8f 03 3a 02 01 00 40 01  |....(..0..:...@.|
-00000050  32 1b 09 56 34 12 00 00  00 00 00 11 9c ff ff ff  |2..V4...........|
-00000060  ff ff ff ff 19 4a d8 12  4d fb 21 09 40 3a 0f 0d  |.....J..M.!.@:..|
-00000070  34 12 00 00 15 f6 ff ff  ff 1d 56 0e 49 40        |4.........V.I@|
+00000000  0a 02 01 00 12 03 88 02  02 1a 03 01 81 04 22 03  |..............".|
+00000010  8c 04 04 2a 02 41 41 2a  02 42 42 2a 03 41 42 43  |...*.AA*.BB*.ABC|
+00000020  2a 03 42 43 44 32 05 48  65 6c 6c 6f 32 04 41 42  |*.BCD2.Hello2.AB|
+00000030  43 44 3a 02 18 01 3a 08  08 81 02 10 82 04 18 01  |CD:...:.........|
 ```
 
-1.第一个字段
+> repeated bool, int32, uint32, sint32  编码: 编号+类型 数组字节长度 值1,值2
 
-repeated string argStrList = 1; 
+第1个字段: 0a 02 01 00
+第2个字段: 12 03 88 02 02
+第3个字段: 1a 03 01 81 04
+第4个字段: 22 03 8c 04 04
 
-字节 0a 表示类型和编号: 1<<3|2 = 10 = 0x0a
-字节 08 表示字符串长度: 8
-字节 53 74 72 69 6e 67 31 2e 表示字符串 "String1."
+> repeated string,bytes  编码: 编号+类型 字符串长度 字符串值, ...
 
-字节 0a 表示类型和编号: 1<<3|2 = 10 = 0x0a
-字节 08 表示字符串长度: 8
-字节 53 74 72 69 6e 67 32 2e 表示字符串 "String2."
+第5个字段: 2a 02 41 41 2a 02 42 42 2a 03 41 42 43 2a 03 42 43 44
+第6个字段: 32 05 48 65 6c 6c 6f 32 04 41 42 43 44
 
-> repeated string表示
+> repeated Message  编码: 编号+类型 Message编码字节长度 Message编码, ...
 
-2.第二个字段
-
-map<string, int32> argMap = 2;
-
-```
-map<key, value> m = 1;
-
-message M {
-    key  k = 1;
-    value v = 2;
-} 
-repeated M m = 1;
-```
-
-12 05
-
-字节 12 表示类型和编号: 2<<3|2 = 0x12
-字节 05 表示         
-
-
-0a 01 41
-字节 0a 表示类型和编号: 1<<3|2 = 0x0a
-字节 01 表示字符串长度: 1
-字节 41 表示字符串: "A"
-
-10 01 
-字节 10 表示类型和编号: 2<<3|0 = 0x10
-字节 01 表示值: 1
-
-
-0a 01 42
-字节 0a 表示类型和编号: 1<<3|2 = 0x0a
-字节 01 表示字符串长度: 1
-字节 42 表示字符串: "B"
-
-10 02
-字节 10 表示类型和编号: 2<<3|0 = 0x10
-字节 02 表示值: 2
+第7个字段: 3a 07 08 81 02 10 02 18 01 3a 06 08 01 10 02 18 01
