@@ -37,7 +37,9 @@
 - 必须有一个0值, 可以使用这个0值作为默认值
 - 零值必须为第一个元素, 为了兼容proto2语义, 枚举值的第一个值总是默认值
 - 可以通过将不同的枚举常量指定为相同的值(需要将allow_alias设置为true).
-```
+```proto
+syntax="proto3";
+
 enum EnumAllowAlias {
     option allow_alias = true;
     UNKNOWN = 0;
@@ -51,7 +53,9 @@ enum EnumAllowAlias {
 
 > 可以在一个消息定义的内部或外部定义枚举 -- 这些枚举可以在.proto文件中的任何消息定义里重用.
 
-```
+```proto
+syntax="proto3";
+
 message Arg {
     int32 argI32 = 1;
     enum Level {
@@ -105,7 +109,8 @@ Any消息类型允许在没有指定它们的.proto的情况下使用消息作�
 
 为了使用Any类型,需要导入`import google/protobuf/any.proto`
 
-```
+```proto
+syntax="proto3";
 import "google/protobuf/any.proto";
 
 message ErrorStatus {
@@ -125,6 +130,8 @@ oneof字段就像可选字段, 除了它们会共享内存, 至多一个字段�
 清除其他手段.
 
 ```proto
+syntax="proto3";
+
 message SampleMessage {
     oneof One {
         string name = 4;
@@ -171,6 +178,7 @@ reserved可以用来指明此message不使用某些字段, 也就是忽略这些
 
 ```proto
 syntax = "proto3";
+
 message AllNormalypes {
     // 忽略编号2和4,5,6
     reserved 2, 4 to 6;
@@ -405,6 +413,8 @@ double argDouble = 3;
 repeated类型解析:
 
 ```proto
+syntax = "proto3";
+
 message Simple {
     int32 argI32 = 1;
     uint32 argUI32 = 2;
@@ -486,7 +496,9 @@ data:
 
 map:
 
-```
+```proto
+syntax = "proto3";
+
 message Map {
     map<int32, int32> argII = 1;
     map<uint32, uint32> argUI = 2;
