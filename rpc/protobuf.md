@@ -202,7 +202,7 @@ message AllNormalypes {
 
 protobuf协议:
 
-[!image](images/protobuf.png)
+![image](images/protobuf.png)
 
 PB以 "1~5个字节"的编号和类型开头, 格式: 编号<<3 | 类型
 
@@ -462,15 +462,19 @@ data:
 
 > repeated bool, int32, uint32, sint32  编码: 编号+类型 数组字节长度 值1,值2
 
+```
 第1个字段: 0a 02 01 00
 第2个字段: 12 03 88 02 02
 第3个字段: 1a 03 01 81 04
 第4个字段: 22 03 8c 04 04
+```
 
 > repeated string,bytes  编码: 编号+类型 (字符串长度+字符串值), ...
 
+```
 第5个字段: 2a 02 41 41 2a 02 42 42 2a 03 41 42 43 2a 03 42 43 44
 第6个字段: 32 05 48 65 6c 6c 6f 32 04 41 42 43 44
+```
 
 > repeated Message  编码: 编号+类型 Message编码字节长度 Message编码, ...
 
@@ -514,21 +518,35 @@ data:
 > map<key, value> argM  => 类型(repeated)+编号 字节长度 key+编号1 key值 value+编号2 value值, ....
 
 第1个字段:
+```
 类型: map<int32, int32> argII = 1;
 值: map[int32]int32{0x01: 0x012, 0x0201: 0x02}
+
 0a 04 08 01 10 12 0a 05 08 81 04 10 02 
+```
 
 第2个字段:
+```
 类型: map<uint32, uint32> argUI = 2;
 值: map[uint32]uint32{0x01: 0x01, 0x0201: 0x05}
+
 12 04 08 01 10 01 12 05 08 81 04 10 05
+```
 
 第3个字段:
+```
 类型: map<string, string> argSS = 3;
 值: map[string]string{"AA": "BB", "ABC": "XY", "B": "HV", "WX": "ABC"}
+
 1a 08 0a 02 41 41 12 02 42 42 1a 09 0a 03 41 42 43 12 02 58 59 1a 07 0a 01 42 12 02 48 56 1a 09 0a 02 57 58 12 03 41 42 43 
+```
+
+
 
 第4个字段:
+```
 类型: map<string, uint32> argSU = 4;
 值: map[string]uint32{"A": 0x01, "B": 0x0102, "EC": 0x012}
+
 22 06 0a 02 45 43 10 12 22 05 0a 01 41 10 01 22 06 0a 01 42 10 82 02
+```
