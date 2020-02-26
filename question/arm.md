@@ -58,3 +58,20 @@ export CXX=arm-linux-gnueabihf-g++
 
 > CC是C++编译器, 默认是g++, 在amd64上面针对arm32可以使用 arm-linux-gnueabihf-g++, 针对arm64可以使用aarch64-linux-gnu-g++, 进行交叉编译
 
+
+GOOS和GOARCH支持列表
+
+
+| GOOS - Target Operating System | GOARCH - Target Platform |
+| ------------------------------ | ------------------------ |
+| android | arm   |
+| darwin  | 386   |
+| darwin  |	amd64 |
+| darwin  |	arm   |
+| darwin  |	arm64 |
+| linux	  | 386   |
+| linux	  | amd64 |
+| linux	  | arm   |
+| linux	  | arm64 |
+| windows |	386   |
+| windows |	amd64 |
