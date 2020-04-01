@@ -151,14 +151,44 @@ server {
     server_name www.backend.com;
     
     location / {
-        index index.html, index.htm;
-        proxy_pass    http://www.backend.com:8080; # 反向代理
-        proxy_cookie  www.backend.com www.frontend.com; # 修改cookie里的域名
-        
         add_header Access-Control-Allow-Origin "http://www.backend.com,http://www.frontend.com"; #跨域的源
+        add_header Access-Control-Allow-Origin "$http_origin";
         add_header Access-Control-Allow-Credentials "true"; # 跨域的cookie
         add_header Access-Control-Allow-Methods "POST, GET, PUT, OPTIONS, DELETE"; # 跨域的方法
-        add_header Access-Control-Allow-Headers "Origin, Authorization"; # 跨域的Header
+        add_header Access-Control-Allow-Headers "Origin, Authorization, Content-Type"; # 跨域的Header
+        
+        if ($request_method = "OPTIONS") {
+            return 200;
+        }
+        
+        proxy_cookie  www.backend.com www.frontend.com; # 修改cookie里的域名
+        proxy_pass    http://www.backend.com:8080; # 反向代理
     }
+}
+```
+
+前端js代码:
+```ecmascript 6
+request = (uri='', method='POST', data={}) => {
+    const url = 'http://api.com'+uri;
+    const config = {
+        credentials: "include", // 携带凭证依据. 同源 same-origin
+        method:method, // 'GET', 'HEAD', 'PUT', 'DELETE'
+        body: JSON.stringify({}),  // 只有POST, PUT才有
+        mod: 'cors', // 'cors', 'no-cors', 跨域依据
+        header:{
+            "Content-Type": "application/json"
+        }
+    }; 
+    const response = fetch(url, config);
+    return response.json();
+};
+
+Promise.all([request('/api/method','POST', {aa:100})])
+    .then(data => {}).catch( err => {})
+
+f = async () => {
+    const data = await request('/api/method','POST', {aa:100})
+    //...
 }
 ```

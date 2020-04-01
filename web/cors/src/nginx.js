@@ -1,4 +1,4 @@
-let fs = require("fs");
+const fs = require("fs");
 const CONF = "/opt/local/nginx/conf/conf.d";
 const TYPE = {
     '1': 'backend_simple.conf',
@@ -8,7 +8,7 @@ const TYPE = {
 
 function setScript(request, response) {
     console.log(request.query, request.query['type']);
-    let data = fs.readFileSync(__dirname + "/" + TYPE[request.query['type']]);
+    const data = fs.readFileSync(__dirname + "/" + TYPE[request.query['type']]);
 
     fs.writeFile(CONF + "/backend.conf", data, null, function (err) {
         response.writeHead(200, {
@@ -31,7 +31,7 @@ function setScript(request, response) {
 }
 
 function getScript(request, response) {
-    let data = fs.readFileSync(CONF + "/backend.conf");
+    const data = fs.readFileSync(CONF + "/backend.conf");
     console.log(request.url, data.toString());
     response.writeHead(200, {
         "content-type": "application/json"

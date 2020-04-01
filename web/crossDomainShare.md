@@ -46,21 +46,16 @@
     - POST
     - HEAD
 
-- `对CORS安全的首部字段集合`, 只是改动了以下首部字段其中的0个或者多个. 对于除了以下首部字段之外的首部字段没有做任何修改, 
+- `对CORS安全的首部字段集合`, 仅允许自定义下列请求头:
     - Accept
     - Accept-Language
     - Content-Language
-    - Content-Type (**)
+    - Content-Type 的值为 `text/plain`, `multipart/form-data` 或 `application/x-www-form-urlencoded`
     - DPR
     - Downlink
     - Save-Data
     - Width
     - Viewport-Width
-
-- Content-Type 的值仅限于下列三者之一:
-    - text/plain
-    - multipart/form-data
-    - application/x-www-form-urlencoded
 
 - 请求中任意 XMLHttpRequestUpload 对象没有注册任何事件监听器; XMLHttpRequestUpload 对象
 可以使用XMLHttpRequest.upload属性访问. (XMLHttpRequestUpload 用来表示上传的进度, 这个对
@@ -68,7 +63,26 @@
 
 - 请求中没有使用 ReadableStream 对象.
 
-### 预检请求
+
+> 简单请求跨域, 服务器的响应头设置为 `Access-Control-Allow-Origin: <origin> | *` 即可.
+
+- 简单请求跨域的响应头, 只能是"简单响应头"
+    - Cache-Control
+    - Content-Language
+    - Content-Type
+    - Expires
+    - Last-Modified
+    - Pragma
+
+> 任何其他响应头都是禁止的. 注意: `没有 Content-Length`
+
+> 要允许js访问任何其他响应头, 服务器必须在响应头中设置 `Access-Control-Expose-Headers:Content-Length`
+    
+
+---
+
+
+### 预检请求(非简单请求)
 
 "需要预检请求" 要求必须首先使用 `OPTIONS` 方法发起一个预检请求到服务器, 以获知服务器是否允许该
 实际请求. "预检请求", 可以避免跨域请求对服务器的用户数据产生未预期的影响.
@@ -83,25 +97,49 @@
     - TRACE
     - PATCH
 
-- 人为设置了 `对CORS安全的首部字段集合` 之外的其他首部字段. 该集合是:
+- 人为设置了 `对CORS安全的首部字段集合之外` 的其他首部字段. 该集合是:
     - Accept
     - Accept-Language
     - Content-Language
-    - Content-Type (**)
+    - Content-Type 的值不是 `text/plain`, `multipart/form-data` 或 `application/x-www-form-urlencoded`
     - DPR
     - Downlink
     - Save-Data
     - Width
     - Viewport-Width
 
-- Content-Type 的值不属于下列之一:
-    - text/plain
-    - multipart/form-data
-    - application/x-www-form-urlencoded
-
 - 请求中任意 XMLHttpRequestUpload 对象注册了事件监听器
 
 - 请求中使用了 ReadableStream 对象.
+
+
+> 简单请求跨域, 服务器的响应头必须设置如下参数:
+
+> `Access-Control-Allow-Origin: '<origin> | *'` # 必须返回
+
+> `Access-Control-Request-Methods: 'POST,GET,HEAD'` # OPTIONS请求必须返回
+
+> `Access-Control-Request-Headers: 'Authorization,Content-Type'` # OPTIONS请求必须返回
+
+
+---
+
+
+### 凭据(Credentials)
+
+默认情况下, 跨域请求不会携带任何凭据(cookies或者HTTP认证(HTTP authentication))
+
+携带凭证, 需要明确设置相关参数:
+
+- 对于Fetch, 需要添加 credentials: "include" 参数
+
+
+> 在非简单跨域请求响应头的基础上, 增加 `Access-Control-Allow-Credentials: true` 响应头.
+
+> `Access-Control-Allow-Origin: '<origin>`, 必须这样设置.
+
+
+---
 
 
 #### 预检请求 与 重定向
