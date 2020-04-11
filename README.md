@@ -46,6 +46,15 @@
 
 - [mysql InnoDB 锁](mysql/innodb-lock.md)
 
+## PgSQL 
+
+- [table](pgsql/table.md)
+- [user](pgsql/user.md)
+
+## Mongodb 
+
+- [user](mongodb/user.md)
+
 ## Nginx配置
 
 - [nginx介绍](nginx/nginx.md)
@@ -69,8 +78,12 @@
 
 ## Linux
 
-- [linu启动](linux/init.md)
-- [服务指标](linux/qps.md)
+- [vim](linux/vim.md)
+- [cmake](linux/cmake.md)
+- [io](linux/io.md)
+- [link](linux/link.md)
+- [top](linux/top.md)
+- [xargs](linux/xargs.md)
 
 ## DNS 
 
