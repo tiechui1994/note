@@ -1,6 +1,9 @@
 **[ top ] Interactive Commands: (important) **
 
 - Z,        'Z' colors display (select which mode display in current window;  **Def,  Job, Mem, Usr**)
+
+- w/a    'w'/'a' 切换当前的模式, **Def,  Job, Mem, Usr**
+
 - B,        'B' blod display
 
 - l, t, m    'l' load avg;  't' task/cpu stats; 'm' memory info;
@@ -9,7 +12,7 @@
 
 - f/F        fields: 'f'/'F' add/remove/order/sort;
 
-- R,H        'R': sort; 'H' display threads;
+- R,H        'R': sort;  'H' display threads;
 
 - n          'n': max tasks display; 
 
@@ -22,3 +25,5 @@
 - d/s        set update interval
 
 - W          write configure file 'W'
+
+  ​
