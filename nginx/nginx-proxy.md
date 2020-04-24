@@ -153,6 +153,11 @@ proxy_set_header FIELD VALUE;
 *FIELD*, 要修改的头域.
 *VALUE*, 更改的值, 支持使用文本, 变量或者变量的组合.
 
+```
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forward-For $proxy_add_x_forwarded_for;
+```
 
 ### proxy_pass_header(响应)
 
@@ -288,6 +293,11 @@ location /server/ {
 location /server/ {
     proxy_pass http://proxy/source/;
     proxy_redirect http://proxy/source/ /server/;
+}
+
+location /server/ {
+    proxy_redirect off;
+    proxy_pass http://proxy/source/;
 }
 ```
 

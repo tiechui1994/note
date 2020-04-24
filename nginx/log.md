@@ -34,7 +34,7 @@ access_log /path/to/log.gz combined gzip flush=5m;
 log_format name [escape=default|json|none] string...;
 ```
 
-使用的位置: http
+使用的位置: http server
 
 默认配置: log_format combined "...";
 
@@ -47,6 +47,12 @@ escape参数(1.11.8)允许设置在变量中转义的json或default字符, 默�
 - $request_time, 请求处理时间(以秒为单位); 从客户端读取第一个字节之间经过的时间,并将最后一个字节发送到客户端后的日志写入
 - $status, 响应状态码
 - $time_local, 本地时间
+
+```
+log_format combined '$remote_addr - $remote_user [$time_local] '
+                    '"$request" $status $apache_bytes_sent'
+                    '"$http_referer" "$http_user_agent"';
+```
 
 
 ## error_log

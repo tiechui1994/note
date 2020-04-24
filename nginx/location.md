@@ -45,6 +45,32 @@ location / {
 (location =) > (location 完整路径) > (location ^~ 路径) > (location ~, ~* 路径) > (location 部分路径) > 
 (location /)
 
+
+**命名location**
+
+作用: 重定向
+
+```
+location @named {
+    ...
+}
+```
+
+```
+server {
+    
+    try $uri @tornado;
+    
+    location @tornado {
+        proxy_pass_header Server;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        
+        proxy_pass http://127.0.0.1:1234;
+    }
+}
+```
+
 ---
 
 ## nginx 文件路径
@@ -97,3 +123,85 @@ location ^~ /t/ {
 ```
 
 如果请求的URI是/t/a.html, web服务器返回的/www/root/html/new/a.html文件.
+
+## try_files 
+
+按顺序检查文件是否存在, 返回第一个找到的文件或文件夹(结尾加"/"表示为文件夹), 如果所有的文件或文件夹都找不到,
+会进行一个内部重定向到最后一个参数.
+
+> 只有最后一个参数可以引起一个内部重定向, 之前的参数都只设置内部URI的指向. 最后一个参数是回退URI且必须存在,  
+否则会出现内部500错误. 命名的 location 也可以使用使用在最后一个参数中. 与 rewrite 指令不同, 如果回退 URI
+不是命名的 location 那么 $args 不会自动保留, 如果想保留 $args, 则必须明确声明.
+
+```
+语法: try_files file ... uri;
+     try_files file ... = code
+     
+可以配置的位置: server, location
+```
+
+- try_files 会根据index指令指示的文件,设置内部指向
+
+```
+root /web;
+location / {
+    index index.html;
+    try_files /static/ $uri $uri/ @callbak;
+}
+```
+
+> nginx会依次查找 `/static/index.html`, `/web/$uri` 文件, `/web/$uri` 目录, 前面一旦找到存在的响应的文件,
+则立即返回文件内容. 都找不到内容重定向到 @callbak 处理.
+
+> @callbak 可以是一个文件, 也可以是一个状态码 (=404)
+
+
+- 跳转到后端服务
+
+```
+upstream tornado {
+    server 127.0.0.1:8001;
+}
+
+server {
+    server_name rumenz.com;
+    return 301 $scheme://www.rumenz.com$request_uri; # 301 重定向
+}
+
+server {
+    listen 80;
+    server_name rumenz.com www.rumenz.com;
+    
+    root /web/www;
+    index index.html index.htm;
+    
+    # find $uri or redirect @tornado
+    try_files $uri @tornado; 
+    
+    # define named location
+    location @tornado {
+        proxy_pass_header Server;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Reql-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        
+        proxy_pass http://tornado;
+    }
+}
+```
+
+
+## index
+
+指定默认文档的文件名, 可以在文件名处使用变量. 如果指定多个文件, 按照指定的顺序逐个查找. 可以在列表末尾加上一个绝对路径名的文件.
+
+```
+语法: index file [file...];
+可以配置的位置: http, server, location
+```
+
+默认值: `index index.html`
+
+```
+index  index.$geo.html  index.0.html  /index.html;
+```
