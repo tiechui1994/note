@@ -338,7 +338,7 @@ instance (master) 复制到另一个MySQL instance (slave). 在master 和 slave�
 
 ### 复制过程
 
-[!image](resource/replication.jpg)
+![image](resource/replication.jpg)
 
 
 - 主节点 bin log dump 线程
@@ -436,7 +436,7 @@ RBR:
 这种模式, 主节点不会主动push bin log到从节点, 这样可能导致failover的情况下, 也许从节点没有及时地
 将最新的bin log同步到本地.
 
-[!image](resource/async-mode.jpg)
+![image](resource/async-mode.jpg)
 
 - 半同步模式(semi-mode)
 
@@ -445,7 +445,7 @@ RBR:
 binlog至少传输到了一个从节点上, 不能保证从节点将此事务更新到db中. 性能上会有一定的降低, 响应时间会
 变长.
 
-[!image](resource/semi-mode.jpg)
+![image](resource/semi-mode.jpg)
 
 
 - 全同步模式
