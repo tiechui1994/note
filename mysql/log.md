@@ -366,7 +366,7 @@ SQL线程负责读取relay log中的内容, 解析成具体的操作并执行, �
 次起来之后, 就可以完成数据的同步.
 
 
-[!iamge](resource/replication-process.jpg)
+![image](resource/replication-process.jpg)
 
 - 从节点上的I/O线程连接到主节点, 并请求从指定日志文件的指定位置(或者从最开始的日志)之后的日志内容;
 
