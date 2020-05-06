@@ -20,6 +20,89 @@ MySQL 中有六种日志文件, 分别是: 重做日志(redo log), 回滚日志(
 `物理格式的日志`, 记录的是 `物理数据页面的修改信息`, 其 redo log 是顺序写入redo log file的物理文
 件中去的.
 
+redo log包含两部分:
+一是内存中的日志缓冲(redo log buffer), 该部分日志是易失性的; 
+二是磁盘上的重做日志文件(redo log file), 该部分日志是持久的.
+
+在概念上, InnoDB 通过 `force log at commit` 机制实现事务的持久性, 即在事务提交的时候, 必须先将事
+务的所有事务日志写入到磁盘上的 redo log file 和 undo log file中进行持久化.
+
+为了确保每次日志都能写入到事务日志文件中, 在每次将 log buffer的日志写入到日志文件的过程中都会调用一次
+fsync操作. 因为MySQL工作在用户空间, MySQL的log buffer处于用户空间的内存中. 要写入到磁盘上的log file
+(redo: ib_logfileN文件, undo: ibdataN 或 .ibd文件) 当中, 中间还要经过操作系统内核空间os buffer,
+调用 fsync 的作用就是将 OS buffer中的日志刷到磁盘的log file中.
+
+![image](resource/innodb_log.png)
+
+
+- 日志块 (log block)
+
+InnoDB 存储引擎当中, redo log 以块为单位进行存储的, 每个块占 512 字节, 这称为redo log bolck. 所以不管
+是`log buffer`中, `os buffer`中 以及 `redo log file on disk`中, 都是以这样512字节的块存储的.
+
+每个 `redo log block` 由3部分组成: **日志块头, 日志块尾, 日志主体**. 其中日志块头占用12字节, 日志块尾
+占用4字节, 因此日志主体只有496字节.
+
+
+由于redo log记录的是数据页的变化, 当一个数据页产生的变化需要使用超过496字节redo log来记录, 那么记忆会使用
+多个redo log block来记录数据页的变化.
+
+日志块头:
+```
+log_block_hdr_no: (4字节), 该日志块在redo log buffer中的位置ID
+
+log_block_hdr_data_len: (2字节), 该log block中已经记录的log大小. 写满该log block时为0x200, 表示
+512字节.
+
+log_block_first_rec_group: (2字节) 表示该log block中作为第一个新的mtr开始log record的偏移量. 如果
+一个mtr日志横跨多个log block时, 只设置最后一个 log block.
+
+log_block_checkpoint_no: (4字节) 写入检查点信息的位置
+```
+关于 log_block_first_rec_group, 因为有时候一个数据页产生的日志量超出一个日志块, 那么需要用多个日志块来
+记录该页的相关日志. 例如, 某一个数据页产生552字节的日志量, 需要两个日志块, 第一个日志块占用492字节, 第二个
+日志块占用60字节. 对于第二个日志块来说, 它的第一个log开始的位置就是73字节 (60+12). 如果该部分值和 
+log_block_hdr_data_len 相等, 则说明该log block中没有新开始的日志块, 即表示该日志块延续了前一个日志块.
+
+
+日志块尾:
+```
+log_block_checksum, 该log block计算出的校验值
+```
+
+- 日志文件结构
+
+每个日志文件组的第一个文件的前2048字节是存放的头文件信息. 
+
+![image](resource/redo_log_file.jpg)
+
+日志文件头共占用4个OS_FILE_LOG_BLOCK_SIZE(512字节)的大小. 
+
+```
+LOG_GROUP_ID, (4字节) 该log文件所属的日志组
+LOG_FILE_START_LSN, (8字节), 该log文件记录的开始日志的lsn
+LOG_FILE_WAS_CREATED_BY_HOT_BACKUP, (32字节), 备份程序所占用的字节数
+
+LOG_CHECKPOINT_1/LOG_CHECKPOINT_2, (512字节) 两个记录InnoDB checkpoint信息的字段, 分别从文件头的第二个
+和第四个 log block 开启记录. 只使用日志文件组的第一个日志文件
+```
+
+- redo log的格式
+
+因为InnoDB存储引擎存储数据的单元是页, 所以redo log也是基于页的格式记录的. 默认情况下, InnoDB的页大小是16KB(
+由innodb_page_size设置) 一个页内可以存储非常多的log block(512字节), 而log block中记录的又是数据页的变化.
+
+其中 log block 中的 496 字节部分是log body, 该body的格式分为4部分:
+
+```
+redo_log_type: (1字节), 表示redo log的日志类型
+
+space: 表示空间ID, 采用压缩的方式后, 占用空间可能小于4字节
+
+page_no: 页的偏移量, 同样进行压缩过的.
+
+redo_log_body: 表示每个redo log的数据部分, 恢复时调用相应的函数进行解析.
+```
 
 - 产生时间
 
@@ -27,45 +110,57 @@ MySQL 中有六种日志文件, 分别是: 重做日志(redo log), 回滚日志(
 开始写入redo log文件中.
 
 之所以说重做日志是在事务开始之后逐步写入重做日志文件, 而不一定是事务提交才写入重做日志文件, 原因是: 重做
-日志有一个缓存区innodb_log_buffer, 其默认的大小是 8M, InnoDB 存储引擎先将重做日志写入innodb_log_buffer
+日志有一个缓存区innodb_log_buffer, 其默认的大小是 16M, InnoDB 存储引擎先将重做日志写入innodb_log_buffer
 中.
 
-```
-mysql root@127.0.0.1:(none)> show variables like '%log_buffer%';
-+------------------------+----------+
-| Variable_name          | Value    |
-+------------------------+----------+
-| innodb_log_buffer_size | 16777216 |
-+------------------------+----------+
-```
 
-然后通过以下三种方式将 innodb 日志缓存区的日志刷新到磁盘:
+InnoDB redo log 刷盘的规则:
 
-1) Master Thread 每秒执行一次刷新 `innodb_log_buffer` 到重做日志文件
+1) 发出commit动作时. commit发出后是否刷日志由变量 `innodb_flush_log_at_trx_commit` 控制
 
-2) 每个事务提交时会将重做日志刷新到重做日志文件
+2) 每秒刷一次. 这个刷日志的频率由变量 `innodb_flush_log_at_timeout`值决定, 默认是1秒.
 
-3) 当重做日志缓存可用空间少于一半时, 重做日志缓存被刷新到重做日志文件
+3) 当log buffer中已经使用的内存超过一半时.
 
-由此可以看出, 重做日志通过不止一种方式写入到磁盘, 尤其是对第一种方式, Master Thread 定时将 `innodb_log_buffer`
-缓存写入到磁盘. 因此重做日志的写盘, 并不一定随着事务的提交才写入重做日志文件的, 而是随着事务的开始, 逐步
-写入的.
+4) 当有checkpoint时, checkpoint在一定程度上代表了刷到磁盘时日志所处的LSN位置.
 
 
 - 对应的物理文件
 
-默认情况下, 对应的物理文件位于数据库 data 目录下的 ib_logfile1 和 ib_logfile2.
+默认情况下, 对应的物理文件位于数据库 data 目录下的 `ib_logfile1` 和 `ib_logfile2`.
 
 innodb_log_group_home_dir 指定日志文件组所在的路径, 默认是 ./ , 表示在数据库的数据目录下.
 
 innodb_log_files_in_group 指定重做日志文件组中的文件数量, 默认是 2
 
-innodb_log_file_size 重做日志文件的大小
+innodb_log_file_size 重做日志文件的大小, 默认值是 512MB
 
-innodb_log_buffer_size 重做日志文件缓存区 `innodb_log_buffer` 的大小, 默认是 8M
+innodb_log_buffer_size 重做日志文件缓存区 `innodb_log_buffer` 的大小, 默认是 16M
+
+innodb_flush_log_at_trx_commit=1, 指定了 `InnoDB` 在事务提交后的日志写入频率. 
+````
+值设置为 `0`, 每隔1秒log buffer刷到文件系统(os buffer)去, 并且调用文件系统的"flush"操作将缓存刷新到磁
+盘上去. 也就是说一秒前的日志都保存到log buffer, 也就是内存上, 也就是 log buffer 的刷新操作和事务提交操作
+没有关联. 在这种情况下, MySQL性能最好. 如果mysqld进程崩溃, 通常导致最后1s的日志丢失.
+
+值设置为 `1`, 每次事务提交, log buffer 会被写入到文件系统中(os buffer)去, 并且调用文件系统的"flush"操
+作将缓存刷新到磁盘上去. 这个是默认值. 效率最慢. 
+
+值设置为 `2`, 每次事务提交, log buffer 会被写入到文件系统中(os buffer)去, 但是每隔1秒调用文件系统(os buffer)
+的"flush"操作将缓存刷新到磁盘上去. 这时如果mysqld进程崩溃, 由于日志已经写入到系统缓存, 所以并不会丢失数据; 
+在操作系统崩溃的情况下, 通常会导致最后1s的日志丢失. 这里的 "1秒" 是可以使用 `innodb_flush_log_at_timeout`
+来控制时间间隔的
+````
+
+![image](resource/innodb_flush_log_at_trx_commit.png)
+
+innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到磁盘的时间间隔. 默认值是1s
 
 
 ### 回滚日志 (undo log)
+
+
+[文档](http://mysql.taobao.org/monthly/2015/04/01/)
 
 - 作用
 
@@ -94,6 +189,11 @@ MySQL 5.6 以后, undo 表空间可以配置成独立的文件, 但是提前需�
 之后生效且不能改变undo log文件的个数.
 
 MySQL 5.7 之后undo表空间配置参数如下:
+
+innodb_file_per_table=ON, 表示为数据库的每张表使用独立的表空间, 数据库的每个表使用一个单独的 '.ibd'
+文件存储数据和索引. 默认值是ON. 如果是 OFF, 数据库的所有数据和索引都存储在 `ibdata` 文件当中 
+
+> 修改这个系统变量并不能带来性能提升. 
 
 innodb_undo_directory  undo独立表空间的存放目录, 默认是 ./
 
@@ -165,6 +265,8 @@ binlog 的默认保存时间由参数 expire_logs_days 配置, 也就是说对�
 log_bin={OFF|/tmp/binlog}, 开启bin log, 并且设置binlog的路径, 文件格式 binlog.xx
 
 binlog_format={ROW|STATEMENT|MIXED}, bin log的格式. 
+
+```
 ROW: 仅保存记录被修改的细节, 不记录sql语句上下文相关信息. 优点, 清晰的记录下每一行数据的修改细节, 不需要记录上
 下文相关信息, 因此不会发生某些特定情况下的produce, function,trigger的调用无法被正确复制的问题, 任何情况下都
 可以被复制, 且 `能加快从库重放的效率`, 保证从库数据的一致性. 缺点, 由于所有执行的语句在日志中都将以每行记录的修
@@ -175,20 +277,29 @@ STATEMENT: 每一条被修改的数据SQL都会记录在binlog中. 优点, 只�
 一样. 缺点, 为了保证SQL语句能在slave上正确执行, 必须记录上下文信息, 以保证所有语句能在slave得到和master端执行
 时候相同的结果. 主从复制, 存在部分函数(如sleep)以及存储过程在slave上会出现与master不一致的情况.
 
-MIXED:以上两种格式的混合使用
+MIXED:以上两种格式的混合使用.
+```
 
 log_bin_index=/tmp/binlog.index  指定binlog索引文件(保存了当前所有的binlog文件名)的名称               
 
 binlog_cache_size=3M, 指定binlog的缓存大小
 
-max_binlog_cache_size=16M, 指定binlog的最大缓存大小                     
-
 max_binlog_size=12M, 指定单个binlog文件的最大size
 
-sync_binlog={0|N},  0, 表示当事务提交之后, MySQL不做fsync之类的磁盘同步操作, 而让fs自行决定什么时候做
-同步; N, 表示每进行N次事务提交之后, MySQL将进行一次fsync之类的磁盘同步指令将binlog_cache当中的数据强制写
-入到磁盘. 在MySQL中默认的设置是sync_binlog=0, 不强制磁盘刷新, 性能最好, 风险是最大的. 而 sync_binlog=1
+max_binlog_cache_size=16M, 指定binlog的最大缓存大小                     
+
+sync_binlog={0|N}, MySQL的二进制日志(bin log)同步到磁盘的频率.
+```
+值为 `0`, 表示当事务提交之后, MySQL不做fsync之类的磁盘同步操作, 而让fs自行决定什么时候做同步; 
+
+值为 `N`, 表示每进行N次事务提交之后, MySQL将进行一次fsync之类的磁盘同步指令将binlog_cache当中的数据
+强制写入到磁盘. 
+
+在MySQL中默认的设置是 `sync_binlog=0`, 不强制磁盘刷新, 性能最好, 风险是最大的. 而 `sync_binlog=1`
 是最安全但是性能损耗最大的设置.
+
+注: 如果autocommit开启, 每个语句都写一次bin log, 否则每次事务写一次.
+```
 
 
 - 其他
