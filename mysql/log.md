@@ -124,6 +124,39 @@ InnoDB redo log 刷盘的规则:
 
 4) 当有checkpoint时, checkpoint在一定程度上代表了刷到磁盘时日志所处的LSN位置.
 
+[掘金文档](https://juejin.im/entry/5ba0a254e51d450e735e4a1f)
+
+[Segment文档](https://segmentfault.com/a/1190000017888478)
+
+[淘宝文档](http://mysql.taobao.org/monthly/2015/05/01/)
+
+内存中 (buffer pool)未刷到磁盘的数据称为脏数据(dirty data). 由于数据和日志都页的形式存在, 所以脏页
+表示脏数据和脏日志.
+
+在InnoDB中, 数据刷盘的规则只有一个, checkpoint. 但是触发checkpoint的情况却有几种. 不管怎样, checkpoint
+触发后, 会将buffer中数据页和脏日志都刷到磁盘.
+
+InnoDB中的checkpoint分为两种:
+
+a) sharp checkpoint: 在重用redo log文件(例如切换日志文件)的时候,会将所有已记录到redo log中对应的
+脏数据刷到磁盘.
+
+b) fuzzy checkpoint: 一次只刷一小部分的日志到磁盘, 而非将所有脏日志刷盘. 有以下几种情况会触发该检查
+点:
+
+master thread checkpoint: 由master线程控制, 每秒或每10秒刷入一定比例的脏页到磁盘.
+
+flush_lru_list checkpoint: 从MySQL 5.6开始, 可以通过 innodb_page_cleaners 变量指定专门负责
+脏页刷盘的page cleaner线程的个数, 该线程的目的是为了保证lru列表有可用的空闲页.
+
+aysnc/sync flush checkpoint: 同步刷盘还是异步刷盘. 如果有非常多的脏页没刷到磁盘(有比例控制),这个
+时候会选择同步刷到磁盘, 但是很少出现; 如果脏页不是很多, 可用选择异步刷到磁盘, 如果脏页很少, 可用暂时不
+刷脏页到磁盘.
+
+dirty page too much checkpoint: 脏页太多时强制触发检查点. 目的是为了保证缓存有足够的空闲空间. too
+much的比例由变量 innodb_max_dirty_pages_pct 控制, MySQL 5.6 以后默认值是 75, 即当脏页站缓冲池的
+百分之75后, 强制刷一部分脏页到磁盘.
+
 
 - 对应的物理文件
 
@@ -160,7 +193,7 @@ innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到
 ### 回滚日志 (undo log)
 
 
-[文档](http://mysql.taobao.org/monthly/2015/04/01/)
+[淘宝文档](http://mysql.taobao.org/monthly/2015/04/01/)
 
 - 作用
 
