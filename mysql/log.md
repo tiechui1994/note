@@ -1,5 +1,19 @@
 ## MySQL 日志
 
+
+文档:
+
+[后台清理](https://www.cnblogs.com/geaozhang/p/7225340.html)
+
+[掘金文档](https://juejin.im/entry/5ba0a254e51d450e735e4a1f)
+
+[Segment文档](https://segmentfault.com/a/1190000017888478)
+
+[redo log淘宝文档](http://mysql.taobao.org/monthly/2015/05/01/)
+
+[undo log淘宝文档](http://mysql.taobao.org/monthly/2015/04/01/)
+
+
 MySQL 中有六种日志文件, 分别是: 重做日志(redo log), 回滚日志(undo log), 二进制日志(binlog),
 错误日志(errorlog), 慢查询日志(slow log), 一般查询日志(general log), 中继日志(relay log).
 
@@ -124,11 +138,7 @@ InnoDB redo log 刷盘的规则:
 
 4) 当有checkpoint时, checkpoint在一定程度上代表了刷到磁盘时日志所处的LSN位置.
 
-[掘金文档](https://juejin.im/entry/5ba0a254e51d450e735e4a1f)
 
-[Segment文档](https://segmentfault.com/a/1190000017888478)
-
-[淘宝文档](http://mysql.taobao.org/monthly/2015/05/01/)
 
 内存中 (buffer pool)未刷到磁盘的数据称为脏数据(dirty data). 由于数据和日志都页的形式存在, 所以脏页
 表示脏数据和脏日志.
@@ -193,7 +203,6 @@ innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到
 ### 回滚日志 (undo log)
 
 
-[淘宝文档](http://mysql.taobao.org/monthly/2015/04/01/)
 
 - 作用
 
