@@ -37,14 +37,23 @@
 ## MySQL相关
 
 - [mysql的sqlmode](mysql/sqlmode.md)
-- [mysql时间类型详解](mysql/mysql-time.md)
-- [mysql列的信息](mysql/column-info.md)
-- [mysql关键字COLLATE](mysql/collate-str.md)
+- [mysql时间类型详解](mysql/time.md)
+- [mysql列的信息](mysql/column.md)
+- [mysql关键字COLLATE](mysql/collate.md)
 
 - [mysql树结构设计](mysql/tree-design.md)
 - [mysql性能注意点](mysql/performance.md)
 
 - [mysql InnoDB 锁](mysql/innodb-lock.md)
+- [mysql日志](mysql/log.md)
+
+- [variables](mysql/variable.md)
+- [alter](mysql/alter.md)
+- [grant](mysql/grant.md)
+- [function](mysql/function.md)
+- [show](mysql/show.md)
+
+- [时间函数](mysql/time-function.md)
 
 ## PgSQL 
 
