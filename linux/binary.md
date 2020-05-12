@@ -188,10 +188,13 @@ strace -c[dfw] [-I n] [-e expr]... [-O overhead] [-S sortby]
 ```
 
 Output format:
-  -a column      对齐 COLUMN 以打印系统调用结果 (default 40)
-  -k             获取每个系统调用之间的堆栈跟踪(实验性)
+  -a column      在特定列 (默认列是40) 中对齐返回值.
+  
+  -k             在每个系统调用之后 (实验的) 打印被跟踪进程的执行堆栈跟踪. 仅当使用 `libunwind` 构建strace时, 
+                 此选项才可用.
+                 
   -o file        将跟踪输出到 FILE 而不是stderr
-  -s strsize     将打印字符串的长度限制为 strsize 个字符 (默认为32个)
+  -s strsize     指定要打印的最大字符串大小(默认为32). 请注意, 文件名不视为字符串, 并且始终完整打印.
   
   -r             打印相对时间戳
   -t             打印绝对时间戳
@@ -210,22 +213,43 @@ Statistics:
   -S sortby      对系统调用统计信息排序: `time`, `calls`, `name`, `nothing` (default time)
 
 Filtering:
-  -e expr        表达式: `option=[!]all or option=[!]val1[,val2]...`
-     options:    `trace`, `abbrev`, `verbose`, `raw`, `signal`, `read`, `write`, `fault`
+  -e expr        表达式: `option=[!]all or option=[!][?]val1[,[?]val2]...`, 其中 option 是 
+  `trace`, `abbrev`, `verbose`, `raw`, `signal`, `read`, `write`, `fault`, `inject` 之一. 
+  而 val 是 `限定的符号` 或 `数字`. 默认的 `option` 是 `trace`. 使用 `!` 表示区反. 例如, `-e open` 
+  等效于 `-e trace=open`, 表示跟踪 `open` 系统调用. 相反的, `-e trace=!open`, 表示跟踪除了 `open` 
+  之外的系统调用. 如果没有系统调用与提供的条件匹配, 则系统调用条件之前的 `?` 允许运行抑制错误. 除此之外, 
+  特殊值 `all` 和 `none` 没有明显的含义.
+  
+  
+  -e trace=set 仅追踪指定的系统调用集合. 例如, trace=open,close,read,write 表只追踪这四个系统调用. 
+  如果仅监视一部分系统调用, 则在推断 user/kenel 边界的时候要小心. 默认值是 trace=all
+  
+  -e trace=%file, 跟踪所有以文件名作为参数的系统调用. 可以将其视为 `-e trace=open,stat,chmod,unlink,...`
+  的缩写, 这对于查看进程所引用的文件很有用. 此外, 使用缩写将确保不会意外忘记在列表中包括 `lstat` 之类的调
+  用.
+  
+  -e trace=%process
+  -e trace=%network
+  -e trace=%signal
+  -e trace=%ipc
+  -e trace=%desc
+  -e trace=%memory
+  -e trace=%stat
   
   -P path        跟踪对路径的访问
 
 Tracing:
-  -b execve      detach on execve syscall
-  -D             run tracer process as a detached grandchild, not as parent
-  -f             follow forks
-  -ff            follow forks with output into separate files
-  -I interruptible
-     1:          no signals are blocked
-     2:          fatal signals are blocked while decoding syscall (default)
-     3:          fatal signals are always blocked (default if '-o FILE PROG')
-     4:          fatal signals and SIGTSTP (^Z) are always blocked
-                 (useful to make 'strace -o FILE PROG' not stop on ^Z)
+  -b syscall     如果达到指定的系统调用, 请与跟踪的进程分离. 当前, 仅支持 `execve syscall`. 如果要跟踪
+  多线程进程并因此需要 `-f`, 但又不想跟踪其(可能非常复杂的)子级, 则此选项很有用.
+  
+  -D             作为独立的 grandchild 而不是作为示踪 parent 运行跟踪程序进程. 
+  
+  -f             跟踪子进程, 这些子进程是由 `fork, vfork, 和 clone` 系统调用导致当前跟踪的进程创建的. 
+  注意, 如果 `-p PID -f` 是多线程的, 则它将附加进程PID的所有线程, 而不仅限于 `thread_id=PID` 的线程.
+  
+  -ff            如果 `-o filename` 选项有效, 则将每个进程跟踪写入 `filename.pid`, 其中pid是每个进程
+  的数字进程ID. 这与 -c 不兼容, 因为不保留每个进程的计数.
+  
 
 Startup:
   -E var         针对执行的命令, 环境变量var移除
