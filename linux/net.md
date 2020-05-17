@@ -10,17 +10,17 @@ netstat  [--tcp|-t]  [--udp|-u]  [--raw|-w]
          [--numeric|-n] 
          [--symbolic|-N]  [--timers|-o]  
          [--all|-a] [--listening|-l]  [--program|-p]  
-         [--extend|-e[--extend|-e]] [--verbose|-v] [--continuous|-c]
+         [--extend|-e] [--verbose|-v] [--continuous|-c]
 
 
 netstat  {--route|-r}      
          [--numeric|-n]
-         [--extend|-e[--extend|-e]] [--verbose|-v] [--continuous|-c]
+         [--extend|-e] [--verbose|-v] [--continuous|-c]
 
 netstat  {--interfaces|-i}     
          [--numeric|-n]
          [--all|-a] [--program|-p]
-         [--extend|-e[--extend|-e]]  [--verbose|-v]  [--continuous|-c]
+         [--extend|-e]  [--verbose|-v]  [--continuous|-c]
 
 netstat  {--groups|-g} 
          [--numeric|-n]
