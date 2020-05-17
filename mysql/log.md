@@ -169,7 +169,7 @@ much的比例由变量 innodb_max_dirty_pages_pct 控制, MySQL 5.6 以后默认
 百分之75后, 强制刷一部分脏页到磁盘.
 
 
-### 对应的物理文件
+#### 对应的物理文件
 
 默认情况下, 对应的物理文件位于数据库 data 目录下的 `ib_logfile1` 和 `ib_logfile2`.
 
@@ -201,6 +201,24 @@ innodb_flush_log_at_trx_commit=1, 指定了 `InnoDB` 在事务提交后的日志
 innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到磁盘的时间间隔. 默认值是1s
 
 
+#### innodb 的恢复行为
+
+在启动 innodb 的时候, 不管上次是正常关闭还是异常关闭, 总是会进行恢复操作.
+
+因为 redo log 记录的是数据页的物理变化, 因此恢复的时候速度比逻辑日志(二进制日志)要快很多. 而且, innodb 自身
+也做了一定程度的优化, 让恢复速度变得更快.
+
+重启 innodb 时, checkpoint 表示已经完整刷到磁盘上 data page 上的 LSN, 因此恢复时仅需要恢复从 checkpoint
+开始的日志部分. 例如, 当数据库在上一次 checkpoint 的 LSN 是 10000 时宕机, 且事务是已经提交的状态. 启动数据库
+时会检查磁盘中数据页的 LSN, 如果数据页的 LSN 小于日志中的 LSN, 则会从 checkpoint 开始恢复.
+
+还有一种状况, 在宕机前正处于 checkpoint 的刷盘过程, 且数据页的刷盘进度超过了日志页的刷盘进度. 这时候宕机, 数据
+页中记录的 LSN 就会大于日志页中的 LSN, 在重启的恢复过程中检查到这一状况, 这时超过日志进度的部分不会重做, 因为这
+本身就表示已经做过的事情, 无需重做.
+
+事务日志具有幂等性, 所以多次操作得到同一结果的行为在日志中只记录一次.
+
+
 ---
 
 
@@ -208,14 +226,26 @@ innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到
 
 #### 作用
 
-保存了事务发生之前的数据的一个版本, 可以用于事务回滚, 同时可以提供多版本并非控制下的读(MVCC), 即非锁
+保存了事务发生之前的数据的一个版本, 可以用于事务回滚; 同时可以提供多版本并非控制下的读(MVCC), 即非锁
 定读.
 
 
 #### 内容
 
 `逻辑格式的日志`, 在执行undo的时候, 仅仅是将数据从逻辑上恢复至事务之前的状态, 而不是从物理层面上操作
-实现的, 这一点不同于 redo log
+实现的, 这一点不同于 redo log.
+
+> 可以认为当delete一条记录时, undo log中记录一条对应的insert记录, 反之亦然, 当update一条记录时,
+> 它记录一条对应相反的update记录.
+
+当执行 rollback 时, 也就可以从 undo log 中的逻辑记录读取到相应的内容并进行回滚. 
+
+有时候应用到行版本控制的时候, 也是通过 undo log 来实现的: 当读取的某一行被其他事物锁定时, 它可以从
+undo log 中分析出该行记录以前的数据是什么, 从而提供行版本信息, 让用户实现非锁定一致性读取.
+
+undo log 是采用段(segment)的方式来记录的, 每个undo操作在记录的时候占用一个 undo log segment.
+
+另外, undo log 也会产生 redo log, 因为 undo log 也需要实现持久性保护.
 
 
 #### 产生的时间
@@ -239,18 +269,79 @@ innodb_file_per_table=ON, 表示为数据库的每张表使用独立的表空间
 
 > 修改这个系统变量并不能带来性能提升. 
 
-innodb_undo_directory  undo独立表空间的存放目录, 默认是 ./
+innodb_undo_directory 指定单独存放undo表空间的目录, 默认为./ (即datadir), 可以设置相对路径或者绝对
+路径.
+ 
+> 该参数实例初始化之后虽然不可直接改动, 但是可以通过先停库, 修改配置文件, 然后移动undo表空间文件的方式去修
+改该参数;
 
-innodb_undo_logs   回滚段为大小(KB), 默认是128KB
+innodb_undo_tablespaces 指定单独存放的undo表空间个数, 例如如果设置为3, 则undo表空间为undo001, undo002,
+undo003, 每个文件初始大小默认为10M.
 
-innodb_undo_tablespaces 指定undo log文件个数, 默认是0
+> 该参数推荐设置为大于等于3, 原因下文将解释. 该参数实例初始化之后不可改动;
+>
+> 因为 truncate table 表空间时, 该文件处于 inactive 状态, 如果只有一个 undo 表空间, 那么整个系统在此过程
+> 都将处于不可用状态, 为了尽可能降低 truncate 对系统的影响, 建议将该参数最少设置为 3;
 
-innodb_max_undo_log_size 指定undo log文件最大的大小, 默认是1G
+innodb_undo_logs   指定回滚段的个数, 默认是128个. 每个回滚段可同时支持1024个在线事物. 这些回滚段会平均分布到
+各个 undo 表空间中. 
+
+> 该变量可以动态调整, 但是物理上的回滚段不会减少, 只是会控制用到的回滚段的个数.
+>
+> 在 MySQL 5.7 中, 第一个 undo log 永远在系统表空间中, 另外 32 个 undo log 分配给了临时表空间, 即ibtemp1,
+> 至少还有2个undo log, 才能保证 undo 表空间中每个里面至少有1个undo log;
+
+innodb_max_undo_log_size undo表空间文件超过此值即标记为可收缩, 默认是1G, 可在线修改.
+
+innodb_purge_rseg_truncate_frequency, 指定 purge 操作被唤起多少次之后才释放rollback segments. 当undo 
+表空间里面的 rollback segments 被释放时, undo 表空间才会被 truncate. 由此可见, 该参数越小, undo 表空间被
+尝试truncate的频率越高. 建议值是 10, 默认值是 128
+
+innodb_undo_log_truncate, 启用 truncate undo 表空间. MySQL 5.7 版本才出现的参数.
+
+> [undo log truncate指导文档](http://mysql.taobao.org/monthly/2018/02/09/)
 
 
 如果undo使用共享表空间, 这个共享表空间中不仅仅是存储了undo的信息. 默认的目录是 ./
 
 innodb_data_file_path  文件路径,大小配置, "ibdata1:1G:autoextend"
+
+
+### 存储方式
+
+innodb 引擎对 undo 的管理采用段的方式. rollback segment称为回滚段, 每个回滚段中有 1024 个 undo log
+segment.
+
+MySQL 5.5 可以支持 128 个 rollback segment, 即支持 128 * 1024 个 undo 操作, 还可以通过修改变量
+innodb_undo_logs(MySQL 5.6版本之前变量是 innodb_rollback_segments) 自定义支持多少个 rollback
+segment, 默认值是 128
+
+默认 rollback segment 全部写在一个文件中, 但可以通过设备变量 innodb_undo_tablespaces 平均分配到
+多少个文件中, 该变量的默认值是0, 即全部写入一个表空间文件. 该变量为静态变量, 只能在数据库停止状态下修改,
+如果写入配置文件或启动时带上对应的参数. 但是 innodb 引擎在启动过程中提示, 不建议修改为非0的值.
+
+
+#### delete/update 操作的内部机制
+
+当事物提交的时候, innodb 不会立即删除 undo log, 因为后续还可能用到 undo log, 如隔离级别是 repeatable
+read 时, 事物读取的都是开启事物时的最新提交版本, 只要该事物不结束, 该版本就不能删除, 即 undo log 不能
+删除.
+
+在事物提交的时候, 会将该事物对应的 undo log 放入到删除列表中, 未来通过 purge 线程删除. 并且提交事物,
+还会判断 undo log 分配的页是否可以重用, 如果可以重用, 则会分配给后面来的事物, 避免为每个独立的事物分配
+独立的 undo log 页而浪费存储空间和性能.
+
+undo log 记录delete和update操作的结果:
+
+- delete 操作实际上不会直接删除, 而是将delete对象打上delete flag, 标记为删除, 最终的删除操作是 purge
+线程完成的.
+
+- update 分为两种情况: update 的列是否是主键列
+
+1) 如果不是主键列, 在 undo log 中直接取反记录是如何update的. 即 update 是直接进行的.
+
+2) 如果是主键列, update 分为两部分执行: 先删除该行, 再插入一行目标行.
+
 
 
 #### 其他
