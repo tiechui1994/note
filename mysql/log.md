@@ -1,4 +1,4 @@
-## MySQL 日志
+# MySQL 日志
 
 
 文档:
@@ -21,7 +21,7 @@ MySQL 中有六种日志文件, 分别是: 重做日志(redo log), 回滚日志(
 
 ---
 
-### 重做日志 (redo log)
+## 重做日志 (redo log)
 
 - 作用 
 
@@ -205,7 +205,7 @@ innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到
 ---
 
 
-### 回滚日志 (undo log)
+## 回滚日志 (undo log)
 
 - 作用
 
@@ -268,7 +268,7 @@ undo 是事务开始之前的保存的被修改的数据的一个版本, 产生u
 ---
 
 
-### 二进制日志 (binlog)
+## 二进制日志 (binlog)
 
 - 作用
 
@@ -370,7 +370,7 @@ MySQL通过两阶段提交过程完成事务的一致性的, 即 redo log 和 bi
 ---
 
 
-### 错误日志 (err log)
+## 错误日志 (err log)
 
 错误日志记录着mysqld启动和停止, 以及服务器运行过程中发生的错误和严重的警告的相关信息. 在默认情况下, 系统记录
 错误日志的功能是关闭的, 错误信息被输出标准错误输出.
@@ -384,7 +384,7 @@ log_error=/path/to/error, 配置文件my.cnf
 ---
 
 
-### 一般查询日志 (general log)
+## 一般查询日志 (general log)
 
 记录了服务器接收到每一个 `命令`, 无论这些命令是否正确甚至是否包含语法错误, general log都会将其记录下来, 记录
 的格式为: `{Time, Id, Command, Argument}`
@@ -407,7 +407,7 @@ log_output={FILE|TABLE}, 设置general log的格式, FILE表示记录到文件�
 ---
 
 
-### 慢查询日志(slow log)
+## 慢查询日志(slow log)
 
 MySQL 的慢查询日志是 MySQL 提供的一种日志记录,它用来记录在 MySQL 中 `响应时间` 超过阀值的语句, 具体指运行时间
 超过 `long_query_time`值的SQL, 则会被记录到慢查询日志. 默认值是10s. 默认情况下, 不开启慢查询日志.
@@ -440,7 +440,7 @@ select * from t2; (语句)
 ---
 
 
-### 中继日志 (relay log)
+## 中继日志 (relay log)
 
 与 bin log一样, relay log 由一组编号的 files 和 一个索引文件组成, 这些files包含描述数据库更改的 events,
 索引文件包含所有使用的relay log files的名称.
