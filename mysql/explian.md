@@ -1,5 +1,9 @@
 # EXPLAIN
 
+[文档](https://weikeqin.com/2020/02/05/mysql-explain/)
+
+[文档](https://segmentfault.com/a/1190000012629884)
+
 案例:
 
 ```
@@ -160,5 +164,14 @@ extra 字段表示额外信息
 
 - using temporary, 查询使用临时表, 一般出现于排序, 分组和多表join 的情况, 查询效率不高, 建议优化.
 
+- using where, 列数据是从仅仅使用了索引中的信息而没有读取实际实际的表返回的, 这发生在对表全部请求列都是同一
+个索引部分的时候.
+
+- using join buffer, 该值强调join条件时没有使用索引, 并且需要 join buffer 来存储中间结果. 如果出现了
+这个值, 那么应该注意, 根据查询的具体情况可能需要添加索引来改进性能.
+
+- impossible where, 该值强调 where 语句会导致没有符合条件的行.
+
+- select tables optimized away, 该值意味着仅通过使用索引, 优化器可能仅从聚合函数结果中返回一行.
 
 
