@@ -119,6 +119,8 @@ d-opt    is of the form +keyword[=value], where keyword is:
 nslookup [domain|ip]
 ```
 
+- 解析域名
+
 ```
 $ nslookup www.baidu.com
 Server:		127.0.1.1
@@ -131,6 +133,8 @@ Address: 220.181.38.150
 Name:	www.a.shifen.com
 Address: 220.181.38.149
 ```
+
+- 反向解析
 
 ```
 $ nslookup 1.1.1.1
