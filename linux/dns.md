@@ -73,4 +73,139 @@ baidu.com.		0	IN	A	39.156.69.79
 ;; MSG SIZE  rcvd: 70
 ```
 
+- 格式
+
+```
+dig [domain] [@global-server] [q-class] [q-type] {q-opt}
+              host [@local-server] {local-d-opt}
+             [host [@local-server] {local-d-opt} [...]]
+```
+
+```
+q-class  is one of (in,hs,ch,...) [default: in]
+
+q-type   is one of (a,any,mx,ns,soa,hinfo,axfr,txt,...) [default:a]
+         (Use ixfr=version for type ixfr)
+         
+q-opt    is one of:
+         -4                  (use IPv4 query transport only)
+         -6                  (use IPv6 query transport only)
+         -b address[#port]   (bind to source address/port)
+         -f filename         (batch mode)
+         -i                  (IPv6反向域名解析)
+         -k keyfile          (specify tsig key file)
+         -c class            (specify query class)
+         -p port             (specify port number)
+         -q name             (specify query name)
+         -t type             (specify query type)
+         -x dot-notation     (IPv4反向域名解析)
+
+d-opt    is of the form +keyword[=value], where keyword is:
+         +[no]aaonly         (Set AA flag in query (+[no]aaflag))
+         +[no]all            (Set or clear all display flags)
+         +[no]answer         (Control display of answer section)
+         +[no]authority      (Control display of authority section)
+         +[no]besteffort     (Try to parse even illegal messages)
+         +[no]cl             (Control display of class in records)
+         +[no]cmd            (Control display of command line)
+         +[no]search         (Set whether to use searchlist)
+         +[no]short          (Display nothing except short form of answer)
+         +[no]trace          (Trace delegation down from root [+dnssec])
+```
+
 ### nslookup
+
+```
+nslookup [domain|ip]
+```
+
+```
+$ nslookup www.baidu.com
+Server:		127.0.1.1
+Address:	127.0.1.1#53
+
+Non-authoritative answer:
+www.baidu.com	canonical name = www.a.shifen.com.
+Name:	www.a.shifen.com
+Address: 220.181.38.150
+Name:	www.a.shifen.com
+Address: 220.181.38.149
+```
+
+```
+$ nslookup 1.1.1.1
+Server:		127.0.1.1
+Address:	127.0.1.1#53
+
+Non-authoritative answer:
+1.1.1.1.in-addr.arpa	name = one.one.one.one.
+
+Authoritative answers can be found from:
+```
+
+
+### host
+
+```
+Usage: host [-aCdlriTwv] [-c class] [-N ndots] [-t type] [-W time]
+            [-m flag] hostname [server]
+   
+   -c specifies query class for non-IN data
+   -t specifies the query type
+   -W specifies how long to wait for a reply
+   -m set memory debugging flag (trace|record|usage)
+    
+   -r disables recursive processing
+
+   -v enables verbose output
+   -w specifies to wait forever for a reply
+   -4 use IPv4 query transport only
+   -6 use IPv6 query transport only
+```
+
+
+```
+$ host -v baidu.com
+Trying "baidu.com"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 8240
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;baidu.com.			IN	A
+
+;; ANSWER SECTION:
+baidu.com.		276	IN	A	39.156.69.79
+baidu.com.		276	IN	A	220.181.38.148
+
+Received 59 bytes from 127.0.1.1#53 in 17 ms
+
+
+Trying "baidu.com"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 10408
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;baidu.com.			IN	AAAA
+
+;; AUTHORITY SECTION:
+baidu.com.		276	IN	SOA	dns.baidu.com. sa.baidu.com. 2012142458 300 300 2592000 7200
+
+Received 70 bytes from 127.0.1.1#53 in 15 ms
+
+
+Trying "baidu.com"
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 55457
+;; flags: qr rd ra; QUERY: 1, ANSWER: 5, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;baidu.com.			IN	MX
+
+;; ANSWER SECTION:
+baidu.com.		4675	IN	MX	20 mx1.baidu.com.
+baidu.com.		4675	IN	MX	20 jpmx.baidu.com.
+baidu.com.		4675	IN	MX	20 mx50.baidu.com.
+baidu.com.		4675	IN	MX	10 mx.maillb.baidu.com.
+baidu.com.		4675	IN	MX	15 mx.n.shifen.com.
+
+Received 143 bytes from 127.0.1.1#53 in 17 ms
+```
