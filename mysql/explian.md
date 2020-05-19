@@ -69,14 +69,30 @@ select_type 表示查询的类型, 它的取值有:
 
 ### type
 
+[文档](https://mengkang.net/1124.html)
+
+[文档](https://www.cnblogs.com/zhanjindong/p/3439042.html)
+
 它提供了判断查询是否高效的重要依据. 通过 type 字段, 可以判断此次查询是 `全表扫描` 还是 `索引扫描`等.
 
 type 常有的取值:
 
-- system: 表中只有一条数据. 这个类型是特殊的 const 类型
+#### system
 
-- const: 针对`主键`或`唯一索引`的等值查询扫描, 最多只返回一行数据. const 查询速度非常快, 因为它仅仅
-只读取一次.
+> The table has only one row (= system table). This is a special case of the const 
+> join type.
+
+表中只有一条数据. 这个类型是特殊的 const 类型
+
+#### const
+
+> The table has at most one matching row, which is read at the start of the query. 
+> Because there is only one row, values from the column in this row can be regarded 
+> as constants by the rest of the optimizer. const tables are very fast because they
+> are read only once.
+ 
+
+针对`主键`或`唯一索引`的值查询扫描, 最多只返回一行数据. const 查询速度非常快, 因为它仅仅只读取一次.
 
 ```
 mysql root@localhost:test> explain select * from order_info where id=1\G;
@@ -96,55 +112,63 @@ Extra         | <null>
 ```
 
 
-- eq_ref: 此类型通常出现在多表的 join 查询, 表示对于当前表的每一个结果, 都只能匹配到后表的一行结果. 并且
-查询的比较操作通常是 `=`, 查询效率较高.
+#### eq_ref 
+
+> One row is read from this table for each combination of rows from the previous tables.
+> Other than the system and const types, this is the best possible join type. It is 
+> used when all parts of an index are used by the join and the index is a PRIMARY KEY
+> or UNIQUE NOT NULL index.
+
+只匹配到一行的时候. 除了 `system` 和 `const` 之外, 这是最好的 join 类型了. 当使用 `主键索引` 或 `
+唯一索引` 的时候, 且这个索引的所有组成部分都被用上, 才能是该类型.
+
+> eq_ref can be used for indexed columns that are compared using the = operator. The 
+> comparison value can be a constant or an expression that uses columns from tables 
+> that are read before this table. In the following examples, MySQL can use an eq_ref 
+> join to process ref_table
+
+对已经建立索引列进行 `=` 操作的时候, `eq_ref` 会被使用到. 比较值可以使用一个常量也可以是一个表达式. 
+这个表达式可以是其他的表的行
 
 ```
-mysql root@localhost:test> explain select * from user_info join order_info on user_info.id=order_info.user_id \G;
-***************************[ 1. row ]***************************
-id            | 1
-select_type   | SIMPLE
-table         | order_info
-partitions    | <null>
-type          | index
-possible_keys | user_product_detail_index
-key           | user_product_detail_index
-key_len       | 254
-ref           | <null>
-rows          | 9
-filtered      | 100.0
-Extra         | Using where; Using index
-***************************[ 2. row ]***************************
-id            | 1
-select_type   | SIMPLE
-table         | user_info
-partitions    | <null>
-type          | eq_ref
-possible_keys | PRIMARY
-key           | PRIMARY
-key_len       | 8
-ref           | test.order_info.user_id
-rows          | 1
-filtered      | 100.0
-Extra         | <null>
+# 多表关联查询, 单行匹配
+
+EXPLAIN SELECT * FROM ref_table, other_table 
+    WHERE ref_table.key_column=other_table.column;
+
+# 多表关联查询, 联合索引, 多行匹配
+
+EXPLAIN SELECT * FROM ref_table, other_table
+    WHERE ref_table.key_column_part1=other_table.column
+      AND ref_table.key_column_part2=1;
 ```
 
-- ref: 此类型通常出现在多表的 join 查询, 针对于 `非唯一索引` 或 `非主键索引`,或者是使用了 `最左前缀` 规
-则索引的查询.
+#### ref
 
-- range: 表示使用索引范围查询, 通过索引字段范围获取表中部分数据记录. 这个类型通常出现在 `=`, `<>`, `>=`
-`<`, `<=`, `<=>`, `BETWEEN`, `IN` 操作中.
+此类型通常出现在多表的 join 查询, 针对于 `非唯一索引` 或 `非主键索引`,或者是使用了 `最左前缀` 规则索引的
+查询.
+
+#### range
+ 
+表示使用索引范围查询, 通过索引字段范围获取表中部分数据记录. 这个类型通常出现在 `=`, `<>`, `>=`, `<`, `<=`,
+`<=>`, `BETWEEN`, `IN` 操作中.
 
 当 type 是 `range` 时, 那么 EXPLAIN 输出 ref 字段为 NULL, 并且 key_len 字段是此次查询中使用到的索引
 的最长那个.
 
-- index: 表示全索引扫描(full index scan), 和 ALL 类型类似, 只不过 ALL 类型是全表扫描, 而 index 类型
-则仅仅扫描所有的索引, 而不是扫描数据.
+#### index
+
+表示全索引扫描(full index scan), 和 ALL 类型类似, 只不过 ALL 类型是全表扫描, 而 index 类型则仅仅扫描
+所有的索引, 而不是扫描数据.
 
 index 类型通常出现在: 所要查询的数据直接在索引树中就可以获取到, 而不需要扫描数据. 当这种状况下, extra 字段
 会显示 `using index`
 
-- all: 全表扫描
+#### all
+
+全表扫描
+
+
 
 #### type 性能比较
 
@@ -170,7 +194,10 @@ extra 字段表示额外信息
 - using join buffer, 该值强调join条件时没有使用索引, 并且需要 join buffer 来存储中间结果. 如果出现了
 这个值, 那么应该注意, 根据查询的具体情况可能需要添加索引来改进性能.
 
-- impossible where, 该值强调 where 语句会导致没有符合条件的行.
+- impossible where, 该值强调 where 语句条件总是 false, 表里没有满足条件的记录
+
+- impossible where noticed after reading cosnt tables: 优化器评估了const表之后,发现where条件均
+不满足.
 
 - select tables optimized away, 该值意味着仅通过使用索引, 优化器可能仅从聚合函数结果中返回一行.
 
