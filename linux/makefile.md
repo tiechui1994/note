@@ -437,8 +437,302 @@ y = z
 a := $($(x))
 ```
 
+> $(x) 的值是 "y", $($(x)) 的值就是 $(y), 也就是 "z"
+
+
+- 追加变量的值
+
+使用 `+=` 操作符给变量追加值
+
+```makefile
+objects = main.o foo.o
+objects += bar.o
+```
+
+> $(objects) 的值就是 "main.o foo.o bar.o"
+
+
+- override 指示符
+
+如果有变量是通常 make 的命令行参数设置的, 那么 Makefile 中对这个变量的值会被忽略. 如果想在 Makefile 中设置
+这类参数的值, 可以使用 `override` 指示符.
+
+```makefile
+override <var>; = <value>;
+override <var>; := <value>;
+
+override <var>; += <more text>;
+```
+
+- 多行变量
+
+设置变量值的另一种方法是使用 `define` 关键字. 使用 `define` 关键字设置变量的值可以有换行.
+
+define 指示符后面跟的是变量的名字, 而重起一行定义变量的值, 定义以 endef 关键字结束. 其工作方式和 "=" 操作符一样.
+变量的值可以包含函数, 命令, 文字, 或是其他变量.
+
+```makefile
+define two
+echo bar
+echo $(bar)
+endef
+```
+
+- 环境变量
+
+make 运行时的系统环境变量可以在make开始运行时被载入到 Makefile 文件中, 但是如果 Makefile 中已经定义了这个变量, 
+或者这个变量是由 make 命令行参数带人的, 那么系统的环境变量的值将被覆盖.
+
+- 目标变量
+
+前面所讲的在 Makefile 中定义的变量都是 "全局变量", 在整个文件, 都可以访问到这些变量. 当然, "自动化变量" 除外,
+如 `$<` 等这种变量的值依赖于规则的目标和依赖目标的定义.
+
 
 ## 使用条件判断
 
+```makefile
+libs_for_gcc = -l gnu
+normal_libs =
 
+foo: $(objects)
+ifeq ($(CC),gcc)
+	$(CC) -o foo $(objects) $(libs_for_gcc)
+else
+	$(CC) -o foo $(objects) $(normal_libs)
+endif
+```
+
+目标 `foo` 根据变量 `$(CC)` 值来选取不同的函数库来编译程序.
+
+
+## 使用函数
+
+函数的调用语法:
+
+```
+$(<function> <args>)
+```
+
+### 字符串处理函数
+
+- subst
+
+```
+$(subst <from>,<to>,<text>)
+```
+
+字符串替换函数. 把字符串 <text> 中的 <from> 字串替换成 <to>
+
+- patsubst
+
+```
+$(patsubst <pattern>,<replacement>,<text>)
+```
+
+模式字符串替换函数. 查找 <text> 中的单词(单词以 "空格", "Tab" 或 "换行" 分割) 是否符合模式 <pattern>, 如果匹配,
+则以 <replacement> 替换. `<pattern>` 可以包含通配符 `%`(任意长度的字符串), `<replacement>` 中也包含 `%`, 那
+么 `<replacement>` 中的这个 `%` 就是 `<pattern>` 中的那个 `%` 所代表的字串.
+
+
+- strip
+
+```
+$(strip <string>)
+```
+
+去掉 <string> 字串中开头和结尾的空字符
+
+
+- findstring
+
+```
+$(findstring <find>,<in>)
+```
+
+在 <in> 当中查找 <find> 字串
+
+
+- filter 
+
+```
+$(filter <pattern ...>, <text>)
+```
+
+以 <pattern> 模式过滤 <text> 字符串中的单词, 保留符合 <pattern> 的单词. 可以有多个模式.
+
+
+- filter-out
+
+```
+$(filter-out <pattern ...>, <text>)
+```
+
+以 <pattern> 模式过滤 <text> 字符串中的单词, 去除符合 <pattern> 的单词.
+
+
+- sort
+
+```
+$(sort <list>)
+```
+
+给字符串 <list> 中的单词排序(升序)
+
+- word
+
+```
+$(word <n>,<text>)
+```
+
+取字符串 <text> 中第 <n> 个单词. (从1开始)
+
+
+- wordlist
+
+```
+$(wordlist <ss>,<e>,<text>)
+```
+
+取字符串 <text> 中第 <ss> 开始到 <e> 的单词.
+
+- words
+
+```
+$(words <text>)
+```
+
+统计 <text> 中字符串的单词个数
+
+- firstword
+
+```
+$(firstword <text>)
+```
+
+### 文件名操作函数
+
+- dir
+
+```
+$(dir <names ...>)
+```
+
+从文件名序列 <names> 中取出目录部分.
+
+
+- notdir
+
+```
+$(notdir <names ...>)
+```
+
+获取文件名字
+
+- suffix
+
+```
+$(suffix <names ...>)
+```
+
+从文件名序列 <names> 中取出各个文件名的后缀
+
+- addsuffix
+
+```
+$(addsufix <suffix>, <names ...>)
+```
+
+把后缀 <suffix> 加到 <names> 中的每个单词的后面
+
+- addprefix
+
+```
+$(addprefix <prefix>, <names ...>)
+```
+
+把后缀 <prefix> 加到 <names> 中的每个单词的前面
+
+
+- join 
+
+```
+$(join <list1>,<list2>)
+```
+
+把 <list2> 中的单词对应地加到 <list1> 的单词后面. 如果 <list1> 的单词个数比 <list2> 多, 那么 <list1> 中多
+出来的单词保持原样. 如果 <list2> 的单词个数比 <list1> 多, 那么, <list2> 多出来的单词将被复制到 <list1> 中.
+
+
+- foreach
+
+```
+$(foreach <var>,<list>,<text>)
+```
+
+Makefile 当中的 `foreach` 函数几乎是仿照于 Unix 标准 Shell 的 `for` 语句.
+
+把参数 <list> 中的单词逐一取出放到变量 <var> 所指定的变量中, 然后再执行行 <text> 所包含的表达式. 每一次 <text> 
+都会返回一个字符串, 循环过程中, <text> 的的所返回的每个字符串会以空格分割, 最后当整个循环结束时, <text> 所返回的每
+个字符串所组成的整个字符串(以空格分割)将会是foreach函数的返回值.
+
+```makefile
+names := a b c d
+
+files := $(foreach n,$(names),$(n).o)
+```
+
+- if 
+
+```
+$(if <condition>, <then-part>)
+
+$(if <condition>, <then-part>, <else-part>)
+```
+
+
+- call 
+
+call 函数是唯一一个可以用来创建新的参数化的函数. 
+
+````
+$(call <expression>,<param1>,<param2>,...<paramn>)
+````
+
+当 make 执行这个函数时, <expression> 参数中的变量, 如 $(1), $(2) 等, 会被参数 <param1>, <param2> 依次取代.
+而 <expresssion> 的返回值就是 call 函数的返回值.
+
+```
+reverse = $(1) $(2)
+
+foo = $(call reverse,a,b)
+```
+
+上面函数的返回值是 `a b`
+
+- origin
+
+origin 函数不会操作变量的值, 它只是返回这个变量是哪里来的
+
+```
+$(origin <var>)
+```
+
+> `<var>` 是变量的名字, 不应该是引用.
+
+返回值有:
+
+`undefined`, <var> 从来没有定义过
+
+`default`, <var> 是一个默认的定义, 比如  CC 这个变量
+
+`environment`, <var> 是一个环境变量
+
+`file`, <var> 这个变量被定义在 Makefile 中
+
+`command line`, <var> 是被命令行定义的
+
+`override`, <var> 是被 override 指示符重新定义的
+
+`automatic`, <var> 是一个运行命令重点自动化变量
 
