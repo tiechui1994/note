@@ -234,7 +234,124 @@ exe2: exe2.o
 
 ### 静态模式
 
+静态模式可以更容易地定义多目标的规则, 可以让规则变得更加有弹性和灵活.
+
+```
+<targets ...> : <target-pattern> : <prereq-patterns ...>
+    <commands>
+    ...
+```
+
+targets 定义一系列的目标文件, 可以使用通配符. 是一个目标的集合.
+
+target-pattern 是指明了 targets 的模式, 也就是目标集模式.
+
+prereq-patterns 是目标的依赖模式,它对 target-pattern 形成的模式再进行一次依赖目标的定义.
+
+例如, <target-pattern> 定义为 `%.o`, 表示 target 集合中都是以 `.o` 结尾的, <prereq-patterns> 定义成 
+`%.c`, 意思是对 <target-pattern> 所形成的目标集进行二次定义, 其计算方法是取 <target-pattern> ,模式中的
+`%`(也就是去掉了 `.o` 这个结尾), 并为其加上 `.c` 这个结尾, 形成新集合.
+
+
+```makefile
+objects = foo.o bar.o
+
+all:$(objects)
+
+$(objects) : %.o : %.c
+	$(CC) -c $(CFLAGS) $< -o $@
+```
+
+目标是从 $objects 中获取, `%.o` 表面所有以 `.o` 结尾的目标(也就是 `foo.o bar.o`), 而依赖模式 `%.c` 则取模
+式 `%.o` 的 `%`, 也就是 `foo bar`, 并为期其加上 `.c` 的后缀, 于是, 依赖的目标就是 `foo.c bar.c`.
+
+命令中的 `$<` 和 `$@` 是自动化变量, `$<` 表示第一个依赖文件, `$@` 表示目标集合(`foo.o bar.o`)
+
+等价形式
+
+```makefile
+foo.o : foo.c
+    $(CC) -c $(CFLAGS) foo.c -o foo.o
+bar.o : bar.c
+	$(CC) -c $(CFLAGS) bar.c -o bar.o
+```
+
+
+例子:
+
+```makefile
+files = foo.elc bar.o lose.o
+
+$(filter %.o,$(files)) : %.o : %.c
+    $(CC) -c $(CFLAGS) $< -o $@
+$(filter %.elc,$(files)) : %.elc : %el
+	emacs -f batch-byte-compile $<
+```
+
+`$(filter %.o,$(files))` 表示调用 Makefile 的 filter函数, 过滤 `$(files)` 集, 只有其中模式为 `%.o` 的内
+容.
+
+
+
 ### 自动生成依赖性
+
+在 Makefile 中, 依赖关系可能会包含一系列的头文件, 比如 main.c 中的 `#include "defs.h"`, 依赖关系是:
+
+```
+main.o : main.c defs.h
+```
+
+大的工程项目, 这种依赖关系很难在Makefile当中维护. 为了避免这种问题, 大多数 C/C++ 编译器都支持一个 `-M` 的选项, 即
+自动找寻源文件中包含的头文件, 并生成依赖关系.
+
+```
+cc -M main.c
+```
+
+其输出是:
+```
+main.o : main.c defs.h
+```
+
+由于编译器自动生成的依赖关系, 这样就不必手写文件的依赖关系了.
+
+> GNU 的 C/C++ 编译器, 得使用 `-MM` 参数. (`-M` 参数会把一些标准库的头文件也包含进来)
+
+
+如何在 Makefile 当中使用该特性?
+
+GNU 组织建议把编译器为每一个源文件的自动生成的依赖关系放到一个文件中, 为每一个 `name.c` 的文件都生成一个 `name.d` 的
+Makefile 文件, `.d` 文件中存放对应 `.c` 文件的依赖关系.
+
+于是, 可以写出 `.c` 文件 和 `.d` 文件的依赖关系, 并让 make 自动更新或生成 `.d` 文件, 并把其包含在主 Makefile 中,
+这样就可以自动化地生成每个文件的依赖关系了.
+
+```
+%.d : %.c
+    @set -e; rm -f $@; \
+    $(CC) -M $(CFLAGS) $< > $@.$$$$; \
+    sed "s,\($*\)\.o[ :]*,\1.o $@ :,g" < $@.$$$$ > $@; \
+    rm -f $@.$$$$
+```
+
+所有的 `.d` 文件依赖于 `.c` 文件, `rm -rf $@` 是删除所有的目标文件.
+`$(CC) -M $(CFLAGS) $< > $@.$$$$` 为每个依赖文件 `$<` (`.c`文件) 生成依赖文件(`.d` 文件). `$$$$` 表示随机号
+`sed "s,\($*\)\.o[ :]*,\1.o $@ :,g < $@.$$$$ > $@`
+
+
+
+于是, 将 `.d` 文件加入到主 Makefile 当中.
+
+```
+sources = foo.c bar.c
+
+include	$(sources:.c=.d)
+```
+
+`$(sources:.c=.d)`, `.c=.d` 意思是做一个替换, 把变量 `$(sources)` 所有的 `.c` 的字符串替换成 `.d`
+
+
+## 书写命令
 
 
 

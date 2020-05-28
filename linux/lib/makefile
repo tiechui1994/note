@@ -7,4 +7,4 @@ main.o:main.c
 command.o: command.c
 
 clean :
-	rm edit $(objects)
+	rm -rf edit $(objects)
