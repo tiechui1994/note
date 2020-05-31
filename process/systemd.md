@@ -1,8 +1,94 @@
-# Systemd
+# systemd
+
+## systemd相关概念
+
+> systemd 到底是什么?
+
+systemd 是 Linux 操作系统的系统和服务管理器. 在启动时作为PID的第一个进程运行时, 它充当启动系统并维护 `用户空间`
+服务的初始化系统. 启动单独的实例, 以供登录用户启动其服务. systemd 通常不由用户直接调用, 而是作为 `/sbin/init`
+符号链接安装并在早期引导期间启动.
+
+systemd启动后, 首先会去三个目录下找相应的配置文件, 按照优先级从高到底为 `/etc/systemd`, `/usr/lib/systemd`
+和 `/lib/systemd`, 优先级高的配置文件会覆盖优先级低的配置文件. 
+
+### unit 的概念
+
+systemd 的配置文件, 也叫作 unit 文件. 关于 unit 主要有以下几种:
+
+- service: 代表一个后台进程, 比如 mysqld. 这是最常用的一类.
+
+- socket: 此类 unit 封装系统和互联网中的一个 socket. 当下, systemd 支持 `流式`, `数据报` 和 `连续包` 的
+AF_INET, AF_INET6, AF_UNIX socket. 也支持传统的 FIFOs 传输模式. 每一个 socket unit 都有一个相应的服务unit. 
+相应的服务在第一个"连接"进入套接字时就会启动. (例如, nscd.socket 在有新的连接后便启动 nscd.service.)
+
+- device: 此 unit 封装一个存在于 Linux 设备树中的设备. 每一个使用udev规则标记的设备都将会在是systemd中作为一个
+设备 unit 出现. udev 的属性设置可以作为配置设备 unit 依赖关系的配置源. 
+
+- mount: 此类 unit 封装文件系统结构层次中的一个挂载点. systemd将对这个挂载点进行监控和管理. 比如可以在启动时自动
+将其挂载; 可以在某些条件下自动卸载. systemd会将/etc/fstab中的条目都转换为挂载点, 并在开机时处理.
+
+- automount: 此类 unit 封装系统结构层次中的一个自挂载点. 每一个自挂载 unit 对应一个 `已挂载的` 挂载 unit, 当该
+自动挂载点被访问时, systemd 执行挂载点中定义的挂载行为.
+
+- swap: 和挂载配置单元类似, 交换配置单元用来管理交换分区. 用户可以用交换配置单元来定义系统中的交换分区, 可以让这些交
+换分区在启动时被激活.
+
+- target: 此类 unit 为其他配置单元进行逻辑分组. 它们本身实际上并不做什么, 只是引用其他 unit 而已. 这样便可以对
+unit 做一个统一的控制. (例如: multi-user.target 相当于在传统使用 `SysV` 的系统中的运行级别 5; bluetooth.target
+只有在蓝牙适配器可用的情况下才调用与蓝牙相关的服务, 如 bluetooth 守护进程, obex 守护进程等)
+
+- timer: 定时器 unit 用来定时触发用户定义的操作. 这类 unit 取代了atd, crond等传统的定时服务.
+
+- snapshot: 与target unit 类似, 快照的一组配置单元. 它保存了系统当前的运行状态.
 
 
-Systemd提供了比Upstart更激进的并行启动能力, 采用 socket/D-BS activation等技术启动服务. 显而易见的结果是更
-快的启动速度. 为了减少启动时间, Systemd的目标是:
+## service unit 配置
+
+一般情况下, 最常用的是 service. 关于 service, 配置参数, 一般最常用的参数有 `Type`, `ExecStarPre`, `ExecStart`
+`ExecStartPost`, `ExexStop`, `ExecStopPost`, `ExecReload`, `ExecCondition`, `Restart`, `OOMPolicy`. 
+
+```
+[unit]
+    Requires: 当前unit依赖其他unit, 强依赖
+    Wants: 弱依赖
+    Before: 如果该字段指定的unit也要启动,那么必须在当前unit之后启动
+    After: 如果该字段指定的unit也要启动,那么必须在当前unit之前启动
+    Condition: 当前unit运行满足的条件
+
+[Install]
+    WantedBy: 一个或多个Target, 当前unit激活时符号链接会放入/etc/systemd/system目录下以Target名+.wants
+              后缀构成的子目录
+    
+    RequiredBy: 强依赖
+
+[Service]
+    Type: 启动时进程的行为. simple(默认值),执行ExecStart指定的命令,启动主进程. forking, 以fork的方式从父进程
+          创建子进程,创建后父进程会立即退出. oneshot,一次性进程,systemd会等当前服务退出,再继续往下执行. dbus, 
+          当前服务通过D-Bus启动. notify,当前服务启动玩吧,会通知systemd,再继续往下执行. idle, 若其他任务执行完
+          毕, 当前服务才会执行.
+    
+    ExecStartPre: 启动当前服务之前执行的命令
+    ExecStart: 启动当前服务的命令
+    ExecStartPost: 启动当前服务之后执行的命令
+   
+    ExecStop: 停止当前服务时执行的命令.
+    ExecStopPost: 停止当前服务后执行的命令. 建议使用此设置进行清理操作, 即使系统无法正常启动, 清理操作也应该执行.
+    
+    
+    RestartSec: 自动重启当前服务间隔的秒数
+    ExecReload: 重启服务时执行的命令
+    
+    Restart: 定义何种情况下systemd会自动重启当前服务. always, on-success, on-failure, on-abnormal, 
+             on-abort, on-watchdog
+    
+    TimeoutSec: 定义systemd停止当前服务之前等待的秒数
+    Environment: 指定环境变量
+```
+
+## systemd 并发启动
+
+systemd 提供了比Upstart更激进的并行启动能力, 采用 socket/D-BS activation等技术启动服务. 显而易见的结果是更
+快的启动速度. 为了减少启动时间, systemd的目标是:
 
 - 尽可能启动更少的进程
 - 尽可能将更多进程并行启动
@@ -10,16 +96,16 @@ Systemd提供了比Upstart更激进的并行启动能力, 采用 socket/D-BS act
 同样地, Upstart也试图实现这两个目标. Upstart采用事件驱动机制, 服务可以暂不启动, 当需要的时候通过事件触发其启动,
 这符合第一个设计目标; 此外不相干的服务可以并行启动, 这实现了第二个目标.
 
-**Systemd提供按需启动能力.**
+**systemd提供按需启动能力.**
 
-当 `Sysvinit` 系统初始化的时候, 它会将所有可能用到的后台服务进程全部启动运行. 并且系统必须等待所有的服务都启动就绪
+当 `SysV` init 系统初始化的时候, 它会将所有可能用到的后台服务进程全部启动运行. 并且系统必须等待所有的服务都启动就绪
 之后,  才允许用户登录. 
 
 > tip: 某些服务很可能在很长一段时间内, 整个服务器运行期间都没有被使用过. 比如 CUPS, 打印服务在多数服务器上很少被真
 正使用到. 花费启动这些服务上的时间是不必要的; 同样, 花费在这些服务上的系统资源也是一种浪费.
 
 
-**Systemd采用Linux的Cgroup特性跟踪和管理进程的生命周期.** init 系统的一个重要职责是负责跟踪和管理服务进程的生命
+**systemd采用Linux的Cgroup特性跟踪和管理进程的生命周期.** init 系统的一个重要职责是负责跟踪和管理服务进程的生命
 周期. 它不仅可以启动一个服务, 它必须也能够停止服务. 服务进程一般都作为后台进程(daemon)在后台运行, 为此服务程序有时
 候会派生(fork)两次. 
 
@@ -27,42 +113,7 @@ Systemd提供了比Upstart更激进的并行启动能力, 采用 socket/D-BS act
 后台进程的PID. 还有更加特殊的情况. 比如吗一个CGI程序会派生两次, 从而脱离了和Apache的父子关系. 当Apache进程被停止
 后, 该CGI程序还在继续运行. 而期望是Apache服务停止后, 所有由它启动的相关进程也被停止. 为了处理这类问题, Upstart通
 过strace来跟踪 fork, exit 等系统调用, 但是这种方法很笨拙, 且缺乏可扩展性. Systemd利用了Linux内核的特性即Cgroup
-来完成跟踪的任务. 当停止服务时, 通过查询Cgroup, Systemd可以准确找到所有的相关进程, 从而干净地停止服务.
-
-## Systemd的基本概念
-
-### 单元的概念
-
-系统初始化需要做是事情非常多. 需要启动后台服务, 比如启动sshd服务; 需要做配置工作, 比如挂载文件系统. 这个过程中的每
-一步都被Systemd抽象为一个配置单元, 即Unit. 可以认为一个服务是一个配置单元; 一个挂载点是一个配置单元; 一个交换分区
-的配置是一个配置单元; 等等. Systemd将配置单元归纳为以下不同的类型.
-
-- service: 代表一个后台进程, 比如mysqld. 这是最常用的一类.
-
-- socket: 此类配置单元封装系统和互联网中的一个套接字. 当下, Systemd支持流式,数据报和连续包的AF_INET, AF_INET6,
-AF_UNIX socket. 每一个套接字配置单元都有一个相应的服务配置单元. 相应的服务在第一个"连接"进入套接字时就会启动. 例
-如, nscd.socket 在有新的连接后便启动 nscd.service.
-
-- device: 此类配置单元封装一个存在于Linux设备树中的设备. 每一个使用udev规则标记的设备都将会在Systemd中作为一个设
-备配置单元出现.
-
-- mount: 此类配置单元封装文件系统结构层次中的一个挂载点. Systemd将对这个挂载点进行监控和管理. 比如可以在启动时自动
-将其挂载; 可以在某些条件下自动卸载. Systemd会将/etc/fstab中的条目都转换为挂载点, 并在开机时处理.
-
-- automount: 此类配置单元封装系统结构层次中的一个自挂载点. 每一个自挂载配置单元对应一个挂载配置单元, 当该自动挂载点
-被访问时, Systemd执行挂载点中定义的挂载行为.
-
-- swap: 和挂载配置单元类似, 交换配置单元用来管理交换分区. 用户可以用交换配置单元来定义系统中的交换分区, 可以让这些交
-换分区在启动时被激活.
-
-- target: 此类配置单元为其他配置单元进行逻辑分组. 它们本身实际上并不做什么, 只是引用其他配置单元而已. 这样便可以对
-配置单元做一个统一的控制. 这样就可以实现大家都已经非常熟悉的运行级别概念. 比如想让系统进入图形化模式, 需要运行许多服
-务和配置命令, 这些操作由一个个的配置单元表示, 将所有这些配置单元组合为一个目标(target), 就表示需要将这些配置单元全
-部执行一遍便进入target所代表的系统运行状态. 例如multi-user.target 相当于SysV系统中运行级别 5
-
-- timer: 定时器配置单元用来定时触发用户定义的操作. 这类配置单元取代了atd, crond等传统的定时服务.
-
-- snapshot: 与target配置单元类似, 快照的一组配置单元. 它保存了系统当前的运行状态.
+来完成跟踪的任务. 当停止服务时, 通过查询Cgroup, systemd可以准确找到所有的相关进程, 从而干净地停止服务.
 
 
 ### 依赖关系
@@ -71,7 +122,7 @@ AF_UNIX socket. 每一个套接字配置单元都有一个相应的服务配置�
 activation(套接字激活)", D-BUS activation和autofs三大方法解除依赖. 比如: 挂载必须等待挂载点在文件系统中被创
 建;挂载也必须等待相应的物理设备就绪. 为了解决这类依赖问题, Systemd的配置单元之间可以彼此定义依赖关系.
 
-Systemd用配置单元定义文件中的关键字来描述配置单元之间的依赖关系. 比如: Unit A 依赖Unit B, 可以在Unit B的定义
+Systemd用配置单元定义文件中的关键字来描述配置单元之间的依赖关系. 比如: unit A 依赖unit B, 可以在unit B的定义
 中使用"require A"来表示.
 
 
@@ -172,53 +223,43 @@ loginctl list-seeions 列出当前的Session
 loginctl list-users 列出当前登录的用户
 ```
 
-## Unit 资源单位
- 
-### 常用的资源
+## unit 控制命令
 
-- service 服务
-- target 多个Unit构成的一个组, 运行级别
-- device 设备
-- mount 挂载
-- slice 进程组
-- swap swap文件
-- socket 进程通信的socket
+systemctl list-units [OPTIONS] 查询系统的unit
 
-systemctl list-units [OPTIONS] 查询系统的Unit
-
-Unit状态:
+unit状态:
 
 ```
 systemctl status [NAME] // NAME可以是具体的资源, 比如 user.slice
-systemctl is-active NAME // 某个Unit是否正在运行
-systemctl is-failed NAME // 某个Unit是否处于启动失败状态
-systemctl is-enabled NAME // 某个Unit是否建立了启动链接
+systemctl is-active NAME // 某个unit是否正在运行
+systemctl is-failed NAME // 某个unit是否处于启动失败状态
+systemctl is-enabled NAME // 某个unit是否建立了启动链接
 ```
 
 
-管理Unit:
+管理unit:
 
 ```
-sudo systemctl start|stop|kill|reload UNIT
+sudo systemctl start|stop|kill|reload unit
 sudo systemctl daemon-reload 重新加载所有修改过的配置文件
 
-sudo systemctl show UNIT  显示Unit所有底层参数
-sudo systemctl show -p PARAM UNIT 显示Unit的具体参数
-sudo systemctl set-property UNIT PARAM=VALUE 设置属性
+sudo systemctl show unit  显示unit所有底层参数
+sudo systemctl show -p PARAM unit 显示unit的具体参数
+sudo systemctl set-property unit PARAM=VALUE 设置属性
 ```
 
 依赖关系:
 
 ```
-systemctl list-dependcies [UNIT]
+systemctl list-dependcies [unit]
 ```
 
-### Unit的配置文件
+### unit的配置文件
 
 systemd 默认从目录/etc/systemd/system/读取配置文件. 但是里面大部分文件都是符号链接, 指向目录/usr/lib/systemd/system/
 
 ```
-systemctl enable UNIT 用于在上面的两个目录之间,建立符号链接关系
+systemctl enable unit 用于在上面的两个目录之间,建立符号链接关系
 ```
 
 配置文件状态:
@@ -231,42 +272,10 @@ systemctl list-unit-files [--type=TYPE]
    masked: 该配置文件被禁止建立启动链接
 ```
 
-配置文件格式:
+获取 unit 配置文件内容:
 
 ```
-systemctl cat UNIT  查看UNIT配置文件的内容
-
-[Unit]
-    Requires: 当前Unit依赖其他Unit, 强依赖
-    Wants: 弱依赖
-    Before: 如果该字段指定的Unit也要启动,那么必须在当前Unit之后启动
-    After: 如果该字段指定的Unit也要启动,那么必须在当前Unit之前启动
-    Condition: 当前Unit运行满足的条件
-
-[Install]
-    WantedBy: 一个或多个Target, 当前Unit激活时符号链接会放入/etc/systemd/system目录下以Target名+.wants
-              后缀构成的子目录
-    
-    RequiredBy: 强依赖
-
-[Service]
-    Type: 启动时进程的行为. simple(默认值),执行ExecStart指定的命令,启动主进程. forking, 以fork的方式从父进程
-          创建子进程,创建后父进程会立即退出. oneshot,一次性进程,systemd会等当前服务退出,再继续往下执行. dbus, 
-          当前服务通过D-Bus启动. notify,当前服务启动玩吧,会通知systemd,再继续往下执行. idle, 若其他任务执行完
-          毕, 当前服务才会执行.
-    
-    ExecStart: 启动当前服务的命令
-    ExecStartPre: 启动当前服务之前执行的命令
-    ExecStartPost: 启动当前服务之后执行的命令
-    ExecReload: 重启服务时执行的命令
-    ExecStop: 停止当前服务时执行的命令
-    RestartSec: 自动重启当前服务间隔的秒数
-    
-    Restart: 定义何种情况下systemd会自动重启当前服务. always, on-success, on-failure, on-abnormal, 
-             on-abort, on-watchdog
-    
-    TimeoutSec: 定义systemd停止当前服务之前等待的秒数
-    Environment: 指定环境变量
+systemctl cat unit  查看unit配置文件的内容
 ```
 
 
@@ -280,7 +289,7 @@ sudo journalctl -b 查看系统本次启动的日志
 
 sudo journalctl _PID=PID 查看指定进程的日志
 sudo journalctl SCRIPT 查看指定脚本的日志
-sudo journalctl -u UNIT 查看UNIT的日志
+sudo journalctl -u unit 查看unit的日志
 
 sudo journalctl -n NUM  尾部最新NUM行日志
 
