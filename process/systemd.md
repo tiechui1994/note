@@ -47,42 +47,137 @@ unit 做一个统一的控制. (例如: multi-user.target 相当于在传统使�
 一般情况下, 最常用的是 service. 关于 service, 配置参数, 一般最常用的参数有 `Type`, `ExecStarPre`, `ExecStart`
 `ExecStartPost`, `ExexStop`, `ExecStopPost`, `ExecReload`, `ExecCondition`, `Restart`, `OOMPolicy`. 
 
+一个 Service unit 配置文件的格式:
+
 ```
-[unit]
-    Requires: 当前unit依赖其他unit, 强依赖
-    Wants: 弱依赖
-    Before: 如果该字段指定的unit也要启动,那么必须在当前unit之后启动
-    After: 如果该字段指定的unit也要启动,那么必须在当前unit之前启动
-    Condition: 当前unit运行满足的条件
+[Unit]
+    ...
 
 [Install]
-    WantedBy: 一个或多个Target, 当前unit激活时符号链接会放入/etc/systemd/system目录下以Target名+.wants
-              后缀构成的子目录
+    ...
     
-    RequiredBy: 强依赖
-
 [Service]
-    Type: 启动时进程的行为. simple(默认值),执行ExecStart指定的命令,启动主进程. forking, 以fork的方式从父进程
-          创建子进程,创建后父进程会立即退出. oneshot,一次性进程,systemd会等当前服务退出,再继续往下执行. dbus, 
-          当前服务通过D-Bus启动. notify,当前服务启动玩吧,会通知systemd,再继续往下执行. idle, 若其他任务执行完
-          毕, 当前服务才会执行.
-    
-    ExecStartPre: 启动当前服务之前执行的命令
-    ExecStart: 启动当前服务的命令
-    ExecStartPost: 启动当前服务之后执行的命令
-   
-    ExecStop: 停止当前服务时执行的命令.
-    ExecStopPost: 停止当前服务后执行的命令. 建议使用此设置进行清理操作, 即使系统无法正常启动, 清理操作也应该执行.
-    
-    
-    RestartSec: 自动重启当前服务间隔的秒数
-    ExecReload: 重启服务时执行的命令
-    
-    Restart: 定义何种情况下systemd会自动重启当前服务. always, on-success, on-failure, on-abnormal, 
-             on-abort, on-watchdog
-    
-    TimeoutSec: 定义systemd停止当前服务之前等待的秒数
-    Environment: 指定环境变量
+    ...
+```
+
+service 包含 `[Unit]`, `[Install]`, `[Service]` 三个 Section.
+
+- `[Unit]` Section 参数:
+
+```
+Requires: 当前 unit 依赖其他 unit, 强依赖
+Wants: 弱依赖
+
+Before: 如果该字段指定的unit也要启动, 那么必须在当前unit之后启动
+After: 如果该字段指定的unit也要启动, 那么必须在当前unit之前启动
+Condition: 当前unit运行满足的条件
+```
+
+- `[Install]` Section 参数:
+
+```
+WantedBy: 一个或多个 target, 当前 unit 激活时符号链接会放入 /etc/systemd/system 目录下以 target名+.wants后缀
+构成的子目录
+
+RequiredBy: 强依赖
+```
+
+- `[Service]` Section 参数: 
+
+```
+Type: 启动时进程的行为. 值是 simple, exec, forking, oneshot, dbus, notify 或 idle 之一.
+
+- simple(当设置了 ExecStart, 但是没有设置 Type 和 BusName 时, 此时是默认值), 那么  ExecStart 进程就是该服务的
+主进程, 并且 systemd 会认为创建了该服务的主服务进程后, 该服务就已经启动完成. 在这种模式下, 如果该进程需要为系统中的其
+他进程提供服务时, 那么必须在启动之前先建立好通信通道(例如,套接字), 这样, 在创建主服务进程后, 执行主服务进程之前, 即可启
+动后继单元.
+
+- exec 和 simple 类似, 不同之处在于, 只要该服务的主服务进程执行完成后, systemd 才会认为该服务启动完成. 其他后继单元
+必须一直阻塞到这个时间点之后才能继续启动. 即 simple 表示当 fork() 函数返回时, 即算启动完成, 而 exec 则表示仅在 fork()
+与 execve() 函数都执行成功时, 才算启动完成.
+
+- oneshot 与 simple 类似, 不同的是, 只有在该服务的主服务进程退出后, systemd 才会认为该服务启动完成, 才会开启后继单
+元. 通常需要设置 RemainAfterExit 选项. 当 Type 和 ExecStart 都没有设置时, 是默认值.
+
+- dbus 与 simple 类似, 不同之处在于, 该服务只有获得了 BusName 指定的 D-Bus 名称之后, systemd 才会认为该服务启动
+完成. 才会开始启动后继单元. 当设置了 BusName 时, 此类型是默认值.
+
+- notify 与 exec 类似, 不同之处在于, 该服务将会在启动完成后通过 notify 之类的接口发送一个通知消息. systemd 将会在
+启动后继单元之前, 首先确保该进程已经成功的发送了这个消息. 必须设置 NotifyAccess 值
+
+- idle 与 simple 类似. 不同之处在于, 服务进程将会被延迟到所有活动任务都完成之后再执行. 这样可以避免控制台上的状态信息
+与 shell 脚本输出混杂在一起. 
+
+- forking, 表示 ExecStrt 进程将会在启动过程中使用 fork() 系统调用. 也就是当所有通信渠道都已建好, 启动亦已成功之后,
+父进程将会退出, 而子进程将作为主服务进程继续运行. 这是传统 UNIX 守护进程的经典做法. 这种状况下, systemd 会认为在父进
+程退出之后, 该服务就已经完成启动. 建议同时设置 PIDFile 参数
+
+建议对长时间持续运行服务尽可能使用 Type=simple(简单快速). 当客户端要通过仅有服务本身创建的 IPC 通道(而非由 systemd
+创建的socket 或 D-bus 之类) 连接到该服务时, 建议选择 notify 或 dbus (该服务必须提供 D-Bus 接口). 如果能够保证服
+务进程调用成, 服务进程自身不做或只做很少的初始化工作(且不大可能初始化失败), 建议选择 exec.
+
+RemainAfterEit: 当服务的所有进程全部退出之后, 是否依然将此服务视为活动(active) 状态. 默认值是 no
+
+PIDFile: 该服务 PID 文件路径(一般位于 /run 目录下). 建议 Type=forking 的状况下设置此选项. 如果设为相对路径, 表示
+相对于 /run/ 目录.
+
+BusName: 设置与此服务通信所使用的 D-Bus 名称. 在 Type=dbus 下必须明确设置此选项.
+
+
+可执行文件前的特殊前缀:
+
+"@", 在绝对路径前加上可选的 "@" 前缀, 那么气候的那些参数将依次作为 "argv[0], argv[1] ..." 传递给被执行的进程.(
+argv[0] 是可执行文件本身)
+
+"-", 在绝对路径前加上可选的 "-" 前缀, 那么即使该进程以失败状态(例如非零返回值)退出,也会被视为成功退出, 但是同时会留下
+错误日志.
+
+"+", 在绝对路径前加上可选的 "+" 前缀, 那么进程将拥有完全的权限(超级用户的特权), 并且 User, Group, CapablityBoundSet
+所设置的权限限制等将被该命令行启动的进程忽略.(但是对其他 ExecStart, ExecStop 有效)
+
+
+ExecStartPre: 
+ExecStartPost: 在执行 ExecStart 之前/后执行的命令行. (如果某个无 "-" 前缀的命令执行失败, 那么剩下的命令行不会被继
+续执行, 同时该 unit 变为失败 (failed) 状态)
+
+> 注意: 不可将 ExecStartPre 用于需要长时间执行的进程. 因为所有有 ExecStarrPre 派生的子进程都会在启动 ExecStart 
+服务进程之前被杀死.
+
+> 注意: 如果在服务启动完成之前, 任意一个 ExecStartPre, ExecStart, ExecStartPost 中无 "-" 前缀的命令执行失败或
+超时, 那么 ExecStopPost 将会被继续执行. 而 ExecStop 则会被跳过.
+
+ExecStart: 启动当前服务的命令
+
+ExecStop: 停止当前服务时执行的命令.
+ExecStopPost: 停止当前服务后执行的命令. 建议使用此设置进行清理操作, 即使系统无法正常启动, 清理操作也应该执行.
+
+ExecReload: 用于设置当该服务被要求重新载入配置时所执行的命令行.
+
+RestartSec: 设置在重启服务(ReStart)前暂停多长时间. 默认值是 100ms. 
+
+TimeoutStartSec: 设置该服务允许的最大启动时长. 如果守护进程未能在限定的时长内发出 "启动完毕" 信号, 那么该服务将被视
+为启动失败, 并会被关闭. 
+
+TimeoutStopSec: 设置每个 ExecStop 的超时时长. 如果其中之一超时, 那么所有后继的 ExecStop 就会被取消, 并且在该服务
+也会被SIGTERM信号强制关闭. 如果该服务没有设置 ExecStop, 那么该服务将会立即被 SIGTERM 信号强制关闭. 设置该服务自身停
+止的超时时长. 如果超时, 那么该服务将会立即被 SIGTERM 信息强制关闭
+
+TimeoutSec: 同时设置 TimeoutStartSec 和 TimeoutStopSec
+
+RuntimeMaxSec: 允许服务持续允许的最大时长. 超出限制时长, 服务会被强制终止. 默认值为 "infinity" (不限时长)
+
+
+Restart: 当服务进程 正常退出, 异常退出, 被杀死, 超时的时候, 是否重新启动该服务. "服务进程" 是指 ExeStartPre, 
+ExecStartPost, ExecStop, ExecStopPost, ExecReload 中设置的进程. 当进程是由于 systemd 的正常操作 (例如,
+systemd stop|restart) 而停止操作时, 该服务不会被重新启动.
+
+取值可以是 no, always, on-success, on-failure, on-abnormal,on-abort, on-watchdog 之一. no是默认值, 表示
+不会被重启. always表示会无条件的重启.
+
+SuccessExitStatus: 额外定义其他的进程"正常退出"状态. 
+
+
+Environment: 指定环境变量
 ```
 
 ## systemd 并发启动
