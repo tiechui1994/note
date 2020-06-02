@@ -174,16 +174,61 @@ service 包含 `[Unit]`, `[Install]`, `[Service]` 三个 Section.
 > **RuntimeMaxSec**: 允许服务持续允许的最大时长. 超出限制时长, 服务会被强制终止. 默认值为 "infinity" (不限时长)
 >
 > <hr>
-> 
-> **Restart**: 当服务进程 正常退出, 异常退出, 被杀死, 超时的时候, 是否重新启动该服务. "服务进程" 是指 ExeStartPre, 
-> ExecStartPost, ExecStop, ExecStopPost, ExecReload 中设置的进程. 当进程是由于 systemd 的正常操作 (例如,
-> systemd stop|restart) 而停止操作时, 该服务不会被重新启动. 取值可以是 no, always, on-success, on-failure, 
-> on-abnormal,on-abort, on-watchdog 之一. no是默认值, 表示不会被重启. always表示会无条件的重启.
 >
 > **SuccessExitStatus**: 额外定义其他的进程"正常退出"状态. 
 >
 > **Environment**: 指定环境变量
 >
+> **Restart**: 当服务进程 正常退出, 异常退出, 被杀死, 超时的时候, 是否重新启动该服务. "服务进程" 是指 ExeStartPre, 
+> ExecStartPost, ExecStop, ExecStopPost, ExecReload 中设置的进程. 当进程是由于 systemd 的正常操作 (例如,
+> systemd stop|restart) 而停止操作时, 该服务不会被重新启动. 取值可以是 no, always, on-success, on-failure, 
+> on-abnormal,on-abort, on-watchdog 之一. no是默认值, 表示不会被重启. always表示会无条件的重启.
+>
+> **RestartPreventExitStatus**: 设置一系列以空白分隔的数字退出码或信号名称, 当进程的退出码或收到的信号与此处的设置
+> 匹配时, 无论 Restart 是如何设置的, 该服务都将无条件的 *禁止重新启动*. 例如 `RestartPreventExitStatus=1 6 SIGABRT`
+> 
+> **RestartForceExitStatus**: 设置一系列以空白分隔的数字退出码或信号名称, 当进程的退出码或收到的信号与此处的设置匹配
+> 时, 无论 Restart 是如何设置的, 该服务都将无条件的 *被自动重新启动*. 默认值是空, 表示完全遵循 Restart 的设置
+> 
+> <hr>
+> 
+> *路径*:
+>
+> **WorkingDirectory**: 设置进程的工作目录. 既可以设置特殊值 "~", 表示 User 用户的家目录, 也可以设一个以 RootDirectory
+> 为基准的绝对路径. 例如, 当 RootDirectory=/sysroot, 并且 WorkingDirectory=/work/dir 时, 实际的工作目录将是
+> `/sysroot/work/dir`. 当 systemd 作为系统实例运行时, 此选项的默认值是 /, 当 systemd 作为用户实例运行时, 此选项
+> 的默认值是对应用户的家目录.
+>
+> **RootDirectory**: 此选项仅可用于系统单元(不适用于用户单元). 设置以 chroot 方式执行进程的根目录. 必须设为一个主机
+> (或容器)的根目录(即运行systemd的系统根目录)为基准的绝对路径. 如果设置此选项, 必须确保进程及其辅助文件在 chroot 中
+> 确实可用.
+>
+> <hr>
+>
+> *凭证*:
+> 
+> **User=, Group=**: 设置进程在执行时使用的用户与组.既可以设为一个数字形式的 UID/GID 也可以设为一个字符串形式的名称.
+> 对于系统服务(由PID=1 的 systemd 系统实例管理) 以及由 root 运行的用户服务(由 root 用户启动的用户实例管理), User 
+> 的默认值是 "root", 同时亦可明确将 User 设为其他用户. 对于普通用户运行的用户服务, User 的默认值是该用户自身, 并且
+> 禁止将 User 切换为其他用户.
+>
+> <hr>
+>
+> *进程属性*:
+>
+> **LimitCPU=, LimitFSIZE=, LimitDATA=, LimitSTACK=, LimitRSS=, LimitNOFILE=, LimitAS=, LimitNPROC=,
+> LimitMEMLOCK=, LimitLocks=, LimitSIGPENDING=, LimitMSGQUEUE=, LimitNICE=, LimitRTPRIO=, LimitRTTIME=**
+> 设置进程的各种软/硬资源限制. 这些指令的值有两种表示法, 一个单独的 vlaue 值表示将软硬两种限制设为同一值. 而以冒号分割
+> 的 soft:hard 值表示分别设置软限制与硬限制(例如, LimitAS=4G:16G). 特殊值 `infinity` 表示没有限制. 对于以字节为
+> 单位的选项, 可以使用以 1024 为基数的 K, M, G, T, P, E 后缀. 对于时间限制, 可以加上 "ms", "s", "min", "h", "d"
+> "w" 等明确的时间单位后缀.  如果仅设置一个整数而没有单位, 对于 LimitCPU= 默认单位是秒, 对于 LimitRTTIME= 默认单位
+> 是微秒. LimitNICE= 的值有两种表示法, 可以设为带 "+" 或 "-" 前缀的谦让值 (-20 到 19 之间); 也可以设置为无前缀的
+> 原始资源限制参数 (1 到 40 之间)
+>
+
+[执行环境配置](http://www.jinbuguo.com/systemd/systemd.exec.html)
+
+[服务单元配置](http://www.jinbuguo.com/systemd/systemd.service.html)
 
 
 ## systemd架构
