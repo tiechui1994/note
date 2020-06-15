@@ -25,23 +25,23 @@ root         1  0.0  0.1 225240  9140 ?        Ss   19:02   0:04 /sbin/init spla
 
 > 进程状态:
 > 
-> - D, 不可中断的休眠(通常是IO)
-> - S, 中断休眠(等待event的完成)
-> - I, 空闲的内核线程
-> - R, running 或 runnable (或在运行队列当中)
-> - T, stopped by job control signal
-> - t, stopped by debugger during the tracing
-> - X, dead(永远也看不到)
-> - Z, 僵尸进程, 进程已终止但未被其父级回收
+> - `D`, 不可中断的休眠(通常是IO)
+> - `S`, 中断休眠(等待event的完成)
+> - `I`, 空闲的内核线程
+> - `R`, running 或 runnable (或在运行队列当中)
+> - `T`, stopped by job control signal
+> - `t`, stopped by debugger during the tracing
+> - `X`, dead(永远也看不到)
+> - `Z`, 僵尸进程, 进程已终止但未被其父级回收
 >
 > 对于 BSD 格式, 其他值:
 > 
-> - < 高优先级
-> - N 低优先级
-> - L, pages locked into memory(用于实时和自定义IO)
-> - s, session leader
-> - l, 多线程
-> - + 前台进程
+> - `<`, 高优先级
+> - `N`, 低优先级
+> - `L`, pages locked into memory(用于实时和自定义IO)
+> - `s`, session leader
+> - `l`, 多线程
+> - `+`, 前台进程
 
 - START, 命令启动的时间.
 - TIME, 累计CPU时间
