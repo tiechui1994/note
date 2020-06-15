@@ -92,20 +92,23 @@ MiB Swap:      0.0 total,      0.0 free,      0.0 used.   5431.9 avail Mem
 
 - PID, 进程pid
 - USER, 进程执行的用户
-- PR, 
-- NI, 
-- VIRT, 
+- PR, 任务的动态调度优先级, 取值范围是 `[-100,39]`
+- NI, 任务的静态调度优先级, 通过nice命令修改, 值越大, 优先级越低, 取值范围是 `[-20,19]`
+
+- VIRT, 任务使用虚拟内存大小(KB), 包含代码, 库以及交换出去的page等 
 
 - RES, 常驻内存大小(KB), 虚拟地址空间(VIRT) 的子集. 表示当前进程正在使用的未交换的物理内存.
 
 - SHR, 共享内存大小(KB), 常驻内存(RES)的子集可能由其他进程使用. 它将包括"shared anonymous pages" 和 "shared 
 file-backed pages". 它还包括映射到 "private pages" (包括程序镜像和共享库)
             
-- S, 
-- %CPU, 进程使用的CPU
-- %MEM, 进程使用的内存
-- TIME+/TIME, CPU时间, 任务自启动以来已使用的总CPU时间. 当"Cumulative mode(累积模式)"为"On"时, 将列出每个进程
-及其子进程(dead)所使用的CPU时间. 可以使用 "S" 来切换累积模式, "S" 既是命令行选项又是交互式命令.
+- S, 任务的状态.
+
+- %CPU, 进程使用CPU时间百分比, 使用多核时显示相加起来, 所以值会大于100%.
+- %MEM, 物理内存使用率, RES/total
+- TIME+/TIME, 进程使用的CPU时间, 单位是秒, 精确到百分之秒, 任务自启动以来已使用的总CPU时间. 当"Cumulative mode(
+累积模式)"为"On"时, 将列出每个进程及其子进程(dead)所使用的CPU时间. 可以使用 "S" 来切换累积模式, "S" 既是命令行选项
+又是交互式命令.
 
 - COMMAND, 命令
 - PPID, 进程的父进程
