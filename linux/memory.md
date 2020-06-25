@@ -1,5 +1,7 @@
 # Linux 下的内存管理
 
+[参考文档](https://github.com/Durant35/durant35.github.io/issues/24)
+
 程序内存地址 => 虚拟内存 => 物理内存
 
 
@@ -242,6 +244,7 @@ $ sysctl -w kernel.randomize_va_space=0
 0000` ~ `0xFFFFFFFF FFFFFFFF` 两个地址区间. 而每个地址区间都有 128TB 的地址空间可以使用, 所以总共是 256TB 的可
 用空间.
 
+---
 
 > amd64 下的 Linux 内存空间布局
 
@@ -257,11 +260,13 @@ B000` (也可以设置 `random mmap offset`), 向上增长.
 
 - stack 段和 `0x00007FFF FFFFF000` 之间可能有 `random stack offset`
 
+---
+
 > vm.legacy_va_layout=0
 >
 > kernel.randomize_va_space=2
 
-![iamge](resource/cat_self_maps.png)
+![image](resource/cat_self_maps.png)
 
 > - 前三行分别是 text segment, data segment 和 bss segment. **text segment**其实是存放二进制可执行代码的位
 > 置, 所以它的权限是读与可执行. **data segment**存放的是静态常量, 所以该地址段权限是只读. **bss segment**存放未
@@ -297,6 +302,8 @@ B000` (也可以设置 `random mmap offset`), 向上增长.
 >> - vvar也就是存放数据的地方了, 那么用户可以通过调用 vsdo 里的函数, 使用 vvar 里的数据, 来获得自己想要的信息. 而
 >> 且地址是随机的, 安全的.
 
+---
+
 > vm.legacy_va_layout=1
 >
 > kernel.randomize_va_space=0
@@ -308,3 +315,58 @@ B000` (也可以设置 `random mmap offset`), 向上增长.
 
 - `amd64` 架构下的进程地址空间布局总体上来说与 `x86` 下的相同, 只不过 amd64 的页大小可以为 4k, 2m, 或者 1g, 不像
 x86 下大小统一为 4k
+
+
+
+## 用户内存空间的各个段分布
+
+> Linux 虚拟地址空间布局
+
+![iamge](resource/user_segment.png)
+
+- `random stack offset`, `random mmap offset` 和 `random brk offset` 随机值意在防止恶意程序. Linux 通过
+对栈, 内存映射, 堆的起始地址加上随机偏移量来打乱布局, 以免恶意程序通过计算访问栈, 函数库等地址.
+
+- 用户进程部分分段存储内容如下表(按地址递减顺序):
+
+| 名称 | 存储内容 | 
+| --- | --- |
+| 栈 | 局部变量, 函数参数, 返回地址等 |
+| 堆 | 动态分配的内存 |
+| bss 段 | 未初始化或初值为0的全局变量和静态局部变量 |
+| data 段 | 已经初始化且初值非0的全局变量和静态局部变量 |
+| text 段 | 可执行代码, 字符串字面量, 只读变量 |
+
+> - bss段, data段, text段, 是可执行程序编译时的分段, 运行时还需要堆和栈
+>
+> - 在将应用程序加载到内存空间执行时, 操作系统负责bss, data, text 段的加载, 并在内存中为这些段分配空间. 栈也是由操
+> 作系统分配和管理; 堆由程序员自己管理, 即显示地申请和释放空间.
+>
+>> - execve(2) 负责为进程 text 和 data 建立映射, 真正将 text 和 data 的内容读入内存是由操作系统的缺页异常处理程
+>> 序按需完成的.
+>>
+>> - 另外, execve(2) 还会将 bss 清零
+
+- 栈 (stack)
+
+- 内存映射段 (mmap)
+
+mmap映射区向下扩展, 堆向上扩展, 两者相对扩展,直到耗尽虚拟地址空间的剩余区域.
+
+- 堆(heap)
+
+- bss 段
+
+bss段用来存放程序未初始化的全局变量, 该段内容只记录数据所需空间大小, 并不分配真实空间.
+
+- 数据段 (data)
+
+data段用来存放程序已经初始化的全局变量, 为数据分配空间, 数据具体值保存在目标文件中.
+
+- 代码段 (text)
+
+text段用来存储程序中执行代码的内存区域, 通常为大小确定的只读段, 包括只读常量, 只读代码等
+
+- 保留区
+
+
