@@ -148,7 +148,7 @@ Transaction Lock-aside Buffer),  用来根据程序访问内存的局部性机�
 
 ## 虚拟内存地址空间
 
-### Linux 虚拟地址空间布局以及进程栈和线程栈总结
+> Linux 虚拟地址空间布局以及进程栈和线程栈总结
 
 ```
 # 是否使用经典进程内存布局
@@ -168,7 +168,7 @@ $ cat /proc/sys/kernel/randomize_va_space
 $ sysctl -w kernel.randomize_va_space=0
 ```
 
-#### 32 位模式下 4GB 的内存地址块
+### 32 位模式下 4GB 的内存地址块
 
 > 32位内核地址空间划分, 64位内核地址空间划分是不同的
 
@@ -227,3 +227,84 @@ $ sysctl -w kernel.randomize_va_space=0
 > - 每当切换到另一个进程时候, 就要设置这个进程的页表. 通过**设置 MMU 的某些寄存器, 然后 MMU 就可以把 cpu 发出的逻辑
 > 地址转换为物理地址了**.
 
+
+### 64 位模式
+
+> Linux 内存管理
+
+![image](resource/64_virtual_mem.png)
+
+> Linux x86_64 位虚拟地址空间布局
+
+- 虚拟地址只使用了 48 位, 因此打印的地址只有 12 位 16 进制.
+
+- 在 x86_64 Linux 下有效的地址区间是从 `0x000000 00000000` ~ `0x00007FFF FFFFFFFF` 还有 `0xFFFF8000 0000
+0000` ~ `0xFFFFFFFF FFFFFFFF` 两个地址区间. 而每个地址区间都有 128TB 的地址空间可以使用, 所以总共是 256TB 的可
+用空间.
+
+
+> amd64 下的 Linux 内存空间布局
+
+[image](resource/amd64_virtual_mem.png)
+
+- 对于 amd64 架构来说, 用户空间的 text 段的起始地址为 `0x00000000 00400000`, 和 x86 下的一样后面跟着 data 段
+和 bss 段. heap 段和 bss 段之间也可以设置一个由 ASLR (ASLR, Address Space Layout Randomization, 是一种安全
+机制, 主要防止缓存区溢出攻击) 导致的 `random brk offset`, heap 段向上增长.
+ 
+- mmap 的起始地址通过页对齐之后从某一地址开始. 由于 amd64架构下 amd64 的页大小可以为 4K, 2M 或者 1G, 不像 x86 下
+页大小统一为 4K, 所以 mmap 的起始范围根据系统的页大小也有不同; x86 下, mmap 段的起始地址固定为 `0x00002AAA AAAA
+B000` (也可以设置 `random mmap offset`), 向上增长.
+
+- stack 段和 `0x00007FFF FFFFF000` 之间可能有 `random stack offset`
+
+> vm.legacy_va_layout=0
+>
+> kernel.randomize_va_space=2
+
+![iamge](resource/cat_self_maps.png)
+
+> - 前三行分别是 text segment, data segment 和 bss segment. **text segment**其实是存放二进制可执行代码的位
+> 置, 所以它的权限是读与可执行. **data segment**存放的是静态常量, 所以该地址段权限是只读. **bss segment**存放未
+> 初始化的静态变量, 所以它的权限是可读写.
+> 
+> - 接下来是 heap segment, heap地址是往高地址增长的, 是用来动态分配内存的区域. 它跟栈相反, 对应的内存申请系统调用
+> 是 brk()
+>
+>> brk() 系统调用可以通过调整 heap 区域的 brk指针, 从而调整 heap 的虚拟内存空间大小.
+> 
+> - 接下来的区域是 memory mapping segment. 这块地址是用来分配内存区域的, 一般是用来把文件映射进内存用的, 但是也可
+> 直接在这里申请内存空间使用, 对应的内存申请系统调用是 mmap()
+>
+>> mmap() 系统调用是把一个文件映射到一段内存地址空间; 也可以匿名直接申请一段内存空间使用
+>> mmap() 不一定要在 memory mapping segment 进行内存申请, 可以指定任意的内存地址, 当然只要不跟已有的冲突就好, 这
+>> 个地址也一定是 `000` 结尾, 才使得能页对齐.
+> 
+> - 再下面就是 stack segment, 栈的最大范围, 我们可以通过 prlimit 查看. 默认情况下的 8MB, 和 x86 一样.
+>
+> - 再下面就是 `vvar`, `vdso` 和 `vsyscall`. 这三个东西都是为了加速访问内核数据, 比如读取 `gettimeofday` 肯定
+> 不能频繁地进行系统调用陷入内核, 所以就映射到用户空间了. 所有程序都有这个3个映射地址段.
+>
+>
+>> 关于 vvar, vdso, vsyscall
+>>
+>> - 先说 vsyscall, 这东西出现最早, 比如读取时间 gettimeofday, 内核会把时间数据和 gettimeofday 的实现映射到这
+>> 块区域, 用户空间可以直接调用(内核将一些本身应该是系统调用的直接映射到用户空间, 这样对于一些使用比较频繁的系统调用, 
+>> 可以直接在用户空间调用以节省开销). 但是 vsyscall 区域太小了, 而且映射区域固定, 有安全问题.
+>>
+>> - 后来又造出了 vdso (virtual dynamic shared object), 之所以保留是为了兼容用户空间程序. vsdo 相当于加载一个
+>> linux-vd.so库文件一样, 也就是把一些函数实现映射到这个区域.
+>>
+>> - vvar也就是存放数据的地方了, 那么用户可以通过调用 vsdo 里的函数, 使用 vvar 里的数据, 来获得自己想要的信息. 而
+>> 且地址是随机的, 安全的.
+
+> vm.legacy_va_layout=1
+>
+> kernel.randomize_va_space=0
+
+![image](resource/cat_self_maps_1.png)
+
+
+### 不同的 CPU 体系架构下虚拟内存地址空间大致类似
+
+- `amd64` 架构下的进程地址空间布局总体上来说与 `x86` 下的相同, 只不过 amd64 的页大小可以为 4k, 2m, 或者 1g, 不像
+x86 下大小统一为 4k
