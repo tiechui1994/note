@@ -189,6 +189,17 @@ $ sysctl -w kernel.randomize_va_space=0
 3. `start_brk` 和 `brk` 这两个值分别标识了堆的起始地址和结束地址. 其中 `brk` 又叫 program break. 在linux中可以
 通过 brk() 和 sbrk() 这两个函数来改变 program break的位置.
 
+3.1) 当程序调用 malloc() 时, 一般就是在内部调用 sbrk() 来调整 brk 标识的位置向上移动.
+
+3.2) 当程序调用 free() 释放空间的时候, 传递给 sbrk() 一个负值来使堆的 brk 标识向下移动. 当然, brk() 和 sbrk() 
+所做的工作不是简单地移动 brk 标识, 还要处理将虚拟内存映射到物理内存地址等工作.
+
+3.3) glibc 中当申请的内存空间不大于 MMP_THRESHOLD 的时候, malloc() 使用brk/sbrk来调整 brk 标识的位置, 这个时
+候所申请的空间确实位于图中 start_brk 和 brk 之间. 当所 `申请的空间大于这个阈值的时候, malloc() 改用 mmap() 来分
+配空间`. 这个时候所申请到的空间就位于图中的 Memory Mapping Segment 这一段当中.
+
+3.4) `习惯上将整个 Heap Segment 和 Memory Mapping Segment 称为 "堆"`
+
 4. `Memory Mapping Segment`段是 `所有调用 mmap() 映射的数据的存储地`, 除了 malloc() 之外, 再就是动态链接库的
 加载. linux 中程序开始运行的一个重要步骤是 `loader 会去查找该程序所依赖的链接库, 然后使用 mmap将链接库映射到进程的
 地址空间中, 即映射到此处`
