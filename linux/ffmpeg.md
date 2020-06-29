@@ -28,7 +28,8 @@ ffmpeg -i in.wav -acodec mp3lame -y out.mp3
 
 > 说明:
 > 
-> - `-ar`, 设置输出文件的音频频率. 常用值 22050 Hz, 44100 Hz, 48000 Hz
-> - `-ac`, 设置音频通道的数目
-> - `-ab`, 设置音频比特率, 值 96kbps, 112kbps, 128kbps, 160kbps, 192kbps, 256kbps, 320kbps
+> - `-ar`, 设置音频采样率. 常用值 22050Hz, 44100Hz, 48000Hz
+> - `-ac`, 设置音频通道, 默认值是1
+> - `-ab`, 设置音频编码率, 值 96kbps, 112kbps, 128kbps, 160kbps, 192kbps, 256kbps, 320kbps
 > - `-acodec`, 编码器, 通过 `ffmpeg -codecs` 可以查看支持的所有的编码器
+> - `-aq`, 设置音频质量(特定于编解码器)
