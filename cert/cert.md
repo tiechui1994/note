@@ -190,3 +190,83 @@ TLS_AES_128_GCM_SHA256       uint16 = 0x1301
 TLS_AES_256_GCM_SHA384       uint16 = 0x1302
 TLS_CHACHA20_POLY1305_SHA256 uint16 = 0x1303
 ```
+
+
+## TLS/SSL 过程
+
+关键词:
+
+> - session key: TLS/SSL 最后协商的结果, 用来进行对称加密
+>
+> - client random: 一个 32B 的序列值, 每次连接来时, 都会动态生成. 即, 每次连接生产的值都会不一样. 因为它包含了 4B
+> 的时间戳和 28B的随机数.
+>
+> - server random: 和 client random一样, 只是由 server 端生成.
+>
+> - premaster secret: 这是 48B 的 blob 数据. 它能和 client & server random 通过 pseudorandom(PRF) 一起生
+> 成 session key.
+>
+> - cipher suite: 用来定义 TLS 连接用到的算法. 通常有 4 部分:
+> 1) 非对称加密(ECDH或RSA)
+> 2) 证书验证(证书的类型)
+> 3) 保密性(对称加密算法)
+> 4) 数据完整性(产生hash的函数)
+>
+> 例如: ECDH-ECDSA-AES256-GCM-SHA384 代表, ECDH 算法进行非对称加密, ECDSA 进行证书验证, 256bit AES 对称加密,
+> 384bit SHA 数据签名.
+
+![image](resource/tls_process.png)
+
+1.客户端发生 clientHello 信息, 包含了客户端支持的最高 TLS协议版本, random num, cipher suite. 如果客户端使用的
+resumed handshake, 那么这里发送的就是 sessionid. 如果客户端还支持 ALPN, 那么它还需要发送它所支持的其他协议, 比如
+HTTP/2.
+
+2.在server端进行serverHello阶段, 这里 server 根据 cient 发送过来的相关信息, 采取不同的策略, 同样还会发送和client
+端匹配的TLS最高版本信息, cipher suite 和 自己产生的 random num. 并且, 这里会产生该次连接独一无二的 sessionID
+
+3.通过 certificate 阶段, 会在信息流中加入 public key certification. ServerKeyExchange 该阶段, 主要是针对 
+ECDH 加密方式.
+
+4.serverHelloDone 标识 server 阶段处理结束, 该阶段产生的信息发送给 client.
+
+5. clientKeyExchange 阶段时, client 会随机生产一串 pre-master secret 序列, 并且会经由 public key 加密, 然后
+发送给 server. 在 ChangeCipherSpec 阶段, 主要是 client 自己, 通过 pre-master secret + server random-num
++ client random-num 生成 sessionKey. 这个标识着, 此时在 client 端, TLS/SSL 过程已经接近尾声.
+
+6. 后面在 server 端进行的 ChangeCipherSpec 和 client 进行的差不多, 通过使用 private key 解密 client 传过来的
+pre-master secret, 然后生成 sessionKey. 后面再通过一次验证, 使用 sessionKey 加密 server finished, 发送给 
+client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
+
+> RSA
+
+![image](resource/rsa_tls.png)
+
+> DH
+
+![image](resource/dh_tls.png)
+
+
+> 科普 DH 算法:
+
+原理公式:
+
+![image](resource/dh.png)
+
+为了防止在 DH 参数交换时, 数据过大, DH 使用的是取模数的方式, 这样就能限制传输的值永远在 `[1, p-1]`. 这里, 先说明一
+下 DH 算法的基本条件:
+
+- 公有条件: p 和 g 都是已知, 并且公开. 即, 第三方也可以随便获取到.
+
+- 私有条件: a 和 b 是两端自己生成的, 第三方获取不到.
+
+基本流程:
+
+![image](resource/dh_key_exchange.png)
+
+将上图的 DHparameter 替换为相对应的 X/Y 即可. 而最后的 Z 就是我们想要的 pre-master secret. 之后, 就和 RSA 加密
+算法一致, 加上两边的 random-num 生成 sessionKey.
+
+> 小结:
+> RSA 和 DH 两者之间的具体区别就在于: RSA会将 premaster secret 显示的传输, 这样有可能会造成私钥泄密引起的安全问题.
+> 而 DH 不会将 premaster secret 显示的传输.
+
