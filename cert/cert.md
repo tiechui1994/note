@@ -122,13 +122,13 @@ GolbalSign 和 Digicert`.
 
 ```bash
 # 生成 CA 私钥
-openssl genrsa -out ca.key 1024
+openssl genrsa -out ca.key 4096
 
-# X.509 Certificate Signing Request (CSR) Management.
+# X.509 Certificate Signing Request (CSR) Management. (CA生成证书签名请求)
 openssl req -new -key ca.key -out ca.csr
 
-# X.509 Certificate Data Management.
-openssl x509 -req -in ca.csr -signkey ca.key -out ca.crt
+# X.509 Certificate Data Management. (CA自签证书, 10年)
+openssl x509 -req -days 3650 -in ca.csr -signkey ca.key -out ca.crt
 ```
 
 - 第三步, 生成服务器端证书和客户端证书
@@ -136,21 +136,21 @@ openssl x509 -req -in ca.csr -signkey ca.key -out ca.crt
 ```bash
 # 服务器需要向CA机构申请签名证书, 在签名证书之前依然是创建自己的CSR文件
 # 需要输入服务器的相关内容(Country, Provence, City, Organization, Organization Unit, 
-# SERVER FQDN, Email, Optional Pwd)
+# Common Name [服务器名称, server FQDN, 必填], Email, Optional Pwd, Optional company)
 openssl req -new -key server.key -out server.csr
 
 # CA机构签名, 需要CA的证书和私钥参与, 最终颁发一个带有CA签名的证书
 # ca.crt ca.key 是CA独有的内容
 # server.csr server端的签名证书请求
 # server.crt 生成的签名证书
-openssl x509 -req -CA ca.crt -CAkey ca.key -CAcreateserial -in server.csr -out server.crt
+openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -CAcreateserial -set_serial 01 -in server.csr \
+-out server.crt
 ```
-
 
 ## 证书使用
 
-签名操作是 `发送方` 用私钥进行签名, `接受方` 用发送方证书来验证签名;
+签名操作是 `发送方`(CA机构) 用私钥进行签名, `接受方`(客户端) 用发送方证书(客户端内置的证书)来验证签名;
 
-加密操作是 `发送方` 用接受方的证书进行加密, `接受方` 用自己的私钥进行解密.
+加密操作是 `发送方`(客户端) 用接受方的证书进行加密, `接受方`(服务器) 用自己的私钥进行解密.
 
 因此, 如果说数字证书是电子商务应用者的网上数字身份证话, 那么证书相应的私钥则可以说是用户的私章或公章.
