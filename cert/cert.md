@@ -278,3 +278,33 @@ client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 > RSA 和 DH 两者之间的具体区别就在于: RSA会将 premaster secret 显示的传输, 这样有可能会造成私钥泄密引起的安全问题.
 > 而 DH 不会将 premaster secret 显示的传输.
 
+## TLS/SSL 中的基本概念
+
+### Forward Secrey
+
+FS(Forward Secrey) 主要是针对 private key 进行描述的. 如果你的 private key 能够用来破解以前通信的 session 内
+容, 比如, 通过 private key 破解你的 premaster secret, 得到了 sessionkey, 就可以解密传输内容了. 这种情况就是 
+non-forward-secrey. 那如何做到 FS 呢? 使用 DH 加密方式即可. 因为, 最后生成的 sessionKey 和 private key 并没
+有直接关系, premaster secret 是通过 `g(ab) mode P` 得到的.
+
+### ALPN
+
+ALPN(Application Layer Protocol Negotiation, 应用层协议协商机制). 在应用层中, HTTP 协议应该是重点. 不过由于
+HTTP 版本的问题, 以及现在 HTTP/2 的流行, 为了让 client-server 使用相同的协议二出现了 ALPN. 
+
+- 在 clientHello 阶段, client 会在 message 中, 添加一个 ProtocolNameList 字段. 用来代表它所支持的协议列表.
+
+- server 端在 serverHello 阶段, 处理 client 提供的 ProtocolNameList. 并且选择最高版本的协议, 执行. 将选择信息
+添加到 serverHello 内.
+
+### SNI
+
+SNI(Server Name Indication), 该机制的提出意义是, 当有一个 server 同时处理了很多个 host 时. 就相当于, 一个 IP 
+映射多个域名, 但是证书只能对一个 3 级域名有效, 所以, 针对于多个 host 来说, server 为了能同时兼顾这些郁闷, 一种简单的
+方法就是重定向到指定域名; 如果都想支持的话, 可以多买几个证书. 如果现在一个 IP 服务器下, 搭载了支持多个域名的 server,
+并且每个域名都有合法的 CA 证书. 那么 server 怎么判断, 哪一个域名用哪一个证书呢? 这时候, 需要用到 SNI. 相当于在 TLS 
+阶段, 将 host 一并发送过去, 然后 server 就知道在 serverHello 阶段该返回啥证书了.
+
+为什么一定要用 SNI ?
+
+
