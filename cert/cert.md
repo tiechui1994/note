@@ -207,46 +207,54 @@ TLS_CHACHA20_POLY1305_SHA256 uint16 = 0x1303
 > 成 session key.
 >
 > - cipher suite: 用来定义 TLS 连接用到的算法. 通常有 4 部分:
-> 1) 非对称加密(ECDH或RSA)
-> 2) 证书验证(证书的类型)
-> 3) 保密性(对称加密算法)
-> 4) 数据完整性(产生hash的函数)
+>> 1)非对称加密(ECDH或RSA)
+>>
+>> 2)证书验证(证书的类型)
+>>
+>> 3)保密性(对称加密算法)
+>>
+>> 4)数据完整性(产生hash的函数)
 >
 > 例如: ECDH-ECDSA-AES256-GCM-SHA384 代表, ECDH 算法进行非对称加密, ECDSA 进行证书验证, 256bit AES 对称加密,
 > 384bit SHA 数据签名.
 
 ![image](resource/tls_process.png)
 
-1.客户端发生 clientHello 信息, 包含了客户端支持的最高 TLS协议版本, random num, cipher suite. 如果客户端使用的
+1.客户端发送 clientHello 信息, 包含了客户端支持的最高 TLS协议版本, random num, cipher suite. 如果客户端使用的
 resumed handshake, 那么这里发送的就是 sessionid. 如果客户端还支持 ALPN, 那么它还需要发送它所支持的其他协议, 比如
 HTTP/2.
 
-2.在server端进行serverHello阶段, 这里 server 根据 cient 发送过来的相关信息, 采取不同的策略, 同样还会发送和client
-端匹配的TLS最高版本信息, cipher suite 和 自己产生的 random num. 并且, 这里会产生该次连接独一无二的 sessionID
+2.在 server 端进行 serverHello 阶段, 这里 server 根据 cient 发送过来的相关信息, 采取不同的策略, 同样还会发送和
+client 端匹配的TLS最高版本信息, cipher suite 和 自己产生的 random num. 并且, 这里会产生该次连接独一无二的 
+sessionid.
 
 3.通过 certificate 阶段, 会在信息流中加入 public key certification. ServerKeyExchange 该阶段, 主要是针对 
 ECDH 加密方式.
 
 4.serverHelloDone 标识 server 阶段处理结束, 该阶段产生的信息发送给 client.
 
-5. clientKeyExchange 阶段时, client 会随机生产一串 pre-master secret 序列, 并且会经由 public key 加密, 然后
+5.clientKeyExchange 阶段时, client 会随机生产一串 pre-master secret 序列, 并且会经由 public key 加密, 然后
 发送给 server. 在 ChangeCipherSpec 阶段, 主要是 client 自己, 通过 pre-master secret + server random-num
-+ client random-num 生成 sessionKey. 这个标识着, 此时在 client 端, TLS/SSL 过程已经接近尾声.
+`+` client random-num 生成 sessionKey. 这个标志着在 client 端, TLS/SSL 过程已经接近尾声.
 
-6. 后面在 server 端进行的 ChangeCipherSpec 和 client 进行的差不多, 通过使用 private key 解密 client 传过来的
+6.后面在 server 端进行的 ChangeCipherSpec 和 client 进行的差不多, 通过使用 private key 解密 client 传过来的
 pre-master secret, 然后生成 sessionKey. 后面再通过一次验证, 使用 sessionKey 加密 server finished, 发送给 
 client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 
-> RSA
+---
+
+> RSA 具体流程
 
 ![image](resource/rsa_tls.png)
 
-> DH
+
+> DH 具体流程
 
 ![image](resource/dh_tls.png)
 
+---
 
-> 科普 DH 算法:
+> DH 算法科普:
 
 原理公式:
 
