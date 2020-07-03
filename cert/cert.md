@@ -307,4 +307,36 @@ SNI(Server Name Indication), 该机制的提出意义是, 当有一个 server �
 
 为什么一定要用 SNI ?
 
+我们这里只是建立了 TCP + TLS 连接, 客户端的一些内容, 比如 hostname, 并不能在 TCP 中获得. 而想获得, 就需要在 HTTP
+阶段, 获得 client 传过来的 `host` 或 `origin` 字段. 所以, 为了解决这个尴尬的点, 就提出了 SNI.
 
+
+### Session Resumption
+
+为了提升性能, 减少请求次数, 提出了 Session ID 和 Session Tickets, 将成功进行连接的 session 内容缓存起来.
+
+#### Session ID
+
+Session ID 是 server 讲上一次成功连接的 session 内容存在自己的硬盘里面. 这里, 就不涉及对 session data 的二次加
+密. 基本过程是:
+
+1. client 端在 clientHello 阶段, 将 random num, TLS protocol 和 通过 hostname 匹配得到是最新一次的 Session
+ID 发送给 server 端 (侧面说明, client 同样需要存储一份 session data).
+
+2. server 接收到 Session ID 之后, 在缓存中查找, 如果找到, 则直接进行 ChangeCipher 阶段, 开始生成 sessionKey.
+然后, 返回相同的 Session ID.
+
+那么, 相对于完全的 TLS/SSL 连接来说, 这里只用到了一次 RTT.
+
+![image](resource/sessionid.png)
+
+
+#### Session Tickets
+
+Session Tickets 和 Session ID 做的是同样的事情. server 将最新一次的 session data 通过 二次加密, 在上一次握手
+结束时传递过去, 然后 client 将传递过来的信息保存. 这样, 利不利用缓存的 session data, 这时取决于 client. 如果该次
+的 session data 没有过期, 那么 client 就会在 clientHello 阶段将该数据发送过去, server 收到后, 便开始进行解密,
+然后, 双方生成 sessionKey, 握手结束.
+
+> Session ID 和 Session Tickets 到底使用哪个? Session ID 节省性能, 而损耗部分空间. Session Tickets 注重的是
+> 节省空间, 而损耗部分性能. 两者都能节省一次 RTT 时间.
