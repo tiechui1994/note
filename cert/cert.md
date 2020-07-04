@@ -341,3 +341,170 @@ Session Tickets 和 Session ID 做的是同样的事情. server 将最新一次�
 
 > Session ID 和 Session Tickets 到底使用哪个? Session ID 节省性能, 而损耗部分空间. Session Tickets 注重的是
 > 节省空间, 而损耗部分性能. 两者都能节省一次 RTT 时间.
+
+
+## TLS/SSL 优化
+
+TLS/SSL主要的性能调优简单包括: 启用 False Start, 选择合适 cipher suite,resumption 等. 另外, 如果你追求 
+`fashion`, 那么 HTTP/2 也是个不错的选择.
+
+### 设置 session 缓存
+
+session 缓存设置可以让两次的 RTT, 变为一次, 这相当于快了一倍(不包括密钥计算等). 不同的 server 设置 session 办法
+有很多, 这里以 nginx 为例. 在 nginx 中, 支持的 Session ID 的形式, 即在 server 中缓存以前 session 的加密内容.
+涉及的字段有两个, `ssl_session_cache` 和 `ssl_session_timeout`.
+
+- ssl_session_cache: 设置 session cache 上限值, 以及是否在多个 worker 之间共享.
+
+- ssl_session_timeout: 设置 session cache 存储的时间.
+
+例子:
+
+```
+ssl_session_cache shared:SSL:10m;
+ssl_session_timeout 20m;
+```
+
+> 表示的含义: session cache 会在不同的 worker 之间分享, 假设 1 MB 只能存储 8000 次握手的信息. 那么 10 MB 一共
+> 可以吃存储 80000 次握手信息. 如果超出, 则不会存储. 缓存信息存在是时长为 20 分钟.
+> 另外, 你也可以开启 `session ticket`, ST(session ticket) 需要一个 sign 参数, 使用 openssl 创建即可.
+
+```
+# 创建 ticket.key
+openssl rand 48 > ticket.key
+
+# 在 nginx 中开启
+ssl_session_ticket on;
+ssl_session_ticket_key ticket.key;
+```
+
+### 选择合适的 cipher suite
+
+先说明一下, 证书的内容和加密套件实际没有任何关系. 这主要还是取决于服务器的支持程度以及客户端的支持度. 另外, 如果想要启
+用 `False Start`, 这和套件的选择有很大的关系. nginx 中, 主要用到两个指令:
+
+```
+ssl_prefer_server_ciphers on;
+ssl_ciphers xxx;
+```
+
+- ssl_prefer_server_ciphers: 用来告诉客户端, 要按照我提供的加密套件选择.
+
+- ssl_cipher: 具体设置的加密套件内容, 使用 `:` 分隔.
+
+
+支持性最高的就是使用:
+
+```
+# 让浏览器决定使用哪个套件
+ssl_ciphers HIGH:!aNULL:!MD5;
+```
+
+一般情况, 还是应该自己来决定使用哪个套件, 这样安全不安全由自己说了算.  这里简单放一个, 比较安全的, 下面所有的套件都必
+须支持 Forward Secrey.
+
+```
+ssl_ciphers ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!MD5;
+```
+
+不过, 以下的加密套件, 最好不要使用, 因为基本上都不安全:
+
+- aNULL: 是一种非标准的 DH 密钥交换套件. 容易被 `中间人` 攻击.
+
+- eNULL: 没有加密方式, 明文交换
+
+- EXPORT: 一种弱加密方式.
+
+- RC4: 使用已经废弃的 ARCFOUR 算法
+
+- DES: 使用已经废弃的 Data Encryption 标准
+
+- SSLv2: 老版本 SSL2.0 的加密套件
+
+- MD5: 直接使用 MD5 加密方式.
+
+
+### False Start
+
+另外, 怎么在 nginx 中开启 False Start 呢? 这其实和服务器并没有多大的关系, 关键还是你选择的套件和 NPN/ALPN 协议的
+作用.
+
+- 首先, 加密套件必须具有 Forward Secrey, 否则开不了.
+
+- 浏览器需要使用 NPN 或者 ALPN 告诉服务器, 该所需的协议版本, 然后再决定开不开启.
+
+那么, nginx中, 我们只要选择好合适的加密套件即可. 这里一份现成的:
+
+```
+ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256::DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5;
+```
+
+**使用 DH 密钥交换**
+
+DH 的加密过程, 上面已经说过了. DH自带两个公共的参数, 所以, 这必须手动进行创建.
+
+```
+# 创建 DH 参数
+openssl dhparam 2048 -out dhparam.pem
+```
+
+然后, 调用该文件
+
+```
+# nginx
+ssl_dhparam dhparam.pem;
+```
+
+这样, 就正式的开启的 DH 加密模式. 抓包观察结果 (DH在ServerHello):
+
+![image](resource/dh_server.png)
+
+由于历史原因, DH param 已经使用的长度是 1024, 比如: 采用 `0akley group 2` 版本. 现在, 比较流行的 DH 加密方式
+是 `ECDH`, 它和以前的加密方式 (`DHE`) 比起来, 在密钥生成这块会快很多. 同样, 由于历史原因, 它的基本条件比较高.
+
+### 使用 SNI
+
+SNI 就是针对一个 IP 手握很多个证书时, 用到的协议机制. 这里主要是用来区分, 不同的 host, 使用不同的证书. 主要使用格式
+就是不同的 server_name 搭配不同的 certificate.
+
+```
+server {
+    server_name www.abc.com;
+    ssl_certificate abc.crt;
+    ssl_certificate_key abc.crt.key;
+}
+
+server {
+    server_name www.xyz.com;
+    ssl_certificate xyz.crt;
+    ssl_certificate_key xyz.crt.key;
+}
+```
+
+如何开启呢? 换个高版本的 nginx. 使用 `nginx -V` 检查 nginx 是否带有
+
+```
+TLS SNI support enabled
+```
+
+完整的示例:
+
+```
+server {
+    listen 443 ssl http2; # 默认打开 http2
+    listen [::]:443 ssl http2;
+    
+    ssl_certificate /etc/nginx/cert/bjornjohansen.no.certchain.crt;
+    ssl_certificate_key /etc/nginx/cert/bjornjohansen.no.key;
+    
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 20m;
+    
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!MD5;
+    
+    ssl_dhparam /etc/nginx/cert/dhparam.pem;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+}
+```
+
