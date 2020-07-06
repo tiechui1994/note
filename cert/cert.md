@@ -269,12 +269,44 @@ client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 
 - 私有条件: a 和 b 是两端自己生成的, 第三方获取不到.
 
-基本流程:
+DH 基本流程:
 
-![image](resource/dh_key_exchange.png)
+> a, g, p 公共参数
 
-将上图的 DHparameter 替换为相对应的 X/Y 即可. 而最后的 Z 就是我们想要的 pre-master secret. 之后, 就和 RSA 加密
-算法一致, 加上两边的 random-num 生成 sessionKey.
+1. 客户端生成随机数a, 计算 A = g^a mod p, 然后把g, p, A 发送给服务器.
+ 
+2. 服务器生成随机数b, 计算 B = g^b mod p, K = A^b mod p, (这里的K就是最终的密钥) 然后把 B 发送给客户端
+
+3. 客户端计算 K = B^a mod p, 到此, 客户端和服务器就产生了相同的密钥 K
+
+> 解析: K = A^b mod p = (g^a mode p)^b mod p = g^ab mod p = (g^b mod p)^a mode p = B^a mod p
+
+而最后的 K 就是我们想要的 pre-master secret. 之后, 就和 RSA 加密算法一致, 加上两边的 random-num 生成 sessionKey.
+
+> 实际的 Server Key Exchange 阶段传递的值也是 p, g, pubkey(上面计算的A)
+> 实际的 Client Key Exchange 阶段传递的值也是 pubkey (上面计算的B)
+
+ECDH (Elliptic Curve Diffie-Hellman) 流程:
+
+> 椭圆曲线密码学属于非对称密码学的. 其公私钥计算公式如下:
+>
+>> - 私钥是一个随机数d, 取值范围在 1,...,n-1, 其中 n 是子群的阶
+>> - 公钥是点 H = dG, G是子群的基点
+>
+> 如果知道私钥 d 和椭圆曲线参数 G, 计算公钥 H 是很容易的, 但是只知道公钥 H 和椭圆曲线参数 G, 计算私钥 d 是非常困难的.
+
+1. 首先客户端和服务器需要使用同一条椭圆曲线, 参数 (p, a, b, G, n, h) 相同. 这里其实就是 tls 当中的 curve  参数
+
+2. 客户端和服务器各自生成公私钥. 客户端生成私钥 dA, 公钥 HA = dAG, 服务器生成私钥 dB, 公钥 HB = dBG
+
+3. 客户端和服务器各自交换公钥 HA 和 HB
+
+4. 客户端计算 S = dAHB, 服务器计算 S = dBHA, 可以推导它们计算的值相同. 推到过程如下:
+S = dAHB = dAdBG = dB(dAG) = dBHA
+
+> 实际的 Server Key Exchange 阶段传递的值也是 pubkey, curve
+> 实际的 Client Key Exchange 阶段传递的值也是 pubkey
+
 
 > 小结:
 > RSA 和 DH 两者之间的具体区别就在于: RSA会将 premaster secret 显示的传输, 这样有可能会造成私钥泄密引起的安全问题.
