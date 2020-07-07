@@ -208,16 +208,37 @@ TLS_CHACHA20_POLY1305_SHA256 uint16 = 0x1303
 > 成 session key.
 >
 > - cipher suite: 用来定义 TLS 连接用到的算法. 通常有 4 部分:
->> 1)非对称加密(ECDH或RSA)
->>
->> 2)证书验证(证书的类型)
->>
->> 3)保密性(对称加密算法)
->>
->> 4)数据完整性(产生hash的函数)
 >
-> 例如: ECDH-ECDSA-AES256-GCM-SHA384 代表, ECDH 算法进行非对称加密, ECDSA 进行证书验证, 256bit AES 对称加密,
-> 384bit SHA 数据签名.
+>> 1)秘钥交换算法, (非对称加密算法, ECDHE或RSA)
+>>
+>> 2)证书签名算法, (RSA)
+>>
+>> 3)数据加密算法(对称加密算法, AES128-CBC等)
+>>
+>> 4)数据校验签名(产生hash的函数)
+>
+> 例如: ECDH-ECDSA-AES256-GCM-SHA384 代表, ECDH 表示使用 ECDH 算法进行秘钥交换, ECDSA 表示证书签名算法, 
+> AES256-GCM 对称加密算法, SHA384 数据签名校验.
+
+例子:
+
+> 加密套件
+
+![image](resource/tls_cipher_1.png)
+
+> 证书签名算法
+
+![image](resource/tls_cipher_2.png)
+
+> 秘钥交换算法 (Server)
+
+![image](resource/tls_cipher_3.png)
+
+> 秘钥交换算法 (Client)
+
+![image](resource/tls_cipher_4.png)
+
+---
 
 ![image](resource/tls_process.png)
 
