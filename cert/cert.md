@@ -548,15 +548,23 @@ server {
     listen 443 ssl http2; # 默认打开 http2
     listen [::]:443 ssl http2;
     
-    ssl_certificate /etc/nginx/cert/bjornjohansen.no.certchain.crt;
-    ssl_certificate_key /etc/nginx/cert/bjornjohansen.no.key;
+    # certificate
+    ssl_certificate /ssl/cert/example.com.crt; // 证书
+    ssl_certificate_key /ssl/cert/example.com.key; // 私钥
     
+    # 客户端证书验证
+    ssl_client_certificate /ssl/ca/client.crt; // 颁发客户端证书CA的证书, 一般都是自建的CA证书
+    ssl_verify_client on;
+    
+    # session 缓存
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 20m;
     
-    ssl_prefer_server_ciphers on;
+    # ssl ciphers
+    ssl_prefer_server_ciphers on; // 优先采取服务器算法
     ssl_ciphers ECDH+AESGCM:ECDH+AES256:ECDH+AES128:DH+3DES:!ADH:!AECDH:!MD5;
     
+    # DH 算法
     ssl_dhparam /etc/nginx/cert/dhparam.pem;
     ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
 }
