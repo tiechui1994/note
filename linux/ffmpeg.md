@@ -10,6 +10,12 @@
 ffmpeg -i in.mp3 -acodec pcm_s16le -ac 1 -ar 16000 out.wav
 ```
 
+- wav -> mp3
+
+```bash
+ffmpeg -i in.wav -acodec mp3lame -y out.mp3
+```
+
 - amr -> wav
 
 ```bash
@@ -22,11 +28,18 @@ ffmpeg -i in.amr -acodec amr_nb  out.wav
 ffmpeg -i in.wav -acodec amr_nb -ac 1 -ar 8000 -ab 12.20k -y out.amr
 ```
 
-- wav -> mp3
+- mp3 -> amr
 
 ```bash
-ffmpeg -i in.wav -acodec mp3lame -y out.mp3
+ffmpeg -i in.mp3 -ac 1 -ar 8000 -ab 12.20k out.amr
 ```
+
+- amr -> mp3
+
+```bash
+ffmpeg -i in.amr -ac 1 -ar 44100 -ab 128k out.mp3
+```
+
 
 > 说明:
 > 
