@@ -19,7 +19,7 @@ ffmpeg -i in.amr -acodec amr_nb  out.wav
 - wav -> amr
 
 ```bash
-ffmpeg -i in.wav -acodec opencore_amrnb -ac 1 -ar 8000 -ab 12.20k -y out.amr
+ffmpeg -i in.wav -acodec amr_nb -ac 1 -ar 8000 -ab 12.20k -y out.amr
 ```
 
 - wav -> mp3
