@@ -25,7 +25,7 @@ zip 命令创建一个压缩文件, 与此同时保留原始文件的完整性. 
 文件名称应该是命令行上的最后一个参数.
 
 ```
-tar file.zip file1 file2 ...
+zip file.zip file1 file2 ...
 ```
 
 ---
@@ -107,5 +107,3 @@ unxz file.xz
 
 xz -d file.xz
 ```
-
-
