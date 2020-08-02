@@ -2,8 +2,9 @@
 
 跨域通信的解决手段大致分为两类:
 
-- 一类是Hack. 比如通过 `title`, `navigation` 等对象传递信息. JSONP可以说是最优秀的Hack.
-- 另一类是HTML5支持. 一个是 `Access-Control-Allow-Origin` 响应头，一个是 `window.postMessage`
+- 一类是 Hack. 比如通过 `title`, `navigation` 等对象传递信息. JSONP可以说是最优秀的Hack.
+
+- 另一类是HTML5支持. 一个是 `Access-Control-Allow-Origin` 响应头, 一个是 `window.postMessage`
 
 ## 设置 document.domain
 
@@ -29,7 +30,7 @@ ifr.style.display = 'none';
 document.body.appendChild(ifr);
 ```
 
-注意: 上述代码所在的URL是http://a.com/foo, 它对http://b.a.com/bar的DOM访问要求后者将 document.domain 
+注意: 上述代码所在的URL是 `http://a.com/fo`o, 它对 `http://b.a.com/bar` 的DOM访问要求后者将 `document.domain` 
 往上设置一级, 代码如下:
 
 ```js
