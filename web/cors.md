@@ -68,9 +68,11 @@
 - 请求中没有使用 `ReadableStream` 对象.
 
 
-> 简单请求跨域, 服务器的响应头包括以下内容:
+> 简单请求跨域(没有预检请求), 服务器的响应头包括以下内容:
 >
 > `Access-Control-Allow-Origin: <origin> | *` # 必须
+>
+> `Access-Control-Request-Methods: 'POST,GET,HEAD'` # 可选(实际请求所允许使用的 `HTTP` 方法)
 >
 > `Access-Control-Request-Headers: 'Authorization,Content-Type'` # 可选(实际请求中允许携带的header)
 
@@ -121,13 +123,13 @@
 - 请求中**使用了 `ReadableStream` 对象**.
 
 
-> 非简单请求跨域, 服务器的响应头包括以下内容:
+> 非简单请求跨域(存在预检请求), 服务器的响应头包括以下内容:
 >
 > `Access-Control-Allow-Origin: '<origin> | *'` # 必须
 >
 > `Access-Control-Request-Methods: 'POST,GET,HEAD'` # 可选(实际请求所允许使用的 `HTTP` 方法)
 >
-> `Access-Control-Request-Headers: 'Authorization,Content-Type'` # 可选(实际请求中允许携带的header)
+> `Access-Control-Request-Headers: 'Authorization, Content-Type'` # 可选(实际请求中允许携带的header)
 
 ---
 
@@ -137,9 +139,10 @@
 
 要想携带凭证头, 需要明确设置相关参数:
 
-- 对于 Fetch, 需要添加 credentials: "include" 参数.
+- 对于 Fetch, 需要添加 `credentials: "include"` 参数.
+- 对于 XMLHttpRequest, 需要添加 `Sec-Fetch-Mode: "cors"` 请求头
 
-> 携带凭据的跨域, 服务器的响应头包括以下内容:
+> 携带凭据的跨域(存在预检请求), 服务器的响应头包括以下内容:
 >
 > `Access-Control-Allow-Origin: '<origin>`,  必须
 >
