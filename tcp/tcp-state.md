@@ -2,7 +2,7 @@
 
 TCP的状态转换图:
 
-![img](./resouces/tcp-state.jpg)
+![image](/images/tcp_state.jpg)
 
 
 TCP 状态转换的两条主线:

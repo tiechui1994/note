@@ -12,7 +12,7 @@
 处于安全考虑, 浏览器限制从脚本内发起的跨域HTTP请求. 例如,XMLHttpRequest和Fetch API遵循同源策略. 这意味着
 使用这些API的Web应用程序只能从加载应用程序的同一个域请求HTTP资源,除非使用CORS头文件.
 
-![](resource/cors.png)
+![image](/images/cors_http.png)
 
 跨域资源共享(CORS) 机制允许 Web 应用服务器进行跨域访问控制, 从而使跨域数据传输得以安全进行. 现代浏览器支持在 API 容
 器中(例如 XMLHttpRequest 或 Fetch)使用CORS, 以降低跨域HTTP请求所带来的风险.

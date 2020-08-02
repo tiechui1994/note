@@ -210,7 +210,7 @@ message AllNormalypes {
 
 protobuf协议:
 
-![image](images/protobuf.png)
+![image](/images/rpc_protobuf.png)
 
 PB以 "1~5个字节"的编号和类型开头, 格式: 编号<<3 | 类型
 

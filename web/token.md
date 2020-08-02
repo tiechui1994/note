@@ -37,7 +37,7 @@ token, 获取受保护资源的凭证, 必须要设置过期时间. 主流网站
 
 ## Token生成
 
-![avatar](resource/token_create.png)
+![image](/images/token_create.png)
 
 ```
 1.将荷载payload, 以及Header信息进行Base64加密, 形成密文payload密文, header密文.

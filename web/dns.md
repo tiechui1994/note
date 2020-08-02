@@ -469,4 +469,4 @@ DNS工作原理: 查询过程
 第五步: 本地DNS服务器将结果返回给请求的主机.
 
 
-![img](resource/dns_process.png)
+![image](/images/dns_process.png)
