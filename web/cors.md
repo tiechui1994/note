@@ -150,7 +150,7 @@
 > 
 > `Access-Control-Request-Methods: 'POST,GET,HEAD'` # 可选(实际请求所允许使用的 `HTTP` 方法)
 >
-> `Access-Control-Request-Headers: 'Authorization,Content-Type'` # 可选(实际请求中允许携带的header)
+> `Access-Control-Request-Headers: 'Authorization, Cookie'` # 必须(实际请求中允许携带的header)
 
 ---
 
