@@ -4,7 +4,6 @@
 
 X.509, 一种证书的标准, 定义了证书中包含的内容.
 
-
 ## 编码格式
 
 同样的X.509证书, 可能有不同的编码格式, 目前有以下两种编码格式:
@@ -224,23 +223,23 @@ TLS_CHACHA20_POLY1305_SHA256 uint16 = 0x1303
 
 > 加密套件
 
-![image](resource/tls_cipher_1.png)
+![image](/images/cert_tls_cipher_1.png)
 
 > 证书签名算法
 
-![image](resource/tls_cipher_2.png)
+![image](/images/cert_tls_cipher_2.png)
 
 > 秘钥交换算法 (Server)
 
-![image](resource/tls_cipher_3.png)
+![image](/images/cert_tls_cipher_3.png)
 
 > 秘钥交换算法 (Client)
 
-![image](resource/tls_cipher_4.png)
+![image](/images/cert_tls_cipher_4.png)
 
 ---
 
-![image](resource/tls_process.png)
+![image](/images/cert_tls_process.png)
 
 1.客户端发送 ClientHello 信息, 包含了客户端支持的最高 TLS协议版本, random num, cipher suite. 如果客户端使用的
 resumed handshake, 那么这里发送的就是 Session ID. 如果客户端还支持 ALPN, 那么它还需要发送它所支持的其他协议, 比
@@ -268,12 +267,12 @@ client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 
 > RSA 具体流程
 
-![image](resource/rsa_tls.png)
+![image](/images/cert_rsa_tls_process.png)
 
 
 > DH 具体流程
 
-![image](resource/dh_tls.png)
+![image](/images/cert_dh_tls_process.png)
 
 ---
 
@@ -281,7 +280,7 @@ client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 
 原理公式:
 
-![image](resource/dh.png)
+![image](/images/cert_dh_formula.png)
 
 为了防止在 DH 参数交换时, 数据过大, DH 使用的是取模数的方式, 这样就能限制传输的值永远在 `[1, p-1]`. 这里, 先说明一
 下 DH 算法的基本条件:
@@ -383,7 +382,7 @@ ID 发送给 server 端 (侧面说明, client 同样需要存储一份 session d
 
 那么, 相对于完全的 TLS/SSL 连接来说, 这里只用到了一次 RTT.
 
-![image](resource/sessionid.png)
+![image](/images/cert_use_sessionid.png)
 
 
 #### Session Tickets
@@ -511,7 +510,7 @@ ssl_dhparam dhparam.pem;
 
 这样, 就正式的开启的 DH 加密模式. 抓包观察结果 (DH在ServerHello):
 
-![image](resource/dh_server.png)
+![image](/images/cert_dh_server_key_exchange.png)
 
 由于历史原因, DH param 已经使用的长度是 1024, 比如: 采用 `0akley group 2` 版本. 现在, 比较流行的 DH 加密方式
 是 `ECDH`, 它和以前的加密方式 (`DHE`) 比起来, 在密钥生成这块会快很多. 同样, 由于历史原因, 它的基本条件比较高.

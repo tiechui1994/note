@@ -140,7 +140,6 @@
 要想携带凭证头, 需要明确设置相关参数:
 
 - 对于 Fetch, 需要添加 `credentials: "include"` 参数.
-- 对于 XMLHttpRequest, 需要添加 `Sec-Fetch-Mode: "cors"` 请求头
 
 > 携带凭据的跨域(存在预检请求), 服务器的响应头包括以下内容:
 >

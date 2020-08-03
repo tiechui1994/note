@@ -50,4 +50,4 @@
 
 **iptables 的网络图**
 
-![image](resource/table_exe.png)
+![image](/images/iptables_table_exe.png)

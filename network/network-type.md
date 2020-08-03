@@ -20,7 +20,7 @@ br0一旦设置IP地址, 就意味着br0可以作为路由接口设备, 参与IP
 
 - Bridge工作过程
 
-![image](resource/type-bridge.png)
+![image](/images/net_type_bridge.png)
 
 介绍: 主机有em1和em2两块网卡, 网桥br0.  用户空间进程app1, app2等是普通网络应用, OpenVPN进程P1, 以及一台或多台kvm
 虚拟机P2(kvm虚拟机实现为主机上的一个qemu-kvm进程, 下文使用qemu-kvm进程表示虚拟机). 
