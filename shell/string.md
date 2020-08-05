@@ -2,22 +2,22 @@
 
 #### 1.判断读取字符串值
 
-|  表达式          | 含义                                          |
-| --------------- | ---------------------------------------------|
-| ${var}          | 变量var的值, 与$var相同 |
-| ${var-DEFAULT}  | 如果var没有被声明, 使用$DEFAULT作为其值 |
-| ${var:-DEFAULT} | 如果var没有被声明或者值为空, 使用$DEFAULT作为其值 |
-| ${var=DEFAULT}  | 如果var没有被声明, 使用$DEFAULT作为其值 |
-| ${var:=DEFAULT} | 如果var没有被声明或者值为空, 使用$DEFAULT作为其值 |
-|                 |                                    |
-| ${var+OTHER}    | 如果var声明了,那么其值就是$OTHER, 否则就是空字符串 |
-| ${var:+OTHER}   | 如果var声明了,那么其值就是$OTHER, 否则就是空字符串 |
-|                 |                                 |
-| ${var?ERR_MSG}  | 如果var没有被声明, 那么打印$ERR_MSG |
-| ${var:?ERR_MSG} | 如果var没有被声明, 那么打印$ERR_MSG |
-|                 |                                 |
-| ${!prefix*}     | 匹配之前`所有以prefix开头`的为变量名称的变量 |
-| ${!prefix@}     | 匹配之前`所有以prefix开头`的为变量名称的变量 |
+|  表达式            | 含义                                          |
+| ----------------- | ---------------------------------------------|
+| `${var}`          | 变量var的值, 与`$var`相同 |
+| `${var-DEFAULT}`  | 如果var没有被声明, 使用`$DEFAULT`作为其值 |
+| `${var:-DEFAULT}` | 如果var没有被声明或者值为空, 使用`$DEFAULT`作为其值 |
+| `${var=DEFAULT}`  | 如果var没有被声明, 使用`$DEFAULT`作为其值 |
+| `${var:=DEFAULT}` | 如果var没有被声明或者值为空, 使用`$DEFAULT`作为其值 |
+|                   |                                    |
+| `${var+OTHER}`    | 如果var声明了,那么其值就是`$OTHER`, 否则就是空字符串 |
+| `${var:+OTHER}`   | 如果var声明了,那么其值就是`$OTHER`, 否则就是空字符串 |
+|                   |                                 |
+| `${var?ERR_MSG}`  | 如果var没有被声明, 那么打印`$ERR_MSG` |
+| `${var:?ERR_MSG}` | 如果var没有被声明, 那么打印`$ERR_MSG` |
+|                   |                                 |
+| `${!prefix*}`     | 匹配之前`所有以prefix开头`的为变量名称的变量 |
+| `${!prefix@}`     | 匹配之前`所有以prefix开头`的为变量名称的变量 |
 
 
 > example
@@ -44,22 +44,22 @@ echo "存在的变量2: ${!w@}"
 
 #### 2. 字符串操作(长度, 读取, 替换)
 
-| 表达式               | 含义                                                         |
-| --------------------| ----------------------------------------------------------- |
-| ${string}           | $string的长度 |
-|                     |                                                             |
-| ${string:pos}       | 在$string中,从$pos开始提取子串 |
-| ${string:pos:len}   | 在$string中,从$pos开始提取长度为$len的子串 |
-|                     |                                                             |
-| ${varible*string}   | 从左到右截取 `第一个string后的字符串` |
-| ${varible*string}   | 从左到右截取 `最后一个string后的字符串` |
-| ${varible%string*}  | 从右到左截取 `第一个string后的字符串` |
-| ${varible%%string}  | 从右到左截取 `最后一个string后的字符串` |
-|                     |                                                             |
-| ${string/sub/repl}  | 使用$repl来替换第一个匹配$sub的子串(不可以正则) |
-| ${string//sub/repl} | 使用$repl来替换所有匹配$sub的子串(不可以正则) |
-| ${string/sub/repl}  | 如果$string的前缀匹配$sub,那么使用$repl替换匹配$sub的子串(1个) |
-| ${string/%sub/repl} | 如果$string的后缀匹配$sub,那么使用$repl替换匹配$sub的子串(1个) |
+| 表达式                 | 含义                                                         |
+| --------------------- | ----------------------------------------------------------- |
+| `${string}`           | `$string`的长度 |
+|                       |                                                             |
+| `${string:pos}`       | 在`$string`中,从`$pos`开始提取子串 |
+| `${string:pos:len}`   | 在`$string`中,从`$pos`开始提取长度为`$len`的子串 |
+|                       |                                                             |
+| `${var#*string}`      | 从左到右截取 `第一个string后的字符串` |
+| `${var##*string}`     | 从左到右截取 `最后一个string后的字符串` |
+| `${var%string}`       | 从右到左截取 `第一个string后的字符串` |
+| `${var%%string}`      | 从右到左截取 `最后一个string后的字符串` |
+|                       |                                                             |
+| `${string/sub/repl}`  | 使用`$repl`来替换第一个匹配`$sub`的子串(非正则) |
+| `${string//sub/repl}` | 使用`$repl`来替换所有匹配`$sub`的子串(非正则) |
+| `${string/#sub/repl}` | 如果`$string`的前缀匹配`$sub`,那么使用`$repl`替换匹配`$sub`的子串(1个) |
+| `${string/%sub/repl}` | 如果`$string`的后缀匹配`$sub`,那么使用`$repl`替换匹配`$sub`的子串(1个) |
 
 ---
 
