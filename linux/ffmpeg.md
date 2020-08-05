@@ -40,6 +40,18 @@ ffmpeg -i in.mp3 -ac 1 -ar 8000 -ab 12.20k out.amr
 ffmpeg -i in.amr -ac 1 -ar 44100 -ab 128k out.mp3
 ```
 
+- pcm -> wav
+
+```bash
+ffmpeg -i input.pcm -f s16be -ar 8000 -ac 2 -acodec pcm_s16be  output.wav
+```
+
+- wav -> pcm
+
+```bash
+ffmpeg -i input.wav -f s16be -ar 8000 -ac 1 -acodec pcm_s16be output.pcm
+```
+
 
 > 说明:
 > 

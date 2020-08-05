@@ -49,7 +49,7 @@ inode号仅在各文件系统下是唯一的, 当Linux挂载多个文件系统�
 
 软链接数据访问:
 
-![image](./resource/softlink_access.jpg)
+![image](/images/linux_link_softlink_access.jpg)
 
 
 当然软连接的用户数据也可以是另一个软连接的路径, 其解析过程是递归的. 但需要注意: 软连接创建时原文件的路径指向使用绝对路径较

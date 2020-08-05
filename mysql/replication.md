@@ -11,7 +11,7 @@ instance (master) 复制到另一个MySQL instance (slave). 在master 和 slave�
 
 ### 复制过程
 
-![image](resource/replication.jpg)
+![image](/images/mysql_repl_replication.jpg)
 
 
 - 主节点 bin log dump 线程
@@ -39,7 +39,7 @@ SQL线程负责读取relay log中的内容, 解析成具体的操作并执行, �
 次起来之后, 就可以完成数据的同步.
 
 
-![image](resource/replication-process.jpg)
+![image](/images/mysql_repl_replication_process.jpg)
 
 - 从节点上的I/O线程连接到主节点, 并请求从指定日志文件的指定位置(或者从最开始的日志)之后的日志内容;
 
@@ -109,7 +109,7 @@ RBR:
 这种模式, 主节点不会主动push bin log到从节点, 这样可能导致failover的情况下, 也许从节点没有及时地
 将最新的bin log同步到本地.
 
-![image](resource/async-mode.jpg)
+![image](/images/mysql_repl_async_mode.jpg)
 
 - 半同步模式(semi-mode)
 
@@ -118,7 +118,7 @@ RBR:
 binlog至少传输到了一个从节点上, 不能保证从节点将此事务更新到db中. 性能上会有一定的降低, 响应时间会
 变长.
 
-![image](resource/semi-mode.jpg)
+![image](/images/mysql_repl_semi_mode.jpg)
 
 
 - 全同步模式

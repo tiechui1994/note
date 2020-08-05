@@ -50,7 +50,7 @@ requisite 或 sufficient)**, 运行的模块的路径和参数.
 
 **验证流程如下:**
 
-![img](resource/pam.jpg)
+![image](/images/linux_pam.jpg)
 
 ## 常用的PAM
 

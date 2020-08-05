@@ -47,7 +47,7 @@ fsync操作. 因为MySQL工作在用户空间, MySQL的log buffer处于用户空
 (redo: ib_logfileN文件, undo: ibdataN 或 .ibd文件) 当中, 中间还要经过操作系统内核空间os buffer,
 调用 fsync 的作用就是将 OS buffer中的日志刷到磁盘的log file中.
 
-![image](resource/innodb_log.png)
+![image](/images/mysql_log_innodb_log.png)
 
 
 #### 日志块 (log block)
@@ -89,7 +89,7 @@ log_block_checksum, 该log block计算出的校验值
 
 每个日志文件组的第一个文件的前2048字节是存放的头文件信息. 
 
-![image](resource/redo_log_file.jpg)
+![image](/images/mysql_log_redo_log_file.jpg)
 
 日志文件头共占用4个OS_FILE_LOG_BLOCK_SIZE(512字节)的大小. 
 
@@ -196,7 +196,7 @@ innodb_flush_log_at_trx_commit=1, 指定了 `InnoDB` 在事务提交后的日志
 来控制时间间隔的
 ````
 
-![image](resource/innodb_flush_log_at_trx_commit.png)
+![image](/images/mysql_log_innodb_flush_log_at_trx_commit.png)
 
 innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到磁盘的时间间隔. 默认值是1s
 

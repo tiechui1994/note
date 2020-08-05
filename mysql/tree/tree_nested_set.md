@@ -23,10 +23,10 @@
 
 计算案例如下:
 
-![](../resource/nested_cal.png)
+![image](/images/mysql_tree_nested_picture.png)
 
 
-![](../resource/nested_stats.png)
+![image](/images/mysql_tree_nested_stats.png)
 
 例如: 获取id为4的所有后代
 
@@ -66,7 +66,7 @@ WHERE t1.id = 6;
 嵌套集中, 使用新的视角看待树状结构. **不是使用节点或行, 而是使用嵌套容器**, 结构如下图
 所示:
 
-![](../resource/nested_categories.png)
+![image](/images/mysql_tree_nested_categories.png)
 
 
 - 数据结构: category
@@ -105,11 +105,11 @@ INSERT INTO category VALUES(1,'ELECTRONICS',1,20),(2,'TELEVISIONS',2,9),
 
 下面是插入数据进行编号图:
 
-![](../resource/nested_numbered.png)
+![image](/images/mysql_tree_nested_numbered.png)
 
 这种设计可以使用树状结构展示:
 
-![](../resource/nested_numbered_tree.png)
+![image](/images/mysql_tree_nested_numbered_tree.png)
 
 说明: 构建这种树需要从左向右, 每次一层的向下遍历其子节点, 对于叶子节点则指定其右值并移动到
 其右边的兄弟节点. 这种算法: **深度优先遍历**

@@ -71,7 +71,7 @@ read操作的发生, 会经历两个阶段:
 
 Linux当中, 默认情况下所有的socket都是blocking.
 
-![image](resource/block_io.png)
+![image](/images/linux_io_block.png)
 
 当用户进程调用了recv()/recvfrom()这个系统调用, 
 
@@ -86,7 +86,7 @@ block的状态, 重新运行起来.
 
 ### 非阻塞IO (nonblocking IO)
 
-[!image](resource/nonblock_io.png)
+![image](/images/linux_io_nonblock.png)
 
 同步非阻塞就是"每隔一会儿瞄一眼进度条"的轮询(polling)方式. 在这种模型中, 设备是以非阻塞的形式打开的.
 这意味着IO操作不会立即完成, read操作可能会返回一个错误代码, 说明这个命令不能立即满足(EAGAIN或EWOULDBLOCK).
@@ -109,7 +109,7 @@ IO multiplexing就是select,poll,epoll. 也称为event driven IO. select/epoll�
 处理多个网络连接IO. 基本原理就是select, poll, epoll这个function会不断的轮训所负责的socket, 当某个socket数据到达
 之后, 就通知用户进程.
  
-[!image](resource/multiplex.png)
+[!image](/images/linux_io_multiplex.png)
 
 当用户进程调用了select, 那么整个进程会被block. 而与此同时kernel会"监听"所有select负责的socket, 当任何一个socket
 中的数据准备好了, select就会返回. 这个时候用户进程再调用read操作,将数据从kernel拷贝到用户进程.

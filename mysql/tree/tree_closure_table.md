@@ -110,7 +110,7 @@ select * from relation;
 
 **树状图**
 
-![](../resource/closer_table_tree.jpg)
+![image](/images/mysql_closure_table_tree.jpg)
 
 
 ## 查询节点

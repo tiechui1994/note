@@ -20,7 +20,7 @@
 > 缺页中断的处理过程, 就是把进程需要的数据从磁盘上拷贝到物理内存中, 如果内存已经满了, 没有空地方联动, 那就找一个页进行
 > 覆盖, 当然如果被覆盖的页曾经被修改过, 需要讲此页写回磁盘.
 
-![image](resource/mem_overwrite.png)
+![image](/images/linux_mem_overwrite.png)
 
 
 > **优点:**
@@ -70,7 +70,7 @@
 处理器启用了 MMU, **CPU执行单元发出的内存地址将被MMU截获**, 从 CPU 到 MMU 的地址称为虚拟地址. 而MMU将这个地址翻
 译成另一个地址发送到CPU芯片的外部地址引脚上, 也就是将虚拟地址转换为物理地址.
 
-![image](resource/mmu.png)
+![image](/images/linux_mem_mmu.png)
 
 
 ## 硬件页表 vs 软件页表
@@ -145,7 +145,7 @@ Transaction Lock-aside Buffer),  用来根据程序访问内存的局部性机�
 
 内核用户空间
 
-![image](resource/user-kernel.png)
+![image](/images/linux_mem_user_kernel.png)
 
 
 ## 虚拟内存地址空间
@@ -174,12 +174,12 @@ $ sysctl -w kernel.randomize_va_space=0
 
 > 32位内核地址空间划分, 64位内核地址空间划分是不同的
 
-![image](resource/32_virtual_mem.png)
+![image](/images/linux_mem_32_virtual_mem.png)
 
 - 每个进程看到的 **地址空间** 都是一样的, 比如, **.text** 都是从 `0x80048000` 开始, 然后 **用户栈** 都是从
 `0xBFFFFFFF` 向低地址增长, 内核地址空间都是 `0xC0000000` ~ `0xFFFFFFFF`
  
-![image](resource/32_virtual_layout.png)
+![image](/images/linux_mem_32_virtual_layout.png)
 
 1. `0x00000000` ~ `0x08048000` 是不能给用户访问的, 这里是一些 C 运行库的内容. 访问会报 **segment fault**错误
 
@@ -234,7 +234,7 @@ $ sysctl -w kernel.randomize_va_space=0
 
 > Linux 内存管理
 
-![image](resource/64_virtual_mem.png)
+![image](/images/linux_mem_64_virtual_mem.png)
 
 > Linux x86_64 位虚拟地址空间布局
 
@@ -248,7 +248,7 @@ $ sysctl -w kernel.randomize_va_space=0
 
 > amd64 下的 Linux 内存空间布局
 
-[image](resource/amd64_virtual_mem.png)
+![image](/images/linux_mem_amd64_virtual_mem.png)
 
 - 对于 amd64 架构来说, 用户空间的 text 段的起始地址为 `0x00000000 00400000`, 和 x86 下的一样后面跟着 data 段
 和 bss 段. heap 段和 bss 段之间也可以设置一个由 ASLR (ASLR, Address Space Layout Randomization, 是一种安全
@@ -266,7 +266,7 @@ B000` (也可以设置 `random mmap offset`), 向上增长.
 >
 > kernel.randomize_va_space=2
 
-![image](resource/cat_self_maps.png)
+![image](/images/linux_mem_cat_self_maps_0.png)
 
 > - 前三行分别是 text segment, data segment 和 bss segment. **text segment**其实是存放二进制可执行代码的位
 > 置, 所以它的权限是读与可执行. **data segment**存放的是静态常量, 所以该地址段权限是只读. **bss segment**存放未
@@ -308,7 +308,7 @@ B000` (也可以设置 `random mmap offset`), 向上增长.
 >
 > kernel.randomize_va_space=0
 
-![image](resource/cat_self_maps_1.png)
+![image](/images/linux_mem_cat_self_maps_1.png)
 
 
 ### 不同的 CPU 体系架构下虚拟内存地址空间大致类似
@@ -322,7 +322,7 @@ x86 下大小统一为 4k
 
 > Linux 虚拟地址空间布局
 
-![iamge](resource/user_segment.png)
+![image](/images/linux_mem_user_segment.png)
 
 - `random stack offset`, `random mmap offset` 和 `random brk offset` 随机值意在防止恶意程序. Linux 通过
 对栈, 内存映射, 堆的起始地址加上随机偏移量来打乱布局, 以免恶意程序通过计算访问栈, 函数库等地址.
@@ -393,7 +393,7 @@ Node 0, zone   Normal    745    574    609    476     57     25     23     12   
 > 核映射显然是 `暂时映射的`, 否则也只能映射128MB的高端内存. 当内核需要访问高端内存时就临时在这个区域进行地址映射(使用
 > 上面得到的*页描述符的线性地址*), 使用完毕之后再用来进行其他高端内存的映射.
 
-![image](resource/kener_mem.png)
+![image](/images/linux_mem_kernel_mem.png)
 
 - 用户进程没有高端内存概念. 只有在内核空间才存在高端内存. 因为内核进程可以访问所有物理内存, 32位系统用户进程最大可以访
 问3GB, 64位用户进程最大可以访问512GB

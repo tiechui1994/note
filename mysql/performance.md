@@ -42,7 +42,7 @@ MATHCH(name) against('{name}' in boolean mode)
 
 - JOIN 优化
 
-![avatar](resource/join.jpeg)
+![image](/images/mysql_perf_join.jpeg)
 
 ```
 LEFT JOIN A表为驱动表
@@ -61,7 +61,7 @@ MySQL会自动选择小表作为驱动表, 但是LEFT JOIN在驱动表的选择�
 
 小表驱动大表
 
-![](./resource/buffer.png)
+![image](/images/mysql_perf_buffer.png)
 
 巧用 STRAIGHT_JOIN
 

@@ -163,7 +163,7 @@ rsyslogd 1136 syslog  mem    REG   259,1     10496      29208 /usr/lib/rsyslog/l
 
 TCP 队列溢出是个相对底层的错误, 它可能会造成超时, RST 等更表层的错误. 因此错误也更隐蔽.
 
-[!image](resource/rst.png)
+![image](../images/linux_online_fault_rst.png)
 
 
 如图所示, 这里有两个队列:
