@@ -56,10 +56,9 @@ export default {
 > **获取路由参数的时候使用的是 *$route.params* 和 *$route.query***
 > 使用 watch 监听器监测 `$route` 对象的变化, 一旦发生变动, 调用 `getParams()` 方法, 在此方法当中获取传递的参数, 并进行更新操作.
 
-> 上述的参数传递过程中, 没有发生页面的刷新操作.
-
-
 - 使用 `router-link` 
+
+源组件:
 
 ```
 <router-link 
@@ -77,5 +76,30 @@ export default {
 </router-link>
 ```
 
-> 参数和上面的 `$router.push` 当中的参数含义相同. 对于目标组件, 两者是一样的.
+> 参数和上面的 `$router.push` 当中的参数含义相同.
 
+目标组件:
+
+```
+<script>
+export default {
+    methods:{
+        getParams() {
+           const params = this.$route.params;
+           const query = this.$route.query;
+           console.log(params, query)
+        }
+    }
+    watch: {
+        '$route': 'getParams'
+    }
+}
+</script>
+```
+
+
+总结:
+
+1. 上述的两种方式是相同的效果, 其中参数 `path`, `name` 是必填参数. 
+
+2. 上述的参数传递过程中, 在跳转到目标页面是没有刷新操作的.
