@@ -27,7 +27,12 @@ webpack.config.js
 
 ```
 module.exports = {
-   entry: './path/to/entry/index.js' 
+   entry: './path/to/entry/index.js' // string | object | array
+   entry: ['./app/entry1', './app/entry2']
+   entry: {
+      a: './app/entry/a',
+      b: ['./app/entry/b1', './app/entry/b2']
+   }
 };
 ```
 
@@ -42,8 +47,8 @@ const path = require('path');
 
 module.exports = {
     output: {
-        path: path.resolve(__dirname, 'dist'),
-        filename: 'webpack.bundle.js'
+        path: path.resolve(__dirname, 'dist'), 
+        filename: 'bundle.js'
     }
 }
 ```
@@ -59,6 +64,41 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].js' // 使用占位符 [name] 
+    }
+}
+```
+
+常用的属性:
+
+```
+const path = require('path');
+
+module.exports = {
+    output: {
+        path: path.resolve(__dirname, 'dist'), // string
+        
+        filename: 'bundle.js'
+        filename: '[name].js' // 用于多个入口点
+        filename: '[chunkhash].js' // 用于长效缓存
+        
+        publicPath: "/asserts/", // string, 输出解析文件目录, url 相对于 HTML 页面
+        publicPath: "",
+        publicPath: "https://cdn.example.com/"
+        
+        library: "math" // string, 导出库的名称
+        
+        libraryTarget: "umd" // 导出库的类型, 常见的值:
+        "umd2": 通用模块, 
+        "global": 在global对象上设置属性
+        "window": 在window对象上设置属性
+        "var": 变量定义于根作用域下
+        
+        
+        chunkFilename: "[id].js" // 附加模块(additional chunk] 的文件名模板
+        chunkFilename: "[chunkhash].js" 
+        
+        sourceMapFilename: "[file].map" // [source map] 的文件模板
+        sourceMapFilename; "sourcemaps/[file].map"
     }
 }
 ```
@@ -123,6 +163,58 @@ module.exports = {
 import styles from 'style-loader!css-loader?modules!./styles.css';
 ```
 
+常用属性设置:
+
+```
+module.exports = {
+    module: {
+       rules: [
+          {
+            // 匹配条件, 每个选项都接收一个正则表达式或字符串
+            // test 和 include 具有相同作用, 都是必须匹配选项
+            // exclude 是必不匹配选择(优先于 test 和 include)
+            test: /\.css$/, 
+            include: [
+                path.resolve(__dirname, "app")
+            ],
+            exclude: [
+                path.resolve(__dirname, "app/images")
+            ],
+            
+            // issuer 条件, 导入源
+            issuer: {test, include, exclude}
+            
+            // 标识应用这些规则, 即"使规则覆盖"
+            enfore: "pre"
+            enfore: "post"
+            
+            // 应用的 loader, 它将对上下文解析
+            loader: "babel-loader"
+            
+            // loader的可选项
+            options: {
+                presets: ["es2015"]
+            }
+          }, 
+          {
+            test: /\.html$/
+            
+            // 使用多个 loader 和 选项
+            use: [
+              {
+                loader: "htmllint-loader",
+              },
+              {
+                loader: "html-loader",
+                options: {
+                }
+              }  
+            ]
+          }
+       ]
+    }
+}
+```
 
 ### 插件 (plugins)
 
@@ -143,3 +235,14 @@ module.exports = {
     ]
 }
 ```
+
+### 模式 (mode)
+
+通过选择 `development` 或 `production` 之一, 来设置 `mode` 参数. 可以启用相应模式下 webpack 内置的优化.
+
+```
+module.exports = {
+    mode: 'production'
+}
+```
+
