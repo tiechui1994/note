@@ -103,3 +103,48 @@ export default {
 1. 上述的两种方式是相同的效果, 其中参数 `path`, `name` 是必填参数. 
 
 2. 上述的参数传递过程中, 在跳转到目标页面是没有刷新操作的.
+
+
+### vue 路由跳转
+
+路由参数类型 `Location`, `Route`:
+```
+Location {
+  name?: string;
+  path?: string;
+  hash?: string;
+  query?: Dictionary<string>;
+  params?: Dictionary<string>;
+  append?: boolean;
+  replace?: boolean;
+}
+
+Route {
+  path: string;
+  name?: string;
+  hash: string;
+  query: Dictionary<string>;
+  params: Dictionary<string>;
+  fullPath: string;
+  matched: RouteRecord[];
+  redirectedFrom?: string;
+  meta?: any;
+}
+```
+
+
+- `this.$router.push(Location, Callback)`
+
+> 在导航后会保存 `history` 记录. 当需要跳转的路由压栈.
+
+- `this.$router.replace(Location, Callback)`
+
+> Location 的 `replace` 属性为 `true`, 在导航后不会留下 `history` 记录. 即修改当前的路由为目标路由.
+
+- `this.$router.go(N)`
+
+> 向路由栈当中PUSH(N为正数)或者POP(N为负数) N 个路由
+
+- `this.$router.resolve(Location, Route)`
+
+> 解析路由, Location是需要跳转的位置, Route是当前的路由信息
