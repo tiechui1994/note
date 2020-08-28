@@ -4,22 +4,22 @@
 
 - 分析工具
 
-![image](resource/analysis_tools.png)
+![image](/images/process_analysis_tools.png)
 
 
 - 基准测试工具
  
-![image](resource/bechmark_tools.png)
+![image](/images/process_bechmark_tools.png)
 
 
 - 观测工具
 
-![image](resource/observation_tools.png)
+![image](/images/process_observation_tools.png)
 
 
 - 观测工具 - sar
 
-![image](resource/observation_sar.png)
+![image](/images/process_observation_sar.png)
 
 
 ---

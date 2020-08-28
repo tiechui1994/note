@@ -58,7 +58,7 @@ RBAC2中增加了一些限制, 强调在RBAC的不同组件中在配置方面的
 3.RBAC3称为统一模型,它包含了RBAC1和RBAC2, 利用传递性, 也把RBAC0包括在内. 这些模型构成了RBAC96模型族.
 
 
-![](./resource/rbca96.png)
+![](../images/access_rbac_rbca96.png)
 
 
 ## RBAC0 模型
@@ -76,12 +76,12 @@ RBAC0是RBAC的核心, 主要有4部分组成:
 
 **表关系图**
 
-![](./resource/rbac0-uml.png)
+![image](/images/access_rbac_rbac0_uml.png)
 
 
 **实体关系图**
 
-![](./resource/rbac0-flow.png)
+![image](/images/access_rbac_rbac0_flow.png)
 
 
 RBAC0定义了能构成一个RBAC控制系统的最小的元素集合.
@@ -116,7 +116,7 @@ RBAC1, 基于RBAC0模型, 引入角色间的继承关系, 即角色上有了上�
 
 **表关系图**
 
-![](./resource/rbac1-uml.png)
+![image](/images/access_rbac_rbac1_uml.png)
 
 
 ## RBAC2 模型
@@ -141,7 +141,7 @@ RBAC2模型中添加了责任分离关系. RBAC2的约束规定了权限被赋�
 
 **表关系图**
 
-![](./resource/rbac2-uml.png)
+![image](/images/access_rbac_rbac2_uml.png)
 
 
 ## RBAC3 模型
@@ -150,7 +150,7 @@ RBAC3, 也就是最全面的权限管理, 它是基于RBAC0的基础上, 将RBAC
 
 **表关系图**
 
-![](./resource/rbac3-uml.png)
+![image](/images/access_rbac_rbac3_uml.png)
 
 
 ## 案例

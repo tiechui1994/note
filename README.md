@@ -1,4 +1,4 @@
-# 开发笔记
+# Note
 
 ## 权限控制
 
@@ -8,25 +8,15 @@
 - [casbin解决权限控制方案 - 介绍](access/casbin)
 - [casbin解决权限控制方案 - 配置](access/casbin)
 
-## 软件开发
 
-- [开发规范](software/spec.md)
+## HTTP
 
-
-## Web开发
-
-- [QPS概念](web/web-qps.md)
-
-- [web安全头](web/web-security.md)
-
-- [websocket数据帧](web/websocket.md)
-
-- [时间格式](web/timezone.md)
-
-- [跨域共享方案](web/crossDomainShare.md)
-- [跨域解决方案](web/crossDomianMethod.md)
-
-- [token过期解决方案](web/token.md)
+- [QPS概念](http/qps.md)
+- [websocket数据帧](http/ws.md)
+- [时间格式](http/timezone.md)
+- [跨域共享方案](http/cors.md)
+- [跨域解决方案](http/cross-method.md)
+- [token过期解决方案](http/token.md)
 
 
 ## Redis相关
@@ -94,6 +84,7 @@
 - [top](linux/top.md)
 - [xargs](linux/xargs.md)
 
+
 ## DNS 
 
 - [DNS安装脚本](https://www.github.com/tiechui1994/linux-tools/master/web/dns.sh)
@@ -103,8 +94,9 @@
 ## Docker 
 
 - [Dockerfile文件](docker/dockerfile.md)
-
 - [Cgroup基础](docker/cgroup.md)
+- [docker-compose](docker/docker-compose.md)
+
 
 ## RPC
 

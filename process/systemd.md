@@ -233,7 +233,7 @@ service 包含 `[Unit]`, `[Install]`, `[Service]` 三个 Section.
 
 ## systemd架构
 
-![image](resource/systemd.png)
+![image](/images/process_systemd.png)
 
 > systemctl是systemd的主命令, 用于管理系统.
 
