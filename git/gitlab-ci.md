@@ -1,11 +1,34 @@
-# gitlab-ci.yml 配置说明
+# gitlab-ci.yml 配置
 
-## 全局配置
+在每个项目中, 使用名为 `.gitlab-ci.yml` 的 YAML 文件配置 GitLab CI/CD piplines.
 
-一个 `yaml` 文件定义了一组各不相同的 `job`, 并定义了它们应该怎么运行. 这组 `jobs` 会被定义为 `yaml`
-文件的顶级元素, 并且每个 `job` 的子元素中总有一个名为 `script` 的节点.
+> 管道是持续集成, 交付和部署的顶级组件.
+>
+> 管道包括:
+>
+> - 作业(job), 定义要做什么, 例如 build 或者 test 代码的 job
+> - 阶段(stages), 定义何时运行 job, 例如, 在 build 代码的阶段之后运行 Test 代码的 stage.
+>
+> job 是由 runner 执行. 如果有足够的并行运行器, 则可以并行执行同一阶段(stage)中的多个job.
+>
+> 如果一个阶段中的所有的 job 都执行成功, 则管道将继续运行下一个阶段.
+>
+> 如果某个阶段中的任何一个 job 执行失败, 则(通常)不会执行下一阶段, 并且管道会提前结束.
+>
+> 典型的管道可能包括四个阶段:
+> - build, 其 job 称为 `compile`
+> - test, 具有两个job, `test1` 和 `test2`
+> - staging, 其 job 称为 `deploy-to-stage`
+> - production, 其 job 称为 `deploy-to-prod`
 
-> A set of jobs, 强调是Set所以名称必须不同.
+管道(pipline)配置从作业(job)开始. 作业是 `.gitlab-ci.yml` 文件的最基本元素.
+
+作业是:
+- 定义了约束, 指出应在什么条件下执行它们.
+- 具有任意名称的顶级元素, 并且必须至少包含 `script` 子句.
+- 不限制可以定义多少.
+
+example:
 
 ```yaml
 job1:
@@ -17,56 +40,51 @@ job2:
       - "job2的脚本命令2(shell)"
 ```
 
-> 上述的文件是最简单的CI配置例子, 每个job都执行了不同的命令, 其中job1只执行了一条命令, job2通过数组的定义按
-顺序执行了2条命令.
+> 上述的文件是最简单的CI配置例子, 每个job都执行了不同的命令, 其中job1只执行了一条命令, job2通过数组的定义按顺序执行了
+2条命令.
 
-`Job` 配置会被 `Runner` 读取并用于构建项目, 并且在 `Runner` 的环境中被执行. 很重要的一点是, 每个 `job` 
-都会独立的运行, 相互间并不依赖.
+`job` 配置会被 `Runner` 读取并用于构建项目, 并且在 `Runner` 的环境中被执行. 很重要的一点是, 每个 `job` 都会独立的
+运行, 相互间并不依赖.
 
-案例:
+**每个 job 必须具有唯一的名称, 但是有一些保留的 keywords 不能用于 job 名称:**
+- `image`
+- `services`
+- `stages`
+- `types`
+- `before_script`
+- `after_script`
+- `variables`
+- `cache`
+- `include`
 
-```yaml
-image: ruby:lastest
-
-service:
-    - postgres
-
-before_script:
-    - bundle install
-
-after_script:
-    - rm secrets
-
-stages:
-    - build
-    - test
-    - deploy
-
-job1:
-    stage: build
-    script:
-      - execute-script-for-job1
-    only:
-      - master
-    tags:
-      - docker
-```
-
-- 保留字
-
-这些单词不能被用于命名job.
-
+## 全局范围配置参数
 
 | 保留字 | 必填 | 说明 |
 | --- | --- | --- |
 | image | 否 | 构建使用的Docker镜像名称, 使用Docker作为Excutor时有效 |
 | services | 否 | 使用的Docker服务, 使用Docker作为Excutor时有效 |
 | stages | 否 | 定义构建的stages | 
-| types | 否 | stages的别名 |
 | before_script | 否 | 定义所有job执行之前需要执行的脚本命令 |
 | after_script | 否 | 定义所有job执行完成后需要执行的脚本命令 |
 | variables | 否 | 定义构建变量 |
 | cache | 否 | 定义一组文件, 该组文件会在运行时被缓存, 下次运行仍然可以使用 |
+
+- image 和 services
+
+example:
+
+```yaml
+services:
+  - name: postgres:11.7
+    alias: db
+    entrypoint: ["docker-entrypoint.sh"]
+    command: ["postgres"]
+
+image:
+  name: ruby:2.6
+  entrypoint: ["/bin/bash"]
+```
+
 
 
 - stages
@@ -76,11 +94,12 @@ job1:
 `stages` 定义的元素顺序决定了构建的执行顺序:
 
 ```
-1. 同样的stage的job是并行执行的.
-2. 下一个stage的jobs是当上一个stage的jobs全部执行完成后才会执行.
+1. 同一stage的job是并行执行的.
+2. 下一stage的jobs是当上一个stage的jobs全部执行完成后才会执行.
 ```
 
-stages 案例: \
+stages 案例:
+
 ```yaml
 stages:
     - build
@@ -88,10 +107,14 @@ stages:
     - deploy
 ```
 
-> 首先, 所有stage属性为build的job会被并行执行. \
-> 如果所有stage属性为build是job都执行成功了, stage为test的job会被并行执行. \
-> 如果所有stage属性为test是job都执行成功了, stage为deploy的job会被并行执行. \
+> 首先, 所有stage属性为build的job会被并行执行.
+>
+> 如果所有stage属性为build是job都执行成功了, stage为test的job会被并行执行. 
+>
+> 如果所有stage属性为test是job都执行成功了, stage为deploy的job会被并行执行. 
+>
 > 如果所有stage属性为deploy是job都执行成功了, 则提交被标记为success.
+>
 > 如果任何一个前置的job失败了, 则提交被标记为failed并且任何下一个stage的job都不会被执行.
 
 
@@ -164,11 +187,13 @@ rspec:
 ```
 
 
-## Jobs 配置
+## job 配置参数
 
 `.gitlab-ci.yml` 允许配置无限个 `job`. 每个 `job` 必须有唯一的名称.
 
 一个 `job` 由一系列定义构建行为的参数组成.
+
+example:
 
 ```yaml
 job_name:
@@ -188,31 +213,39 @@ job_name:
 
 | 关键字 | 必填 | 说明 |
 | --- | --- | --- |
-| script | 是 | 定义了Runner会执行的脚本命令 |
-| image | 否 | 使用Docker镜像 |
-| services | 否 | 使用Docker服务 |
+| script | 是 | 运行程序执行的 Shell 脚本 |
+| when | 否 | 定义什么时候执行构建. 可选: `always`(默认值), `manual`, `delayed`, `on_success`, `on_failure` |
 | stage | 否 | 定义构建的stage(默认是: `test`) | 
+| after_script | 否	| 覆写全局的after_script命令 |
+| before_script	| 否 | 覆写全局的before_script命令 |
+| image | 否 | 使用Docker镜像. 也可用: `image:name`, `image:entrypoint` |
+| services | 否 | 使用Docker服务镜像. 也可用: `services:name`, `services:alias`, `services:entrypoint`, `services:command` |
 | type | 否 | stage的别名 |
 | variables | 否 | 定义job级别的环境变量 |
-| only | 否 | 定义一组构建会创建的git refs |
-| except | 否 | 定义一组构建不会创建的 git refs |
+| only | 否 | 限制创建job的时间. 也可用: `only:refs`, `only:variables`, `only:changes` |
+| except | 否 | 限制不创建job的时间. 也可用: `except:refs`, `except:variables`, `except:changes` |
 | tags | 否 | 定义一组tags用于选择合适的Runner |
 | allow_failure | 否 | 运行构建失败. 失败的构建不会影响提交状态 |
-| when | 否 | 定义什么时候执行构建. 可选: on_success, on_failure, always, manual |
 | dependencies | 否 | 定义当前够你依赖的其他构建, 然后可以在它们直接传递artifacts |
-| artifacts | 否 | 定义一组构建artifact |
-| cache | 否 | 定义一组可以缓存以在随后的工作中共享的文件 |
-| before_script	| 否 | 覆写全局的before_script命令 |
-| after_script | 否	| 覆写全局的after_script命令 |
-| environment | 否 | 定义当前构建完成后的运行环境的名称 |
+| artifacts | 否 | 成功时附加到job的文件和目录列表. 也可用 `artifacts:paths`, `artifacts:name`, `artifacts:when`, `artifacts:expire_in`, `artifacts:reports`, `artifacts:exclude` |
+| cache | 否 | 定义一组可以缓存以在随后的工作中共享的文件. 也可用: `cache:paths`, `cache:key`, `cache:policy` |
+| environment | 否 | 定义当前构建完成后的运行环境的名称. 也可用: `environment:name`, `environment:action` |
 | retry	| 否 | 定义job失败后的自动重试次数 |
+| include | 否 | 允许此 job 包含外部 YAML 文件. 也可用: `include:local`, `include:file`, `include:remote` |
+| release | 否 | 指定运行程序生成 Release 对象 |
+| trigger | 否 | 定义 downstream 管道的 trigger |
+
 
 - script
 
 `script` 命令需要被包在双引号或者单引号之间. 例如, 包含符号 `:` 的命令都需要写在引号中, 这样 
 `ymal` 的解析器才能正确的解析. 在使用包含以下符号的命令要特别小心:
 
-`:`, `{`, `}`, `[`, `]`, `,`, `&`, `*`, `#`, `?`, `|`, `-`, `<`, `>`, `=`, `!`, `%`, `@`, ```
+```
+'{, '}', '[', ']', 
+
+':', ',', '&', '*', '#', '?', '|', '-', '<', '>', '=', '!', '%', '@', '`'
+```
 
 
 - only 和 except
