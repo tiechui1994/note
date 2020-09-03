@@ -31,7 +31,7 @@ explainable_stmt: {
 | 字段 | 含义 |
 | --- | --- |
 | id | SELECT 查询的标识符. 每个SELECT都会自动分配一个唯一的标识符. |
-| select_type | SELECT查询的类型 |
+| **select_type** | SELECT查询的类型 |
 | table | 查询涉及到的表或衍生表 |
 | partions | 匹配分区表的分区 |
 | **type** | 判断此次查询是 `全表扫描` 还是 `索引扫描` 等 |
@@ -97,3 +97,83 @@ explainable_stmt: {
 - `UNCHANGEBLE SUBQUERY`, 子查询, 结果无法缓存, 必须针对外部查询的每一行重新评估
 
 - `UNCHANGEBLE UNION`, `UNION` 属于 `UNCHANGEBLE UNION` 的第二个或后面的查询.
+
+
+### type
+
+连接类型, 取值如下, **性能从好到坏排序**:
+
+- `system`, 该表只有一行(相当于系统表), `system` 是 `const` 类型的特例.
+
+- `const`, 针对 **PRIMARY KEY** 或 **UNIQUE KEY** 的 **等值查询扫描, 最多只返回一行数据**. `const` 查询速度
+非常快, 因为它仅仅读取一次即可.
+
+```
+> desc select * from student where id=1;
++------+---------------+---------+--------------+--------+-----------------+---------+-----------+-------+--------+------------+---------+
+|   id | select_type   | table   |   partitions | type   | possible_keys   | key     |   key_len | ref   |   rows |   filtered |   Extra |
+|------+---------------+---------+--------------+--------+-----------------+---------+-----------+-------+--------+------------+---------|
+|    1 | SIMPLE        | student |       <null> | const  | PRIMARY         | PRIMARY |         4 | const |      1 |        100 |  <null> |
++------+---------------+---------+--------------+--------+-----------------+---------+-----------+-------+--------+------------+---------+
+```
+
+> PRIMARY 主键
+
+- `eq_ref`, 当使用了**索引的全部组成部分**, 并且 **索引是 PRIMARY KEY 或 UNIQUE KEY NOT NULL** 才会使用该类
+型, 性能仅次于 `system` 和 `const`.
+
+```
+# 多表关联查询, 单行匹配
+SELECT * FROM ref_tb,other_tb
+    WHERE ref_tb.key_col=other_tb.col;
+
+# 多表联合查询, 联合索引, 多行匹配
+SELECT * FROM ref_tb,other_tb
+    WHERE ref_tb.key_col_part1=other_tb.col
+    AND ref_tb.key_col_part2=1;
+```
+
+> 案例1的等价形式: 
+> 
+> ```
+> SELECT * FROM ref_tb JOIN other_tb
+>   WHERE ref_tb.key_col=other_tb.col
+> ```
+> 
+> 先产生笛卡尔集合, 再从笛卡尔集当中过滤.
+
+- `ref`, 当满足 **索引的最左前缀规则**, 或者 **索引不是PRIMARY KEY, 也不是UNIQUE KEY NOT NULL**, 才会发生.如
+果使用的索引只会匹配到少量的行, 性能也是不错的.
+
+```
+# 根据索引(非主键, 非唯一索引), 匹配到多行.
+SELECT * FROM FROM ref_tb WHERE key_col=expr;
+
+# 多表关联查询, 单个索引, 多行匹配
+SELECT * FROM ref_tb, other_tb
+    WHERE ref_tb.key_col=other_tb.col;
+
+# 多表联合查询, 联合索引, 多行匹配
+SELECT * FROM ref_tb,other_tb
+    WHERE ref_tb.key_col_part1=other_tb.col
+    AND ref_tb.key_col_part2=1;
+```
+
+- `fulltext`: 全文索引
+
+- `ref_or_null`, 该类型类似于 `ref`, 但是MySQL会额外搜索哪些行包含了NULL. 这种类型常见于解析子查询.
+
+> 没遇到过
+
+- `index_merge`, 此类型表示使用索引合并优化, 表示一个查询里使用到了多个索引.
+
+- `unique_subquery`, 和 `eq_ref` 类似, 但是使用了 IN 查询, 且子查询是 `主键` 或 `唯一索引`
+
+> 没遇到过
+
+- `index_subquery`, 但是使用了 IN 查询, 且子查询是 `非唯一索引`
+
+> 没遇到过
+
+- `range`, 范围扫描. 表示检索了指定范围的行. 主要用于有限制的索引扫描. 比较常见的范围扫描是带有 `BETWEEN子句`, 或
+`WHERE子句` 里有 `>`, `>=`, `<`, `<=`, `IS NULL`, `<=>`

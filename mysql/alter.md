@@ -27,7 +27,7 @@ alter_specification:
    ADD [CONSTRAINT symbol] PRIMARK KEY // 主键(约束)
        [index_type] (key_part, ...) [index_option]
 
-   ADD [CONSTRAINT symbol] UINQUE [INDEX|KEY] [index_name] // 唯一索引(约束)
+   ADD [CONSTRAINT symbol] UNIQUE [INDEX|KEY] [index_name] // 唯一索引(约束)
        [index_type] (key_part, ...) [index_option]
 
    ADD [CONSTRAINT symbol] FOREIGN KEY [index_name] // 外键(约束)
@@ -81,6 +81,8 @@ table_option:
 
    INSERT_METHOD [=] {NO | FIRST | LAST }
 ```
+
+> `key_part` 是列名称, 不能加字符串加引号.
 
 
 ## ALTER TABLE的性能和空间需求
