@@ -124,28 +124,27 @@ server {
 
 ### proxy_pass_request_headers(请求)
 
-**proxy_pass_request_headers指令**用于配置是否将`客户端的请求头`发送给代理服务器.
+**proxy_pass_request_headers指令** 用于配置是否将 `原始请求的Header` 发送给代理服务器.
 
 ```
 proxy_pass_request_headers on|off;
 ```
+
 默认是开启(on), 该指令可以在http块, server块,或者location块中进行配置.
-
-
-### proxy_hide_header(请求)
-
-**proxy_hide_header指令**用于设置nginx服务器在发送HTTP响应时, 隐藏一些头域信息.
-
-```
-proxy_hide_header FIELD;
-```
-*FIELD*是需要隐藏的头域, 该指令可以在http块, server块,或者location块中进行配置.
 
 
 ### proxy_set_header(请求)
 
-**proxy_set_header指令** 用于更改nginx服务器接收到的 **客户端请求的请求头信息**, 然后将新的请求头发
-送给被代理的服务器.
+允许在传递给 `代理服务器` 的请求头当中重新定义或添加字段. 该值可以包含文本, 变量, 及其组合. 当且仅当 `当前级别上未定义`
+`proxy_set_header` 指令时, **这些指令才从上一级继承**. 默认情况下, 仅重新定义两个字段:
+
+```
+proxy_set_header Host       $proxy_host;
+proxy_set_header Connection close;
+```
+
+如果启用了缓存, 则会从原始请求Header当中的 "If-Modified-Since", "If-Unmodified-Since", "If-None-Match", 
+"If-Match", "Range", 和 "If-Range" 不会传递到代理服务器.
 
 ```
 proxy_set_header FIELD VALUE;
@@ -153,19 +152,24 @@ proxy_set_header FIELD VALUE;
 *FIELD*, 要修改的头域.
 *VALUE*, 更改的值, 支持使用文本, 变量或者变量的组合.
 
+例子:
+
 ```
 proxy_set_header Host $host;
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forward-For $proxy_add_x_forwarded_for;
 ```
 
-### proxy_pass_header(响应)
+### proxy_pass_header, proxy_hide_header (响应)
 
-**proxy_pass_header指令** 设置  *代理服务响应的头域信息*.  默认情况下, nginx服务器在发送响应的时候,
-报文头中不包含"Date", "Server", "X-Accel"等来自代理服务器的头域信息.
+默认情况下, nginx不会将 `代理服务器` 的响应中的标头字段 "Date", "Server", "X-Pad" 和 "X-Accel-..." 传递给客户端. 
+`proxy_hide_header` 指令**设置了不会传递的其他字段**. 相反, 如果需要允许传递上面的字段, 则可以使用 `proxy_pass_header` 指令.
+
+> 言外之意是 `proxy_pass_header` 的值只能是 "Date", "Server", "X-Pad" 和 "X-Accel-..." 当中一个. 
 
 ```
 prox_pass_header FIELD;
+proxy_hide_header FIELD;
 ```
 *FIELD*是需要发送的头域, 该指令可以在http块, server块,或者location块中进行配置.
 
@@ -178,11 +182,11 @@ prox_pass_header FIELD;
 ```
 proxy_ignore_headers FIELD ...;
 ```
-*FIELD*是要设置的HTTP响应头的头域. 例如: `X-Accel-Redirect`, `X-Accel-Expires`, `Set-Cookie`,
-`Cache-Control`等.
+*FIELD*是要设置的HTTP响应头的头域. 可选的值包含: "X-Accel-Redirect", "X-Accel-Expires", "X-Accel-Limit-Rate" 
+"X-Accel-Buffering", "X-Accel-Charset", "Expires", "Cache-Control", "Set-Cookie", "Vary".
 
 
-**区别:**
+**上述的header之间关系:**
 
 ```
 请求路径:

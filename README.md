@@ -60,7 +60,7 @@
 - [https配置](nginx/https.md)
 - [location配置](nginx/location.md)
 - [log配置](nginx/log.md)
-- [rewrite配置](nginx/rewrite.md)
+- [rewrite配置](nginx/redirect.md)
 - [upstream配置](nginx/upstream.md)
 - [虚拟主机配置](nginx/virtual-host.md)
 
