@@ -30,7 +30,8 @@ CMD /usr/sbin/nginx
 
 - FROM
 
-格式: \
+格式:
+
 ```dockerfile
 FROM <image>
 FROM <image>:<tag>
@@ -41,7 +42,8 @@ FROM <image>:<tag>
 
 - MAINTAINER
 
-格式: \
+格式:
+
 ```dockerfile
 MAINTAINER <name> 
 ```
@@ -50,19 +52,21 @@ MAINTAINER <name>
 
 - RUN
 
-格式: \
+格式:
+
 ```dockerfile
 RUN <command>
 RUN ["executable", "param1", "param2"]
 ```
 
-前者将在shell终端中运行命令, 即 `/bin/sh -c`; 后者则使用 `exec` 执行. \
-指定使用其他终端可以使用第二种方式实现. 例如 `RUN ["/bin/bash", "-c" "echo hello"]`. \
+前者将在shell终端中运行命令, 即 `/bin/sh -c`; 后者则使用 `exec` 执行.
+指定使用其他终端可以使用第二种方式实现. 例如 `RUN ["/bin/bash", "-c" "echo hello"]`.
 每条 `RUN` 指令都将在当前镜像基础上执行指定命令, 并提交为新的镜像. 当命令较长时可以使用 `\` 来换行.
 
 - CMD
 
-格式: \
+格式:
+
 ```dockerfile
 CMD ["executable", "param1", "param2"] # 使用 exec 执行, 推荐方式.
 CMD command param1 param2  # 在/bin/sh中执行, 提供给需要交互的应用.
@@ -76,7 +80,8 @@ CMD ["param1", "param2"]  # 提供给 ENTRYPOINT 的默认参数.
 
 - EXPOSE
 
-格式: \
+格式:
+
 ```dockerfile
 EXPOSE <port> [<port> ...]
 ```
@@ -87,7 +92,8 @@ EXPOSE <port> [<port> ...]
 
 - ENV
 
-格式: \
+格式:
+
 ```dockerfile
 ENV <key> <value>
 ```
@@ -97,7 +103,8 @@ ENV <key> <value>
 
 - ADD
 
-格式: \
+格式:
+
 ```dockerfile
 ADD <src> <dest>
 ```
@@ -108,7 +115,8 @@ url; 还可以是一个 tar 文件(自动解压为目录)
 
 - COPY
 
-格式: \
+格式:
+
 ```dockerfile
 COPY <src> <dext>
 ```
@@ -120,7 +128,8 @@ COPY <src> <dext>
 
 - ENTRYPOINT
 
-格式: \
+格式:
+
 ```dockerfile
 ENTRYPOINT ["executable", "param1", "param2"]
 ENTRYPOINT command param1 param2
@@ -133,7 +142,8 @@ ENTRYPOINT command param1 param2
 
 - VOLUME
 
-格式: \
+格式: 
+
 ```dockerfile
 VOLUME ["/data"]
 ```
@@ -143,7 +153,8 @@ VOLUME ["/data"]
 
 - USER
 
-格式: \
+格式: 
+
 ```dockerfile
 USER daemon
 ```
@@ -157,7 +168,8 @@ postgres && useradd -r -g postgres postgres`. 要临时获取管理员权限可�
 
 - WORKDIR
 
-格式: \
+格式:
+
 ```dockerfile
 WORKDIR /path/to/workerdir
 ```
@@ -168,7 +180,8 @@ WORKDIR /path/to/workerdir
 
 - ONBUILD
 
-格式: \
+格式:
+
 ```dockerfile
 ONBUILD [INSTRUCTION]
 ```
@@ -176,7 +189,8 @@ ONBUILD [INSTRUCTION]
 配置当所创建的镜像作为其他新创建镜像的基础镜像时, 所执行的操作命令.
 
 
-案例: \
+案例:
+
 ```dockerfile
 # [...]
 ONBUILD ADD . /app/src
@@ -189,7 +203,8 @@ ONBUILD RUN /usr/local/bin/python-build --dir /app/src
 
 编写完成 Dockerfile 之后, 通过 `docker build` 命令来创建镜像.
 
-格式: \
+格式:
+
 ```bash
 docker build [选项] 路径
 ```
