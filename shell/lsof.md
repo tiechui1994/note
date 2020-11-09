@@ -27,17 +27,41 @@ lsof 输出各列信息的意义如下:
 - FD: 文件描述符, 应用程序通过文件描述符识别该文件. 如cwd, txt等
 
 ```
+1) cwd: current work directory, 即: 应用程序的当前工作目录, 这是该应用程序启动的目录.
+2) txt, 该类型的文件是程序代码, 如应用程序二进制本身或共享库.
+3) mem, memory-mapped file
+4) mmap, memory-mapped device
+5) pd, parent directory
+6) rtd, root directory
+7) 0: 标准输入
+2) 1: 标准输出
+3) 2: 标准错误
 ```
 
 - TYPE: 文件类型, 如 DIR, REG, 常见的文件类型:
 
 ```
+1) DIR: 目录
+2) CHR: 字符类型
+3) BLK: 块设备类型
+4) UNIX: UNIX域套接字
+5) FIFO: 先进先出FIFO队列
+6) IPv4: 网际(IP)套接字
 ```
 
 - DEVICE: 指定磁盘的名称
 - SIZE: 文件的大小
 - NODE: 索引节点(文件在磁盘上的标识)
 - NAME: 打开文件的确切名称
+
+命令参数:
+
+- `-c <process>`, 列出指定进程所打开的文件. `<process>支持模糊匹配`
+- `-d <fd>`, 列出占用该文件号的进程
+- `+d <dir>`, 列出目录下被打开的文件
+- `-p <pid>`, 列出指定进程号所打开的文件
+- `-i <condition>`, 列出符合条件的进程. (4, 6, 协议, :端口, @ip), 可以使用多次
+- `-r <sec>`, 每隔多少秒执行一次
 
 
 #### 参考文档
