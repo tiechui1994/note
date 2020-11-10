@@ -1,4 +1,116 @@
-## Ubuntu 下 NetworkManger 启动流程分析
+## interfaces 配置
+
+### 设置以太网接口
+
+大多数网络设置可以通过 `/etc/network/interfaces` 上的 interfaces 配置文件完成. 在这里, 可以为网卡提供IP address
+(或使用dhcp), 设置route, 配置IP masquerading, 设置default routes等等.
+
+> 记住将要在启动时启动的接口添加到 'auto' 行.
+
+
+### 使用 DHCP 自动配置接口
+
+```
+auto eth0
+allow-hotplug eth0
+iface eth0 inet dhcp
+```
+
+### 手动配置接口
+
+如果是手动配置它, 则类似以下内容将设置 default gateway(network, broadcast 和 gateway是可选的）:
+
+```
+auto eth0
+iface eth0 inet static
+    address 192.168.0.7
+    netmask 255.255.255.0
+    gateway 192.168.0.254
+```
+
+### 设置速度与双工(duplex)
+
+某些网络中, 无法进行自动协商. 如果必须手动设置接口的速度和双工, 则可能需要反复尝试. 以下是基本步骤:
+
+- 安装 `ethtool` 和 `net-tools` 软件包. 以便拥有 `ethtool` 和 `mii-tool` 程序
+
+- 尝试确定其当前速度和双工设置. 
+
+1. 以 root 用户身份, 首先尝试 `ethtool eth0`, 然后查看 `Speed:` 和 `Duplex:` 行是否有效. 否则, 设备可能不支持
+ethtool
+
+2. 以 root 身份, 尝试 `mii-tool -v eth0`, 查看其输出是否正常.
+
+
+## NetworkManager
+
+NetworkManager 守护程序试图通过管理主网络连接和其他网络接口 (如以太网,Wi-Fi和移动宽带设备) 来使网络的配置和操作尽
+可能轻松自如. 
+
+当网络连接可用时, NetworkManager会连接该网络设备, 除非该行为被禁用. 
+
+
+为了响应网络事件, NetworkManager 将按字母顺序在 `/etc/NetworkManager/dispatcher.d` 目录或子目录中执行脚本. 每
+个脚本应该是 `root` 拥有的常规可执行文件. 此外, 它允许 `group` 或 `other` 的用户写入, 也不可以 `setuid`.
+
+每个脚本都接收两个参数, 第一个是操作发生的设备的接口名称, 第二个是操作. 对于设备操作, 该接口是适合IP配置的内核接口的名称.
+因此, 如果适用, 它可以是 `VPN_IP_IFACE`, `DEVICE_IP_IFACE`, `DEVICE_IFACE`. 对于 `hostname`, 设备名称始终为
+"none", 对于 `connectivity-change`, 该名称为空.
+
+*Action* 是:
+
+- **pre-up**
+
+该 `interface` 已连接到网络, 但尚未完全激活. 必须将处理此事件的脚本放在 `dispatcher.d/pre-up.d` 目录中, 或将其符
+号链接到 `dispatcher.d/pre-up.d` 目录中, NetworkManager将等待脚本执行完成,然后再向应用程序指示该接口已完全激活.
+
+
+- **up**
+
+`interface` 已激活.
+
+- **pre-down**
+
+该 `interface` 将被停用, 但尚未从网络断开连接. 必须将处理此事件的脚本放在 `dispatcher.d/pre-down.d` 目录中, 或将
+其符号链接到 `dispatcher.d/pre-down.d` 目录中, NetworkManager 将等待脚本执行完成, 然后再将接口与其网络断开连接. 
+
+- **down**
+
+该 `interface` 已被禁用.
+
+- **vpn-pre-up**
+
+VPN已连接到网络, 但尚未完全激活. 必须将处理此事件的脚本放在 `dispatcher.d/pre-up.d` 目录中, 或将其符号链接到
+`dispatcher.d/pre-up.d` 目录中, NetworkManager 将等待脚本执行完成, 然后向应用程序指示VPN已完全激活.
+
+- **vpn-up**
+
+VPN连接已激活.
+
+- **vpn-pre-down**
+
+VPN 将被停用, 但尚未从网络断开连接. 必须将处理此事件的脚本放在 `dispatcher.d/pre-down.d` 目录中, 或将其符号链接到 
+`dispatcher.d/pre-down.d` 目录中, 并且 NetworkManager 将等待脚本执行完成, 然后再将VPN与其网络断开连接.
+
+- **vpn-down**
+
+VPN连接已停用.
+
+- **hostname**
+
+系统主机名已更新. 使用 `gethostname` 进行检索. 接口名称(第一个参数)为空, 并且未为此操作设置任何环境变量.
+
+- **dhcp4-change**
+
+DHCPv4租约发生改变(renewed, rebound等)
+
+- **connectivity-change**
+
+network connectivity 状态发生改变(`no connectivity`, `went online`等)
+
+
+## NetworkManger 启动流程分析
+
 
 1, 读取配置文件 `/etc/NetworkManager/NetworkManager.conf`, 同时会读取以下目录的配置文件:
 
@@ -29,9 +141,7 @@ wifi.scan-rand-mac-address=no
 
 - 创建新的 netns (network namaespace), 参数 `(net:8, mnt:9)`
 
-- NEWLINK, link
-
-- lo, eth
+- 针对 lo, 
 
 4, monitoring
 
@@ -85,6 +195,24 @@ wifi.scan-rand-mac-address=no
 设置 `management mode`, `managed` 或者 `unmanaged`
 
 6, 创建 `network interface device`
+
+
+```
+<trace> [1598180286.9161] platform-linux: event-notification: RTM_NEWLINK, flags multi, seq 1, in-dump: 1: lo <UP,LOWER_UP;loopback,up,running,lowerup> mtu 65536 arp 772 loopback? not-init addrgenmode eui64 addr 00:00:00:00:00:00 rx:114675,294937541 tx:114675,294937541
+<trace> [1598180286.9162] ethtool[1]: ETHTOOL_GDRVINFO, lo: failed: 不支持的操作
+
+<debug> [1598180286.9162] platform: signal: link   added: 1: lo <UP,LOWER_UP;loopback,up,running,lowerup> mtu 65536 arp 772 loopback? not-init addrgenmode eui64 addr 00:00:00:00:00:00 driver unknown rx:114675,294937541 tx:114675,294937541
+<trace> [1598180286.9162] ethtool[2]: ETHTOOL_GDRVINFO, enp1s0: success
+<trace> [1598180286.9163] platform-linux: event-notification: RTM_NEWLINK, flags multi, seq 1, in-dump: 2: enp1s0 <UP;broadcast,multicast,up> mtu 1500 arp 1 ethernet? not-init addrgenmode eui64 addr 34:17:EB:53:A5:C9 rx:0,0 tx:0,0
+<trace> [1598180286.9163] ethtool[2]: ETHTOOL_GDRVINFO, enp1s0: success
+
+<debug> [1598180286.9163] platform: signal: link   added: 2: enp1s0 <UP;broadcast,multicast,up> mtu 1500 arp 1 ethernet? not-init addrgenmode eui64 addr 34:17:EB:53:A5:C9 driver r8169 rx:0,0 tx:0,0
+<trace> [1598180286.9164] ethtool[3]: ETHTOOL_GDRVINFO, wlp2s0: success
+<trace> [1598180286.9164] platform-linux: event-notification: RTM_NEWLINK, flags multi, seq 1, in-dump: 3: wlp2s0 <DOWN;broadcast,multicast> mtu 1500 arp 1 wifi? not-init addrgenmode eui64 addr A0:88:69:81:7F:04 rx:254095,208985694 tx:167754,18648308
+<trace> [1598180286.9164] ethtool[3]: ETHTOOL_GDRVINFO, wlp2s0: success
+<debug> [1598180286.9165] platform: signal: link   added: 3: wlp2s0 <DOWN;broadcast,multicast> mtu 1500 arp 1 wifi? not-init addrgenmode eui64 addr A0:88:69:81:7F:04 driver iwlwifi rx:254095,208985694 tx:167754,18648308
+```
+
 
 ```
 <info>   NetworkManager (version 1.10.8) is starting... (after a restart)
