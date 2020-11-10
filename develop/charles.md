@@ -1,11 +1,17 @@
 # Charles 抓包
 
+> 简介: Charles 抓包是日常开发当中经常会用到的技术, 在 Android 6 之前, 手机系统既信任系统内置的证书, 也信任用户自己
+安装的证书, 但是在 Android 7 之后, 却发生了变化, 手机系统只信任系统内置的根证书. 当然了, 这是为了手机系统更安全. 但是
+这样以来, 原来抓包的方法就失效了. 本文主要全面讲解 IOS 和 Android 系统如何去配置根证书. 彻底解决抓包所遇到的最头疼的问
+题.
+
 ## Charles 抓包前的准备工作
 
 1. 下载 `Charles`, 官网的地址: https://www.charlesproxy.com
 
 2. 配置要抓包的站点, 进入 `Proxy > SSL Proxying Settings > SSL Proxying`, 启用 `Enable SSL Proxying`, 同
-时在 `Include` 当中添加 `Location` (站点配置), 如图(下面这个是通配符配置, 通常状况下这个足够了):
+时在 `Include` 当中添加 `Location` (站点配置), 如下图所示(这是个通配符配置, 一般状况下, 这个这个已经能够满足绝大数
+抓包的需求了)
 
 ![image](/images/develop_charles_sslproxy.png)
 
