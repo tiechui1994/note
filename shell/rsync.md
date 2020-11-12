@@ -59,6 +59,50 @@ rsync [OPTION] [USER@]HOST:SRC DEST
 则会导致文件被重新传输.
 
 
+- `--filter=PATTERN`, filter 规则允许灵活选择要传输(include)的文件和要跳过(exclude)的文件.
+
+rsync 的 filter 规则语法:
+
+```
+RULE [PATTERN_OR_FILENAME]
+
+RULE, MODIFIERS [PATTERN_OR_FILENAME]
+```
+
+> 可以选择使用短或长规则名称, 如下所述. 如果使用短命名规则, 则将 RULE 与 MODIFIERS 分开的 `,` 是可选的. 后面的 
+PATTERN 或 FILENAME (如果存在) 必须在单个空格或下划线 `_` 之后. 
+
+下面是可以的规则前缀:
+
+```
+exclude, - 指定排除模式
+include, + 指定包含模式
+merge, . 指定一个合并文件以读取更多规则
+dir-merge, : 指定每个目录的合并文件
+hide, H 指定用于从传输中隐藏文件的模式
+show, S 非隐藏文件模式
+protect, P 指定一种保护文件不被删除的模式
+risk, R 与模式匹配的文件不受保护
+clear, ! 清除当前的include/exclude 列表(不带参数)
+```
+
+> 从文件中读取规则时, 空行和以"#"开头的注释行将被忽略.
+
+> `--filter`, `--include`, `--exclude` 选项各采用一个规则/模式. 要添加多个选项, 可以在命令行上多次使用这些选项.
+
+合并文件有两种方式: 单个文件 `merge` ('.'), 和 目录 `dir-merge` (':').
+
+example:
+
+```
+merge /ect/rsync/default.rules
+. /ect/rsync/default.rules
+
+dir-merge .per-dir-filter
+dir-merge,n- .non-inherited-per-dir-excludes
+:n- .non-inherited-per-dir-excludes
+```
+
 - `--exclude=PATTERN`
 - `--include=PATTERN`
 
