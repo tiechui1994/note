@@ -88,7 +88,7 @@ aXDrm30UE6+dWdQ3n0ePVLNcHV+ZrIqwka94M/t8HavZpm4y
 的结果进行调整)
 
 
-3. 将生成好的证书文件拷贝到 `/system/etc/security/cacerts/` 目录下, 并且修改文件权限:
+3. 将生成好的证书文件拷贝到 `/system/etc/security/cacerts/` 目录下, 并且修改文件权限(默认状况下权限是644):
 
 ```
 # adb 连接到 vmos 虚拟机
@@ -96,11 +96,6 @@ adb connect 192.168.50.100:5666
  
 # 拷贝文件
 adb push faf57fe3.0 /system/etc/security/cacerts/
-
-# 修改文件权限
-adb shell
-cd /system/etc/security/cacerts/
-chmod 644 faf57fe3.0
 ```
 
 > `192.168.50.100:5666` 是 `VMOS` 虚拟机的ADB地址. 在进入 `VMOS` APP后, 进入 `设置 > 其他设置` 当中, 按照下
@@ -120,7 +115,11 @@ adb shell settings put global http_proxy 192.168.50.14:8888
 ```
 
 > `192.168.50.14:8888` 是我的 Charles 的主机IP地址+端口号, 这个需要根据自己设置的情况修改.
-> 这一步很重要的, 如果没有这一步操作, 前面的准备工作都白搭了!!
+> 这一步很重要的, 如果没有这一步操作, 前面的准备工作都白搭了.
+>
+> 题外话, 当要修改 `全局代理` 的时候, 依然可以使用 `adb shell settings put global http_proxy ip:port` 的形式.
+> 但是, 如果要移除 `全局代理`, 注意了, 这里是移除全局代理, 则使用的命令是 `adb shell settings put global http_proxy :0`
+> 这个很重要的, 希望大家注意. 如果操作不对, 很有可能导致你的手机无法正常上网.
 
 5. 到处为止, 大家就可以愉快的抓包了. 要么去 `VMOS` 的应用商店下载应用, 要么自己把应用传递到 `VMOS` 当中. 这个大家自己
 去探索吧, 是非常简单的操作.
