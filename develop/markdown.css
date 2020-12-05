@@ -86,6 +86,8 @@ ul, ol {
 
 ul { /*无序列表*/
     list-style-type: disc;
+    margin-bottom: 15px;
+    margin-top: 15px;
 }
 
 ol { /*有序列表*/
