@@ -38,10 +38,10 @@
 - [mysql日志](mysql/log.md)
 
 - [variables](mysql/variable.md)
-- [alter](mysql/alter.md)
-- [grant](mysql/grant.md)
+- [alter](mysql/cmd/alter.md)
+- [grant](mysql/cmd/grant.md)
 - [function](mysql/function.md)
-- [show](mysql/show.md)
+- [show](mysql/cmd/show.md)
 
 - [时间函数](mysql/time-function.md)
 

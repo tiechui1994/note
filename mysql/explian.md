@@ -52,19 +52,34 @@ Extra         | Using index
 
 select_type 表示查询的类型, 它的取值有:
 
-- SIMPLE, 表示此查询不包含 UNION 查询或子查询
+- SIMPLE, 表示此查询不包含 "UNION查询" 或 "子查询".
 
-- PRIMARY, 表示此查询是 UNION 的第一个查询
+- PRIMARY, 表示此查询最外层的 SELECT.
 
-- UNION, 表示此查询是 UNION 的第二个查询
+- UNION, 表示此查询是 UNION 的第二个查询, 或者 UNION 当中更后面的查询.
 
-- DEPENDENT UNION, UNION 中的第二个或后面的查询语句, 取决于外面的查询
+- DEPENDENT UNION, UNION 中的第二个或后面的查询语句, 依赖于外面的查询.
 
-- UNION RESULT, UNION 的结果
+- UNION RESULT, UNION 的结果.
 
-- SUBQUERY, 子查询中的第一个 SELECT 
+- SUBQUERY, 子查询中的第一个 SELECT. 
 
-- DEPENDENT SUBQUERY, 子查询中的第一个 SELECT, 取决于外面的查询, 即子查询依赖外层查询的结果
+- DEPENDENT SUBQUERY, 子查询中的第一个SELECT, 依赖于外面的查询, 即子查询依赖外层查询的结果.
+
+- DERIVED, 表示派生 SELECT(在FROM子句中的子查询)
+
+- MATERIALIZED, 表示物化子查询
+
+- UNCACHEABLE SUBQUERY, 表示子查询结果无法缓存, 必须针对外部查询的每一行重新进行评估.
+
+- UNCACHEABLE UNION, 表示在UNION中属于不可缓存子查询的第二个或更后面的查询.
+
+> DEPENDENT 通常表示使用相关子查询.
+>
+> `DEPENDENT SUBQUERY` 评估与评估不同 `UNCACHEABLE SUBQUERY`. 因为 `DEPENDENT SUBQUERY` 子查询对于外部上下
+文中的每一组不同的变量值只重新计算一次. 对于 `UNCACHEABLE SUBQUERY` 外部上下文的每一行, 子查询都会被重新评估.
+>
+> 子查询的可缓存性不同于查询缓存中查询结果的缓存
 
 
 ### type
