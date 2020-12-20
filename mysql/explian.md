@@ -66,7 +66,7 @@ select_type 表示查询的类型, 它的取值有:
 
 - DEPENDENT SUBQUERY, 子查询中的第一个SELECT, 依赖于外面的查询, 即子查询依赖外层查询的结果.
 
-- DERIVED, 表示派生 SELECT(在FROM子句中的子查询)
+- DERIVED, 表示派生 SELECT (在FROM子句中的子查询)
 
 - MATERIALIZED, 表示物化子查询
 
@@ -74,12 +74,46 @@ select_type 表示查询的类型, 它的取值有:
 
 - UNCACHEABLE UNION, 表示在UNION中属于不可缓存子查询的第二个或更后面的查询.
 
-> DEPENDENT 通常表示使用相关子查询.
+> `DEPENDENT` 通常表示使用相关子查询.
 >
 > `DEPENDENT SUBQUERY` 评估与评估不同 `UNCACHEABLE SUBQUERY`. 因为 `DEPENDENT SUBQUERY` 子查询对于外部上下
 文中的每一组不同的变量值只重新计算一次. 对于 `UNCACHEABLE SUBQUERY` 外部上下文的每一行, 子查询都会被重新评估.
 >
-> 子查询的可缓存性不同于查询缓存中查询结果的缓存
+> 子查询的可缓存性不同于查询缓存中查询结果的缓存.
+>
+> `DERIVED` 出现在派生表查询中. 派生表是在查询FROM子句范围内生成表的表达式.
+
+
+案例1: 查询 select_type 为 `DERIVED`. 
+
+```
+CREATE TABLE `t1` (
+  `id` int(11) DEFAULT NULL,
+  `rank` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO t1 VALUES (1,3);
+INSERT INTO t1 VALUES (1,5);
+INSERT INTO t1 VALUES (2,4);
+INSERT INTO t1 VALUES (2,5);
+INSERT INTO t1 VALUES (3,4);
+```
+
+查询一个分组表中的一组总和的平均值.
+
+```sql
+SELECT AVG(sum_rank) 
+    FROM (SELECT SUM(rank) as sum_rank 
+          FROM t1 GROUP BY id) as t;
+```
+
+请注意: 子查询(sum_rank) 中使用的列名在外部查询中被识别.
+
+> 派生表(`derived table`) 可以返回 `标量`, `列`, `行` 或 `表`. 
+> 派生表不能是`相关的子查询`, 或者 `包含外部引用或对其他表的引用的查询`. 
+
+
+
 
 
 ### type
@@ -90,24 +124,18 @@ select_type 表示查询的类型, 它的取值有:
 
 它提供了判断查询是否高效的重要依据. 通过 type 字段, 可以判断此次查询是 `全表扫描` 还是 `索引扫描`等.
 
-type 常有的取值:
+type 的值:
 
-#### system
+- system
 
-> The table has only one row (= system table). This is a special case of the const 
-> join type.
+该表只有一行(=系统表). 这个类型是 const 类型的特例.
 
-表中只有一条数据. 这个类型是特殊的 const 类型
+- const
 
-#### const
+该表至多有一个匹配的行, 在查询开始时读取. 由于只有一行, 因此该行中列的值可以被优化器的其余部分视为常亮. const 表非常快,
+因为它们只读一次.
 
-> The table has at most one matching row, which is read at the start of the query. 
-> Because there is only one row, values from the column in this row can be regarded 
-> as constants by the rest of the optimizer. const tables are very fast because they
-> are read only once.
- 
-
-针对`主键`或`唯一索引`的值查询扫描, 最多只返回一行数据. const 查询速度非常快, 因为它仅仅只读取一次.
+针对`主键`或 `唯一索引`的值查询扫描, 最多只返回一行数据. const 查询速度非常快, 因为它仅仅只读取一次.
 
 ```
 mysql root@localhost:test> explain select * from order_info where id=1\G;
@@ -126,62 +154,121 @@ filtered      | 100.0
 Extra         | <null>
 ```
 
+- eq_ref 
 
-#### eq_ref 
+对于前面的表中的每一行的组合, 从这个表读取一行. 除了 system 和 const 类型, 这是最好的 join type. 当 join 使用索引
+的所有部分并且索引是 `PRIMARY KEY` 或 `UNIQUE NOT NULL` 索引时使用它.
 
-> One row is read from this table for each combination of rows from the previous tables.
-> Other than the system and const types, this is the best possible join type. It is 
-> used when all parts of an index are used by the join and the index is a PRIMARY KEY
-> or UNIQUE NOT NULL index.
-
-只匹配到一行的时候. 除了 `system` 和 `const` 之外, 这是最好的 join 类型了. 当使用 `主键索引` 或 `
-唯一索引` 的时候, 且这个索引的所有组成部分都被用上, 才能是该类型.
-
-> eq_ref can be used for indexed columns that are compared using the = operator. The 
-> comparison value can be a constant or an expression that uses columns from tables 
-> that are read before this table. In the following examples, MySQL can use an eq_ref 
-> join to process ref_table
-
-对已经建立索引列进行 `=` 操作的时候, `eq_ref` 会被使用到. 比较值可以使用一个常量也可以是一个表达式. 
-这个表达式可以是其他的表的行
+eq_ref 可以用于使用 `=` 运算符进行比较的索引列. 比较值可以是一个常量, 也可以是一个表达式, 该表达式使用在此表之前读取的
+表中的列.
 
 ```
-# 多表关联查询, 单行匹配
+# 关联查询, 单列匹配
 
 EXPLAIN SELECT * FROM ref_table, other_table 
     WHERE ref_table.key_column=other_table.column;
 
-# 多表关联查询, 联合索引, 多行匹配
+
+# 关联查询, 多列匹配(这里就使用到了常量)
 
 EXPLAIN SELECT * FROM ref_table, other_table
-    WHERE ref_table.key_column_part1=other_table.column
-      AND ref_table.key_column_part2=1;
+    WHERE ref_table.key_column_part1=other_table.column AND ref_table.key_column_part2=1;
 ```
 
-#### ref
+- ref
 
-此类型通常出现在多表的 join 查询, 针对于 `非唯一索引` 或 `非主键索引`,或者是使用了 `最左前缀` 规则索引的
-查询.
+对于之前表中的每个行组合, 从此表中读取具有匹配索引值的所有行(注: 这里是多行). ref 如果 join 只使用最左边的前缀, 或者如
+果索引不是 `PRIMARK KEY` 或者 `UNIQUE` 索引(换句话说, 如果 join 不能基于键值选择单个行), 则使用该索引. 如果使用的
+索引只匹配几行, 这个是一个很好的 join type.
 
-#### range
+ref 可以用于使用 `=` 或 `<=>` 运算符进行比较的索引列. 
+
+```
+SELECT * FROM ref_table WHERE key_column=expr;
+
+# 下面的两个例子和前面的例子是一样的, 但是区别在于使用的索引不一样.
+
+SELECT * FROM ref_table, other_table
+    WHERE ref_table.key_column=other_table.column;
+
+SELECT * FROM ref_table, other_table
+    WHERE ref_table.key_column_part1=other_table.column AND ref_table.key_column_part2=1;
+```
+
+- fulltext
+
+join 使用 FULLTEXT 索引执行.
+
+- ref_or_null
+
+这种连接类型与 ref 类似, 但是另外 MySQL 对包含 NULL 值的行进行额外的搜索. 这种连接类型优化最常用于解析子查询.
+
+```
+SELECT * FROM ref_table
+    WHERE key_column=expr OR key_column IS NULL;
+```
+
+- index_merge
+
+此 join 类型表示使用索引合并优化. 在这种情况下, key 输出行中的列包含使用索引列表, 且 key_len 包含所用索引的最长关键
+部分列表. 
+
+- unique_subquery
+
+这种类型取代了以下形式的 eq_ref 一些 IN 子查询:
+
+```
+value IN (SELECT primary_key FROM sigle_table WHERE som_expr)
+```
+
+unique_subquery 只是一个索引查找函数, 可以完全替代子查询以提高效率.
+
+- index_subquery
+
+这种连接类型与 unique_subquery. 它取代了 IN 子查询, 但它适合于以下形式的子查询中的非唯一索引:
+
+```
+value IN (SELECT key_column FROM sigle_table WHERE some_expr)
+```
+
+- range
+
+使用索引来选择行, 仅检索给定范围内的行. 输出行中的键列指示使用哪个索引. key_len 列是包含使用的最长的键部分. 此类型的 
+ref 列为 NULL.
  
-表示使用索引范围查询, 通过索引字段范围获取表中部分数据记录. 这个类型通常出现在 `=`, `<>`, `>=`, `<`, `<=`,
-`<=>`, `BETWEEN`, `IN` 操作中.
+这个类型通常出现在 `=`, `<>`, `>=`, `<`, `<=`, `<=>`, `BETWEEN`, `IN` , `IS NULL` 操作中.
 
-当 type 是 `range` 时, 那么 EXPLAIN 输出 ref 字段为 NULL, 并且 key_len 字段是此次查询中使用到的索引
-的最长那个.
+```
+SELECT * FROM tbl_name WHERE key_column=10;
 
-#### index
+SELECT * FROM tbl_name WHERE key_column BETWEEN 10 AND 20;
+
+SELECT * FROM tbl_name WHERE key_column IN (10, 20, 30);
+
+SELECT * FROM tbl_name WHERE key_part1=10 AND key_part2 IN (10, 20, 30);
+```
+
+- index
 
 表示全索引扫描(full index scan), 和 ALL 类型类似, 只不过 ALL 类型是全表扫描, 而 index 类型则仅仅扫描
 所有的索引, 而不是扫描数据.
 
-index 类型通常出现在: 所要查询的数据直接在索引树中就可以获取到, 而不需要扫描数据. 当这种状况下, extra 字段
-会显示 `using index`
+index 类型通常出现在: 
+1) 如果索引是查询的覆盖索引, 并且可用于满足表中所需的所有数据, 则只扫描索引树. 在这种情况下, extra 列是 `Using index`.
+仅扫描扫描通常比ALL快.
 
-#### all
+2) 全表扫描使用索引中读取来按索引顺序查找数据行. `Uses index` 不会查询在 extra 列中.
+2) 使用对索引的读取执行全表扫描, 以按索引顺序查找数据行. 
 
-全表扫描
+当查询只使用属于单个索引一部分时, MySQL可以使用这种 join 连接类型.
+
+- all
+
+对来自之前表的行的每个组合进行全表扫描. 如果该表是未标记为const的第一个表, 则通常不好, 并且在所有其他状况下通常非常糟糕.
+通常可以通过加索引来避免 ALL, 这些索引允许基于早期表中的常量值或列值从表中检索行.
+
+全表扫描是针对之前表中的每一行组合完成的. 如果表是没有标记的第一个表 const, 通常情况不好, 而在其他状况下通常很糟糕. 通常
+状况下
 
 
 
