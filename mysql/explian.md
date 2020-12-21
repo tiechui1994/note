@@ -113,10 +113,10 @@ SELECT AVG(sum_rank)
 > 派生表不能是`相关的子查询`, 或者 `包含外部引用或对其他表的引用的查询`. 
 
 
-
-
-
 ### type
+
+> 索引的分类: 聚簇索引(也称为主键)和二级索引(普通索引). 
+> 唯一索引全称是唯一二级索引, 是一种特殊的二级索引.
 
 [文档](https://mengkang.net/1124.html)
 
@@ -135,7 +135,8 @@ type 的值:
 该表至多有一个匹配的行, 在查询开始时读取. 由于只有一行, 因此该行中列的值可以被优化器的其余部分视为常亮. const 表非常快,
 因为它们只读一次.
 
-针对`主键`或 `唯一索引`的值查询扫描, 最多只返回一行数据. const 查询速度非常快, 因为它仅仅只读取一次.
+针对索引是 `PRIMARY KEY` 或 `UNIQUE NOT NULL` 的值查询扫描, 最多只返回一行数据. const 查询速度非常快, 因为它仅仅
+只读取一次.
 
 ```
 mysql root@localhost:test> explain select * from order_info where id=1\G;
@@ -201,7 +202,12 @@ join 使用 FULLTEXT 索引执行.
 
 - ref_or_null
 
+对于二级索引进行等值匹配查询, 该索引的值也可以是 NULL 值时, 那么对该表的访问方法的类型可能是 `ref_or_null`. 一般状况
+下等值查询 filtered 列的值100.
+
 这种连接类型与 ref 类似, 但是另外 MySQL 对包含 NULL 值的行进行额外的搜索. 这种连接类型优化最常用于解析子查询.
+
+> 注意: 这是针对二级索引(索引可以是单列, 也可以是多列)的查询, 并且进行等值匹配查询(二级索引的前缀等值匹配).
 
 ```
 SELECT * FROM ref_table
@@ -210,8 +216,58 @@ SELECT * FROM ref_table
 
 - index_merge
 
-此 join 类型表示使用索引合并优化. 在这种情况下, key 输出行中的列包含使用索引列表, 且 key_len 包含所用索引的最长关键
-部分列表. 
+一般情况下, 执行一个查询最多只会用到一个索引. 但是在特殊情况下也可能使用多个二级索引, 此时的 type 就是 index_merge. 
+在这种情况下, 输出的 key 列包含使用索引列表, key_len列是包含所用索引长度的列表. 
+
+合并分为三种: union, intersection, sort-union
+
+1) intersection合并, 交集. extra列包含 `Using intersect(...)`
+
+1.InnoDB表的主键上的任何范围.
+
+2.二级索引前缀的N部分(即所有二级索引部分被覆盖): `key1=const1 AND key2=const2 AND keyN=constN`
+
+例子:
+
+```
+# 主键索引, 二级索引
+SELECT * FROM innodb_table
+    WHERE primary_key < 10 AND key1 = 20;
+
+# 一个复合二级索引和一个单列二级索引
+SELECT * FROM innodb_tbale
+    WHERE (key1_part1 = 1 AND key1_part2 = 2) AND key2 = 2;
+```
+
+2) union合并, 并集. extra列包含 `Using union(...)`
+
+1.二级索引前缀的N部分(即所有二级索引部分被覆盖):  `key1=const1 AND key2=const2 AND keyN=constN`
+
+例子:
+
+```
+SELECT * FROM tbl_name
+    WHERE key1=1 OR key2=2
+```
+
+
+3) sort-union合并, union索引合并的使用条件太苛刻, 必须保证各个二级索引在进行等值匹配的条件下才能被用到. 比如下面的查询
+就无法使用到 union 索引合并:
+
+```
+SELECT * FROM tbl_name WHERE key1 < 'a' OR key2 > 'z'
+```
+
+
+
+```
+# key1, key2 分别都是索引.
+SELECT * from tb1_name WHERE key1=10 OR key2=20;
+SELECT * from tb1_name WHERE (key1=10 OR key2=20) AND non_key=30;
+
+SELECT * from t1,t2 WHERE (t1.key1 IN (1,2) OR t2.key2 LIKE 'val%') AND t2.key1=t1.some_col;
+
+```
 
 - unique_subquery
 
