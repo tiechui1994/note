@@ -241,7 +241,7 @@ SELECT * FROM innodb_tbale
 
 2) union合并, 并集. extra列包含 `Using union(...)`
 
-1.二级索引前缀的N部分(即所有二级索引部分被覆盖):  `key1=const1 AND key2=const2 AND keyN=constN`
+1.二级索引前缀的N部分(即所有二级索引部分被覆盖):  `key1=const1 OR key2=const2 OR keyN=constN`
 
 例子:
 
@@ -251,40 +251,52 @@ SELECT * FROM tbl_name
 ```
 
 
-3) sort-union合并, union索引合并的使用条件太苛刻, 必须保证各个二级索引在进行等值匹配的条件下才能被用到. 比如下面的查询
-就无法使用到 union 索引合并:
+3) sort-union合并, union索引合并的使用条件太苛刻, 必须保证各个二级索引在进行等值匹配的条件下才能被用到. sort-union
+索引合并: 先按照二级索引记录的主键值进行排序, 之后按照 union 索引合并方式执行. 这种 sort-union 索引合并比单纯的 union
+索引合并多了一步对索引记录的主键值排序的过程. extra 列包含 `Using sort_union(...)`. 例如, 下面的例子就可能使用到 
+sort-union:
 
 ```
-SELECT * FROM tbl_name WHERE key1 < 'a' OR key2 > 'z'
-```
+SELECT * FROM tbl_name WHERE key1 < 'a' OR key2 > 'z';
 
+SELECT * FROM tbl_name WHERE key1>6 OR key2<1
+```
 
 
 ```
 # key1, key2 分别都是索引.
 SELECT * from tb1_name WHERE key1=10 OR key2=20;
 SELECT * from tb1_name WHERE (key1=10 OR key2=20) AND non_key=30;
-
-SELECT * from t1,t2 WHERE (t1.key1 IN (1,2) OR t2.key2 LIKE 'val%') AND t2.key1=t1.some_col;
-
 ```
 
 - unique_subquery
 
-这种类型取代了以下形式的 eq_ref 一些 IN 子查询:
+类似于两表中被驱动表的 `eq_ref` 访问方法, `unique_subquery` 是针对一些包含 `IN` 子查询的查询语句中, 如果查询优化器
+决定将 `IN` 子查询转换为 `EXIST` 子查询, 而且子查询可以使用到主键进行等值匹配的话, 那么该子查询执行计划的 `type` 列
+的值就是 `unique_subquery`. 例如:
 
 ```
-value IN (SELECT primary_key FROM sigle_table WHERE som_expr)
+SELECT * FROM tbl_name WHERE value IN (
+    SELECT primary_key FROM signle_table WHERE signle_table.xxx=tbl_name.xxx
+) OR|AND expr;
 ```
+
+> 注意事项:
+> 1.IN子查询
+> 2.子查询返回主键
+> 3.子查询当中等值连接匹配
+> 4.查询还需要其他条件, 否则类型可能是 `eq_ref`
 
 unique_subquery 只是一个索引查找函数, 可以完全替代子查询以提高效率.
 
 - index_subquery
 
-这种连接类型与 unique_subquery. 它取代了 IN 子查询, 但它适合于以下形式的子查询中的非唯一索引:
+index_subquery 与 unique_subquery 类似. 只不过访问子查询中的表时使用的是普通索引.
 
 ```
-value IN (SELECT key_column FROM sigle_table WHERE some_expr)
+SELECT * FROM tbl_name WHERE value IN (
+    SELECT index_key FROM signle_table WHERE signle_table.xxx=tbl_name.xxx
+) OR|AND expr;
 ```
 
 - range
@@ -303,6 +315,14 @@ SELECT * FROM tbl_name WHERE key_column IN (10, 20, 30);
 
 SELECT * FROM tbl_name WHERE key_part1=10 AND key_part2 IN (10, 20, 30);
 ```
+
+> 注意事项:
+>
+> - 不是索引查询语句使用了 `IN`, type 列就一定是 `range`, 也有可能是 `all` 或 `ref` (例如 `Where key IN (1)`
+> 就是 `ref`)
+> - 如果索引查询
+> - 如果主键查询语句使用了 `IN`, `BETWEEN`, `<`, `>` 等条件, 一般情况下是 `range`.
+> - 如果索引查询语句使用了 `IN`, `BETWEEN`, `<`, `>` 等条件, 并且
 
 - index
 
@@ -326,31 +346,78 @@ index 类型通常出现在:
 全表扫描是针对之前表中的每一行组合完成的. 如果表是没有标记的第一个表 const, 通常情况不好, 而在其他状况下通常很糟糕. 通常
 状况下
 
+### key_len
 
+key_len 列表示当优化器决定使用某个索引执行查询时, 该索引记录的最大长度, 它是由三部分构成的:
 
-#### type 性能比较
+- 对于使用固定长度类型的索引列来说, 它实际占用的存储空间的最大长度就是该固定值; 对于指定字符集是变长类型的索引列来说, 比
+如某个索引列的类型是 `VARCHAR(100)`, 使用的字符集是 `utf8`, 那么该列实际占用的最大存储空间就是 `100 x 3 = 300` 个
+字节.
 
-all < index < range < ref < eq_ref < const < system
+- 如果该索引列可以存储 `NULL` 值, 则 `key_len` 比不可以存储 `NULL` 值时多1个字节.
 
-all 类型是全表扫描. 查询速度最慢.
+- 对于变长字段来说, 都会有2个字节的空间来存储该变长列的实际长度.
+
+### ref
+
+当使用索引列等值匹配的条件去执行查询时, 也就是在访问方法是 `const`, `eq_ref`, `ref`, `ref_or_null`, `unique_subquery`
+`index_subquery` 其中之一时, ref 列展示的就是与索引列作等值匹配的具体信息, 比如一个常数或者是某个列.
 
 
 ### extra
 
 extra 字段表示额外信息
 
-- using filesort, 当 extra 中有 `using filesort` 时, 表示 MySQL 需额外的排序操作. 不能通过索引达到
-排序效果. 一般有 `using filesort`, 都建议优化去掉.
+- `Using filesort`, 当 extra 中有 `Using filesort` 时, 表示 MySQL 需额外的排序操作. 不能通过索引达到排序效果. 
+一般有 `Using filesort`, 都建议优化去掉.
+
+- `Using temporary`, 在许多查询的执行过程中, MySQL可能会借助临时表来完成一些功能, 比如去重, 排序之类的. 比如在执行
+许多包含 `DISTINCT`, `GROUP BY`, `UNION` 等子句的查询过程中, 如果不能有效利用索引完成查询, MySQL 很可能寻求通过
+建立内部的临时表来执行查询.
+
+```
+mysql> EXPLIAN SELECT DISTINCT none FROM t3 \G;
+***************************[ 1. row ]***************************
+id            | 1
+select_type   | SIMPLE
+table         | t3
+partitions    | None
+type          | ALL
+possible_keys | None
+key           | None
+key_len       | None
+ref           | None
+rows          | 13
+filtered      | 100.0
+Extra         | Using temporary
+```
+
+建议使用最好使用索引来替换掉使用临时表.
+
+- `Start temporary`, `End temporary`, 在将 IN 子查询转换成 `semi-join`, 如果执行策略采用 `DuplicateWeedout` 
+时, 也就是通过建立临时表来实现为外层查询中的记录进行去重操作时,驱动表查询执行计划的 extra 列将显示 `Start temporary`, 
+被驱动表查询计划的 extra 列将显示 `End temporary`.
+
+- `LooseScan`, 在将 IN 子查询转换为 `semi-join` 时, 如果执行策略采用 `LooseScan`, 则在驱动表执行计划的 extra 列
+将显示 `LooseScan`. 一般是使用到了索引.
+
+> 注意: 驱动表的 extra 列
+
+- `FirstMatch(table_name)`, 在将 IN 子查询转换为 `semi-join` 时, 如果执行策略采用 `FirstMatch`, 则在被驱动表
+执行计划的 extra 列显示为 `FirstMatch(table_name)`
+
+> 注意: 被驱动表的 extra 列
+
+
+- `Using join buffer (Block Nested Loop)`, 在连接查询执行过程中, 当被驱动表不能有效的利用索引加快访问速度, MySQL
+一般会为其分配一块叫 `join buffer` 的内存块来加快查询速度, 也就是常说的`基于块的嵌套循环算法`.
+
+- `Using index condition`
 
 - using index, 覆盖索引扫描, 表示查询在索引树中就可以查找到所需数据, 不用扫描表数据文件, 往往说明性能不错.
 
-- using temporary, 查询使用临时表, 一般出现于排序, 分组和多表join 的情况, 查询效率不高, 建议优化.
-
 - using where, 列数据是从仅仅使用了索引中的信息而没有读取实际实际的表返回的, 这发生在对表全部请求列都是同一
 个索引部分的时候.
-
-- using join buffer, 该值强调join条件时没有使用索引, 并且需要 join buffer 来存储中间结果. 如果出现了
-这个值, 那么应该注意, 根据查询的具体情况可能需要添加索引来改进性能.
 
 - impossible where, 该值强调 where 语句条件总是 false, 表里没有满足条件的记录
 
