@@ -4,6 +4,10 @@
 
 [文档](https://segmentfault.com/a/1190000012629884)
 
+[文档](https://mengkang.net/1124.html)
+
+[文档](https://www.cnblogs.com/zhanjindong/p/3439042.html)
+
 案例:
 
 ```
@@ -117,10 +121,6 @@ SELECT AVG(sum_rank)
 
 > 索引的分类: 聚簇索引(也称为主键)和二级索引(普通索引). 
 > 唯一索引全称是唯一二级索引, 是一种特殊的二级索引.
-
-[文档](https://mengkang.net/1124.html)
-
-[文档](https://www.cnblogs.com/zhanjindong/p/3439042.html)
 
 它提供了判断查询是否高效的重要依据. 通过 type 字段, 可以判断此次查询是 `全表扫描` 还是 `索引扫描`等.
 
@@ -412,7 +412,20 @@ Extra         | Using temporary
 - `Using join buffer (Block Nested Loop)`, 在连接查询执行过程中, 当被驱动表不能有效的利用索引加快访问速度, MySQL
 一般会为其分配一块叫 `join buffer` 的内存块来加快查询速度, 也就是常说的`基于块的嵌套循环算法`.
 
-- `Using index condition`
+- `Using index condition`, 这个表示使用了索引下推(index condition pushdown)技术, 简称ICP. 用于优化查询. 
+
+ICP是什么?
+
+1.在不使用ICP的情况下, 在使用非主键索引(又称为普通索引或二级索引)进行查询时, 存储引起通过索引检索到数据, 然后返回给MySQL
+服务器, 服务器然后判断数据是否符合条件.
+
+2.在使用ICP的情况下, 如果存在某些被索引的列的判断条件时, MySQL服务器将这一部分判断条件传递给存储引擎, 然后由存储引擎通过
+判断索引是否符合MySQL服务器传递的条件, 只有当索引符合条件时才会将数据检索出来返回给MySQL服务器.
+
+> 索引条件下推优化可以减少存储引擎查询基础表的次数, 也可以减少 MySQL 服务器从存储引擎接收数据的次数.
+
+关闭索引下推命令 `set optimizer_switch='index_condition_pushdown=off';`
+
 
 - using index, 覆盖索引扫描, 表示查询在索引树中就可以查找到所需数据, 不用扫描表数据文件, 往往说明性能不错.
 
@@ -425,5 +438,11 @@ Extra         | Using temporary
 不满足.
 
 - select tables optimized away, 该值意味着仅通过使用索引, 优化器可能仅从聚合函数结果中返回一行.
+
+
+### 其他
+
+- 开启优化器追踪. `SET optimizer_trace="enabled=on"`, 查询会在 `information_schema.OPTIMIZER_TRACE` 当中
+记录优化器的详情.
 
 
