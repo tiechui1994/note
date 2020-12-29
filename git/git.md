@@ -100,3 +100,28 @@ config 是一个 git 的一个本地配置文件. 在刚初始化一个git项目
 remote, 在 `master` 分支进行 `git fetch` 和 `git push` 时, remote 指定了往哪个远程仓库进行 fetch/push.
 merge 和 branch 一起定义了分支的上游分支. 它告诉 `git fetch` 和 `git pull`, `git rebase` 合并哪个分支, 并且还
 可能影响 `git push`. 在分支 "xxx" 中时, 它告诉 `git fetch` 将标记为要合并到 `FETCH_HEAD` 中的默认refspec. 
+
+
+### hooks 文件
+
+常见的 hook 文件, 及其调用的时机.
+
+- `applypatch-msg`, 该 hook 由 gita-am 调用. 它接收一个参数, 即保存建议的提交日志消息的文件名称.
+
+- `pre-commit`, 该 hook 由 git-commit 调用, 可以使用 `-no-verfiy` 选项绕过. 它不带任何参数, 并且在获取提交日志
+消息之前被调用. 如果此脚本以非0状态退出会导致 git commit 命令在创建提交之前终止.
+
+默认的 pre-commit 启用时会捕获带有尾随空格的行的引入, 并在找到这样的行时终止提交.
+
+- `post-commit`, 该 hook 由 git-commit 调用. 它不带任何参数, 并且在提交后被调用. 
+
+这个 hook 主要用于通知, 不会影响 git commit 的结果.
+
+- `prepare-commit-msg`, 该 hook 由 git-commit 调用. 在准备默认日志消息之后, 并且启动编辑器之前调用/
+
+它需要一到三个参数. 第一个是包含提交日志消息的文件的名称. 第二个是提交消息的来源,可以是 message (如果指定了 `-m` 或 `-F`
+选项); template (如果指定了 `-t` 选项或者设置了 `commit.template` 选项); merge (如果提交是一个合并或者存在
+.git/MERGE_MSG文件); squash (如果存在 .git/SQUASH_MSG文件); commit; 然后提交 SHA-1 (如果指定了 `-c`, `-C`或
+`--amend` 选项).
+
+如果脚本的退出状态非0, 则 git commit 将终止.

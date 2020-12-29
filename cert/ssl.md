@@ -13,13 +13,13 @@ X.509, 一种证书的标准, 定义了证书中包含的内容.
 
 > Apache, *NIX 服务器使用
 
-> 信息查看: openssl x509 -in certificate.pem -txt -noout
+> 信息查看: openssl x509 -inform pem -in certificate.pem
 
 - DER (Distinguished Encoding Rules), 二进制格式, 不可读.
 
 > Java 和 Windows 服务器使用
 
-> 信息查看: openssl x509 -in certificate.der **-inform** -txt -noout
+> 信息查看: openssl x509 -inform der -in certificate.der
 
 
 ## 相关的文件扩展名
@@ -80,14 +80,16 @@ keytool -export \
 
 - **KEY**, 公钥或者私钥, 并非X.509证书, 可能是PEM编码, 也可能是DER编码
 
-> 查看方法: openssl rsa -in mykey.key -text -noout
->         openssl rsa -in mykey.key -text -noout -inform der
+> 查看方法: 
+> openssl rsa -inform pem -in mykey.key -text
+> openssl rsa -inform der -in mykey.key -text  
 
 
 - **CSR**, 证书签名请求(Certificate Signing Request), 这个并不是证书, 而是向 **CA** 获得签名证书的申请. 
 **核心内容是一个公钥** (当然还附带了一些别的信息), 在生成这个申请的时候, 同时也会生成一个私钥, 私钥要自己保管好.
 
-> 查看方法: openssl req -text -noout -in my.csr
+> 查看方法: 
+> openssl req -in my.csr -text
 
 生成csr文件:
 
