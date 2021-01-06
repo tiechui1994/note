@@ -46,7 +46,7 @@ sed 中包含两种形式的行寻址: `数字形式表示的行区间` 和 `文
 
 - 文本模式的行寻址:
 
-1. `/pattern/ command`   单个模式匹配(所有匹配pattern的行).
+1. `/pattern/ command` 单个模式匹配(所有匹配pattern的行).
 
 ```bash
 sed -n '/^root/ p' file

@@ -91,6 +91,15 @@ arr=("en" "us")
 arr=([1]="en" [3]="zh" [0]="cn")
 ```
 
+案例: 通过正则匹配结果创建数组
+
+```bash
+arr=($(grep -n -o -E '^session' sshd))
+echo "len: ${#arr}"
+```
+
+注: `$(grep -n -o -E '^session' sshd)` 的内容是换行输出.
+
 - array 赋值与获取
 
 与 map 的方式很类似.
@@ -114,7 +123,6 @@ _=${arr[index]}
 **长度**: `${#arr[@]}`, 使用 `#`. 与 map 的方式是一致的
 
 **所有的value**: `${arr[@]}` 或者 `${arr[*]}`. 推荐使用前一种方式. 注意这里的结果是一个元组
-
 
 - array 遍历
 
