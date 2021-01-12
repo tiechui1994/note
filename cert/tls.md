@@ -1,4 +1,4 @@
-# SSL 证书解读
+# TLS/SSL 证书解读
 
 ## 证书标准
 
@@ -20,7 +20,6 @@ X.509, 一种证书的标准, 定义了证书中包含的内容.
 > Java 和 Windows 服务器使用
 
 > 信息查看: openssl x509 -inform der -in certificate.der
-
 
 ## 相关的文件扩展名
 
@@ -54,7 +53,7 @@ keytool 也能直接生成JKS
 
 从jks当中提取  **证书**, **私钥**, **公钥**:
 
-```bash
+```
 # jks -> p12
 keytool -importkeystore \
     -srckeystore keystore.jks \
@@ -157,8 +156,7 @@ openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -CAcreateserial -set_serial
 
 因此, 如果说数字证书是电子商务应用者的网上数字身份证话, 那么证书相应的私钥则可以说是用户的私章或公章.
 
-
-## TLS/SSL 支持的算法集合
+## 常用的 TLS/SSL 支持的算法集合
 
 > Go1.13 版本提供的支持
 
@@ -192,6 +190,25 @@ TLS_AES_128_GCM_SHA256       uint16 = 0x1301
 TLS_AES_256_GCM_SHA384       uint16 = 0x1302
 TLS_CHACHA20_POLY1305_SHA256 uint16 = 0x1303
 ```
+
+## TLS/SSL 协议
+
+TLS/SSL 协议分层:
+
+![image](/images/cert_tls_layers.png)
+
+TLS/SSL 协议层主要包含两层: Handshake Layer 和 Record Layer.
+
+Handshake Layer 又包含以下的子协议:
+
+- Handshake Protocol, 它允许对等彼此进行身份验证, 并协商密码套件(ciphers)和连接的其他参数. SSL握手协议涉及在客户端
+和服务器之间的四组消息. 每组消息通常在单独的TCP段中传输.
+
+- Change Cipher Spec Protocol, 它使先前协商的参数有效, 因此通信变得加密.
+
+- Alert Protocol, 用于传送 Exceptions 并指示可能危害安全性的潜在问题.
+
+- Application Data Protocol, 它获取任意数据(通常是应用程序层数据), 并通过安全通道进行发送.
 
 
 ## TLS/SSL 过程
@@ -269,12 +286,12 @@ client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 
 > RSA 具体流程
 
-![image](/images/cert_rsa_tls_process.png)
+![image](/images/cert_tls_rsa_tls_process.png)
 
 
 > DH 具体流程
 
-![image](/images/cert_dh_tls_process.png)
+![image](/images/cert_tls_dh_tls_process.png)
 
 ---
 
@@ -282,7 +299,7 @@ client, 观察能否成功解密, 来表示最终的 TLS/SSL 完成.
 
 原理公式:
 
-![image](/images/cert_dh_formula.png)
+![image](/images/cert_tls_dh_formula.png)
 
 为了防止在 DH 参数交换时, 数据过大, DH 使用的是取模数的方式, 这样就能限制传输的值永远在 `[1, p-1]`. 这里, 先说明一
 下 DH 算法的基本条件:
@@ -384,7 +401,7 @@ ID 发送给 server 端 (侧面说明, client 同样需要存储一份 session d
 
 那么, 相对于完全的 TLS/SSL 连接来说, 这里只用到了一次 RTT.
 
-![image](/images/cert_use_sessionid.png)
+![image](/images/cert_tls_sessionid.png)
 
 
 #### Session Tickets
@@ -396,7 +413,6 @@ Session Tickets 和 Session ID 做的是同样的事情. server 将最新一次�
 
 > Session ID 和 Session Tickets 到底使用哪个? Session ID 节省性能, 而损耗部分空间. Session Tickets 注重的是
 > 节省空间, 而损耗部分性能. 两者都能节省一次 RTT 时间.
-
 
 ## TLS/SSL 优化
 
@@ -512,7 +528,7 @@ ssl_dhparam dhparam.pem;
 
 这样, 就正式的开启的 DH 加密模式. 抓包观察结果 (DH在ServerHello):
 
-![image](/images/cert_dh_server_key_exchange.png)
+![image](/images/cert_tls_dh_server_key_exchange.png)
 
 由于历史原因, DH param 已经使用的长度是 1024, 比如: 采用 `0akley group 2` 版本. 现在, 比较流行的 DH 加密方式
 是 `ECDH`, 它和以前的加密方式 (`DHE`) 比起来, 在密钥生成这块会快很多. 同样, 由于历史原因, 它的基本条件比较高.
