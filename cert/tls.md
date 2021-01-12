@@ -199,7 +199,7 @@ TLS/SSL 协议分层:
 
 TLS/SSL 协议层主要包含两层: Handshake Layer 和 Record Layer.
 
-Handshake Layer 又包含以下的子协议:
+Handshake Layer 包含以下的子协议:
 
 - Handshake Protocol, 它允许对等彼此进行身份验证, 并协商密码套件(ciphers)和连接的其他参数. SSL握手协议涉及在客户端
 和服务器之间的四组消息. 每组消息通常在单独的TCP段中传输.
@@ -210,6 +210,146 @@ Handshake Layer 又包含以下的子协议:
 
 - Application Data Protocol, 它获取任意数据(通常是应用程序层数据), 并通过安全通道进行发送.
 
+
+Record Layer:
+
+底层是堆叠在TCP之上的, 因为它是面向连接的可靠传输层协议. 该层基本上由 TLS Record Protocol组成. 简而言之, Record Protocol
+首先将高层协议数据分为214字节或更小的块; 然后有选择地压缩数据, 添加消息身份验证码(MAC), 最后根据cipher spec(经过协商)
+对数据加密, 并添加SSL Record头. 
+
+> 注意: 每个块都打包成一个不保留客户端消息边界的结构, 这意味着可以将多个相同类型的消息合并为一个结构.
+
+```
+-----------+
+  data   --+--------------> 1. Fragment data
+-----------+
+                            +------------------------+
+                            |                        |
+                            +------------------------+
+
+                            2. Compress data (generally no compression applied)
+
+                            +------------------------+----+
+                            |                        |MAC | Add Message Authentication Code
+                            +------------------------+----+
+
+                            3. Encrypt data
+
+                            +-----------------------------+
+                            |ciphertext                   |
+                            +-----------------------------+
+
+                            4. Add header
+
+                       +----+-----------------------------+
+     TLS Record header |    |ciphertext                   | Add a TLS Record header
+                       +----+-----------------------------+
+```
+
+
+#### Record Protocol 格式
+
+`TLS Record header` 包含3个域, 共 5 bytes:
+
+- `byte 0`: TLS record type
+
+- `byte 1-2`: TLS version(major/minor)
+
+- `byte 3-4`: Length of data in the record(不包含header本身). 最大支持16K
+
+> TLS record type 的值
+
+```
+CHANGE_CIPHER_SPEC 20
+ALERT              21
+HANDSHAKE          22
+APPLICATION_DATA   23
+```
+
+#### Handshake Protocol 格式
+
+这部分内容是紧跟在 `TLS Record header` 之后的. 包含3个域.
+
+- `byte 0`: handshake type
+- `byte 1-2`: handshake message length
+- `byte 3-`: message(不同的 `handshake type` 具有不同的消息格式)
+
+> handshake type 的值
+
+```
+HELLO_REQUEST      0
+CLIENT_HELLO       1
+SERVER_HELLO       2
+
+CERTIFICATE         11
+SERVER_KEY_EXCHANGE 12
+CERTIFICATE_REQUEST 13
+SERVER_DONE         14
+CERTIFICATE_VERIFY  15
+CLIENT_KEY_EXCHANGE 16
+
+FINISHED            20
+```
+
+#### ChangeCipherSpec Protocol 格式
+
+这部分内容是紧跟在 `TLS Record header` 之后的. 包含1个域, 长度是 1 byte.
+
+- `byte 0`: ChangeCipherSpec Layer
+
+#### Alert Protocol 格式
+
+这部分内容是紧跟在 `TLS Record header` 之后的. 包含2个域, 长度是 2 byte.
+
+- `byte 0`: alert severity
+
+- `byte 1`: alert descriptions
+
+> alert severity 的值
+
+```
+WARNING 1
+FATAL   2
+```
+
+> alert descriptions 的值
+
+```
+CLOSE_NOTIFY 0
+
+UNEXPECTED_MESSAGE 10
+
+BAD_RECORD_MAC    20
+DECRYPTION_FAILED 21
+RECORD_OVERFLOW   22
+
+DECOMPRESSION_FAILURE 30
+
+HANDSHAKE_FAILURE     40
+NO_CERTIFICATE        41
+BAD_CERTIFICATE       42
+UNSUPPORT_CERTIFICATE 43
+CERTIFICATE_REVOKE    44
+CERTIFICATE_EXPIRED   45
+CERTIFICATE_UNKNOWN   46
+ILLEGAL_PARAMETER     47
+UNKNOWN_CA            48
+ACCESS_DENIED         49
+
+DECODE_ERROR  50
+DECRYPT_ERROR 51
+
+EXPORT_RESTRICTION 60
+
+PROTOCOL_VERSION      70
+INSUFFICIENT_SECURITY 71
+
+INTERNAL_ERROR  80
+
+USER_CANCELLED  90
+
+NO_RENEGOTIATION 100
+```
 
 ## TLS/SSL 过程
 
