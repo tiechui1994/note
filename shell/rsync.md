@@ -46,6 +46,7 @@ rsync [OPTION] [USER@]HOST:SRC DEST
 先文件新副本, 然后将文件副本重命名). 
 
 存在的影响:
+
 ```
 1. 使用中的二进制文件无法更新(操作系统阻止此种情况的发生)
 2. 传输过程中文件的数据将处于不一致状态.
@@ -101,6 +102,32 @@ merge /ect/rsync/default.rules
 dir-merge .per-dir-filter
 dir-merge,n- .non-inherited-per-dir-excludes
 :n- .non-inherited-per-dir-excludes
+```
+
+- `C 是一种指定应以CVS兼容方式读取文件的方式. 这会启用 "n", "w" 和 "-", 但也允许指定清除列表的标记(!). 如果未提供文
+件名, 则假定为 ".cvsignore"`.
+
+> - `n` 表示规则不被子目录继承.
+> - `w` 表示规则使用空格进行分割, 而不是常规的行分割. 注: 此时 `- foo + bar` 会被解析成两个规则.
+
+- `e 将从传输中排除合并文件名.` 例如 "dir-merge,e .rules" => "dir-merge .rules" 且 "- .rules".
+
+
+```bash
+cat <<EOF | rsync -avC --filter='. -' src/ dst
++ foo.o
+:C
+- *.old
+EOF
+
+rsync -avC --include='foo.c' --filter=':C' --exclude='*.old' src/ dst
+```
+
+
+
+```bash
+# 只同步 .git 目录下的文件
+rsync --filter ': .git' /src/path /dst/path
 ```
 
 - `--exclude=PATTERN`
