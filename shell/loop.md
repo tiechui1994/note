@@ -100,6 +100,22 @@ until [[ "$i" -gt 5 ]]; do
 done
 ```
 
+### case 循环
+
+```bash
+arg=$0
+case "$arg" in 
+    "a")
+        echo "a" ;;
+    "b")
+        echo "b" ;;
+     *)
+        echo "*" ;;
+esac
+```
+
+在每个 `case` 必须以 ";;" 结尾, 表示当前 case 执行完毕.
+
 
 ### 其他结构
 
