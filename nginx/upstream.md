@@ -53,7 +53,9 @@ down, 将组内的某台服务器标记为永久的无效状态, 通常与ip_has
 ```
 
 
-### ip_hash(策略)
+### 负载均衡策略
+
+#### ip_hash(策略)
 
 **ip_hash指令**用于实现会话保持功能, 将某个客户端的多次请求定向到组内同一台服务器上, 保证客户端与服务器之间建
 立稳定的会话. 只有当该服务器处于无效(down)状态时, 客户端请求才会被下一个服务器接收和处理.
@@ -94,7 +96,7 @@ http {
 进程将采用**最近最少使用**的策略关闭网络连接.
 
 
-### hash(策略)
+#### hash(策略)
 
 **hash指令**: 使用hash算法调度.
 
@@ -118,7 +120,7 @@ upstream backend {
 ```
 
 
-### least_conn(策略)
+#### least_conn(策略)
 
 **least_conn指令**用于配置nginx服务器使用负载均衡策略为为网络连接分配服务器组内的服务器. 该指令在功能上实
 现了**最少连接负载均衡算法**, 在选择组内的服务器时, 考虑各服务器权重的同时,每次选择的都是当前网络连接最少的那
@@ -139,7 +141,7 @@ upstream backend {
 ```
 
 
-### random(策略)
+#### random(策略)
 
 random模式 提供了一个参数 `two`, 当这个参数被指定时, nginx会先随机地选择两个服务器(考虑**weight**),
 然后用以下几种方法选择其中的一个服务器:
@@ -150,7 +152,7 @@ least_time=header: 接收到 response header的最短平均时间($upstream_head
 least_time=last_byte: 接收到完整response的最短平均时间($upstream_response_time, nginx plus版本)
 ```
 
-### keepalive
+#### keepalive
 
 **keepalive指令**用于控制网络连接保持功能. 通过该指令, 能够保持nginx服务器的工作进程为服务器组打开一部分
 网络连接, 并且将数量控制在一定的范围之内.
@@ -158,3 +160,115 @@ least_time=last_byte: 接收到完整response的最短平均时间($upstream_res
 ```
 keepalive CONNECTIONS;
 ```
+
+### upstream 与 proxy_pass
+
+nginx 中有两个模块都有 `proxy_pass` 指令:
+
+- `ngx_http_proxy_module` 的 `proxy_pass`
+
+```
+语法: proxy_pass URL;
+场景: location, if in location, limit_except
+说明: 设置后端服务器的 protocol (http或https) 和 addres(domain 或 ip+port, 或 unix-domain socket), 以及
+location中可以匹配的一个可选的URL.
+```
+
+- `ngx_stream_proxy_module` 的 `proxy_pass`
+
+```
+语法: proxy address;
+场景: server
+说明: 设置后端服务器的地址. 这个 address 可以是一个 domain 或 ip+port, 或 unix-domain socket
+```
+
+---
+
+> `ngx_stream_module` 的 `proxy_pass`
+
+使用 ip + port:
+
+```
+server {
+    listen 127.0.0.1:12345;
+    proxy_pass 127.0.0.1:8080;
+}
+```
+
+使用 unix socket:
+
+```
+server {
+    listen [::1]:12345;
+    proxy_pass unix:/tmp/stream.socket;
+}
+```
+
+---
+
+> `ngx_http_module` 的 `proxy_pass`
+
+直接使用URL:
+
+```
+server {
+    listen      80;
+    server_name www.test.com;
+ 
+    # 正常代理, 不修改后端url的
+    location /path/ {
+        proxy_pass http://127.0.0.1;
+    }
+ 
+    # 修改后端url地址的代理(本例后端地址中, 最后带了一个 test)
+    location /testb {
+        proxy_pass http://www.other.com:8801/test;
+    }
+ 
+    # 使用 if in location
+    location /google {
+        if ( $geoip_country_code ~ (RU|CN) ) {
+            proxy_pass http://www.google.hk;
+        }
+    }
+ 
+    location /yongfu/ {
+        # 没有匹配 limit_except 的, 代理到 unix:/tmp/backend.socket:/uri/
+        proxy_pass http://unix:/tmp/backend.socket:/uri/;
+ 
+        # 匹配到请求方法为: PUT or DELETE, 代理到9080
+        limit_except PUT DELETE {
+            proxy_pass http://127.0.0.1:9080;
+        }
+    }
+}
+```
+
+使用 upstream:
+
+```
+upstream local {
+    server 172.18.0.6:1234;
+}
+
+upstream www.local.com {
+    server 172.18.0.1:53;
+}
+
+server {
+    listen      80;
+    server_name www.test.com;
+ 
+    location /path/ {
+        proxy_pass http://local;
+    }
+    
+    location /path/ {
+        set target www.local.com
+        proxy_pass http://local;
+    }
+}
+```
+
+upstream + proxy_pass + resolver 的使用技巧: [文档](https://www.jianshu.com/p/5caa48664da5)
+
