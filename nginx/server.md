@@ -11,12 +11,13 @@ listen address[:port] 
         [deferred] 
         [bind] 
         [ipv6only=on|off] 
-        [ssl] 
+        [ssl]
+        [http2]
 ```
 
 参数说明:
 
-default_server, 
+default_server, 默认的 server, 只能配置一个, 一般是最后一个. `default` 和 `default_server` 的含义是一样的.
 
 backlog=number, 在listen()调用中设置backlog参数, 该参数限制挂起连接队列的最大长度. 默认情况下, backlog在FreeBSD,
 DragonFly BSD和macOS上设置为-1, 在其他平台上设置为511.
@@ -29,6 +30,13 @@ bind, 指示对给定的 'address:port' 对进行单独的 bind() 调用. 这很
 accept_filter, deferred, ipv6only 或 so_keepalive 参数, 那么对于给定的 'address:port' 对将始终进行单独的 
 bind() 调用.
 
+ssl, 表示启用 ssl 连接, 在这种状况下, 端口是 443
+
+http2, 表示启用 http2 连接. 
+
+> 注: 在同一个 server 当中可以有多个 `listen` 配置.
+
+---
 
 案例:
 
@@ -49,11 +57,12 @@ listen localhost:8000;
 ```
 nginx中的server_name指令主要用于配置基于名称虚拟主机.
 
-请求Header当中的Host参数:
-    当请求url是 http://127.0.0.1/index.html, 则Host为 "127.0.0.1"
-    当请求url是 http://localhost/index.html, 则Host为 "localhost"
-当请求到达nginx时, 首先会根据 Host 参数去匹配 server_name, 确定 server 之后,
-会根据location的信息, 将请求 "送达" 到指定的服务器.
+请求Header当中的Host参数: 
+当请求url是 http://127.0.0.1/index.html, 则Host为 "127.0.0.1"
+当请求url是 http://localhost/index.html, 则Host为 "localhost"
+    
+当请求到达nginx时, 首先会根据 Host 参数去匹配 server_name, 确定 server 之后, 会根据location的信息, 将请求 "送达" 
+到指定的服务器.
 ```
 
 - 匹配顺序, server_name指令在接到请求后的匹配顺序如下:

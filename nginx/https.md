@@ -10,14 +10,14 @@ openssl genrsa -des3 -out server.key 2048
 
 会有两次输入密码, 输入同一个即可. 然后会得到一个server.key文件.
 
-说明: 以后使用此文件(通过openssl命令)可能经常要求输入密码, 如果想去除输入密码的步骤, 可以使用
-如下的命令, 重新生成一个server.key以替换原来的文件:
+说明: 以后使用此文件(通过openssl命令)可能经常要求输入密码, 如果想去除输入密码的步骤, 可以使用如下的命令, 重新生成一个
+server.key以替换原来的文件:
 
 ```
 openssl rsa -in server.key -out server.key
 ```
 
-- 创建服务器证书的申请文件server.csr
+- 创建服务器证书的申请文件 server.csr
 
 ```
 openssl req -new -key server.key -out server.csr
@@ -103,7 +103,7 @@ server {
     # 配置秘钥位置
     ssl_certificate_key     /root/Lee/keys/server.key;
     
-    # 开启双向认证
+    # 开启双向认证, 以及认证客户端的CA证书(一般是自己私有的CA)
     #ssl_verify_client on;
     #ssl_client_certificate ca.crt;
     
