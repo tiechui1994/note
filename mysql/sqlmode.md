@@ -6,9 +6,9 @@
 
 ```
 ONLY_FULL_GROUP_BY,
-STRICT_TRANS_TABLES,
-NO_ZERO_IN_DATE,
 NO_ZERO_DATE,
+NO_ZERO_IN_DATE,
+STRICT_TRANS_TABLES,
 ERROR_FOR_DIVISION_BY_ZERO,
 NO_AUTO_CREATE_USER,
 NO_ENGINE_SUBSTITUTION
@@ -16,61 +16,69 @@ NO_ENGINE_SUBSTITUTION
 
 - ONLY_FULL_GROUP_BY
 ```
-ONLY_FULL_GROUP_BY的语义就是确定select target list中的所有列的值都是明确语义, 简单的说来,
-在ONLY_FULL_GROUP_BY模式下, target list中的值要么是来自于聚集函数的结果, 要么是来自于group by list中的表达式的值.
+ONLY_FULL_GROUP_BY的语义就是确定 "select target list" 中的所有列的值都是明确语义, 简单的说来,
+在ONLY_FULL_GROUP_BY模式下, "target list" 中的值要么是来自于 "聚集函数的结果", 要么是来自于 "group by list" 中
+的表达式的值.
 
-因为有ONLY_FULL_GROUP_BY, 所以要在MySQL中正确的使用group by语句的话, 只能是select column1 from tb1 group by column1
-(即只能查询group by的字段,其他均都要报1055的错)
+因为有 ONLY_FULL_GROUP_BY, 所以要在 MySQL中正确的使用 "group by" 语句的话, 只能是 "select column1 from tb1 
+group by column1".
 
-MySQL允许target list中对于非聚集函数的alias column被group by, having以及order by语句引用.
+(即只能查询group by的字段, 其他均都要报1055的错)
 
-注: 从MySQL 5.7.5开始, 默认的SQL模式包括ONLY_FULL_GROUP_BY
+MySQL允许 "target list" 中对于非聚集函数的 "alias column" 被 `GROUP BY`, `HAVING` 以及 `ORDER BY` 语句引用.
+
+注: 从MySQL 5.7.5开始, 默认的SQL模式包括 ONLY_FULL_GROUP_BY
 ```
 
 - NO_ZERO_DATE
 ```
-NO_ZERO_DATE模式影响 mysql 是否允许 '0000-00-00' 作为有效日期. 其效果还取决于是否启用了严格的SQL模式.
-    1.如果未启用此模式，则允许使用'0000-00-00'并且插入不会产生警告.
-    2.如果启用此模式，则允许使用'0000-00-00'并且插入会产生警告.
-    3.如果启用此模式和严格模式, 则不允许使用'0000-00-00'并且插入会产生错误,除非同时给出IGNORE. 
-    对于 INSERT IGNORE 和 UPDATE IGNORE, 允许使用'0000-00-00'并且插入产生警告.
+NO_ZERO_DATE 模式影响 MySQL 是否允许 '0000-00-00' 作为有效日期. 其效果还取决于是否启用了严格的SQL模式.
+  1.如果未设置此模式, 则允许使用'0000-00-00'并且插入不会产生警告.
+  2.如果设置此模式, 则允许使用'0000-00-00'并且插入会产生警告.
+  3.如果设置此模式和严格模式, 则不允许使用'0000-00-00'并且插入会产生错误, 除非同时给出IGNORE. 
+  对于 INSERT IGNORE 和 UPDATE IGNORE, 允许使用'0000-00-00'并且插入产生警告.
 
 错误: Error 1292: Incorrect date|datetime|time value
 ```
 
 - NO_ZERO_IN_DATE
 ```
-NO_ZERO_IN_DATE模式会影响mysql是否允许 "年份为不为0但月份或日期为0的日期". (此模式会影响日期类型,
-例如 "2010-00-01" 或 "2010-01-00", 但不会要控制 mysql 是否允许'0000-00-00', 请使用NO_ZERO_DATE模式.)
-NO_ZERO_IN_DATE的效果还取决于是否启用了严格的SQL模式.
-    1. 如果未启用此模式, 则允许 "月份或日期为0"的日期, 并且插入不会产生警告。
-    2. 如果启用此模式，则 "月份或日期为0" 的日期 将作为 "0000-00-00" 插入并生成警告。
-    3. 如果启用此模式和严格模式, 则不允许 "月份或日期为0" 的日期, 并且插入会产生错误. 除非同时给出IGNORE.
-    对于 INSERT IGNORE 和 UPDATE IGNORE, "月份或日期为0" 的日期将作为 '0000-00-00' 插入并产生警告。
+NO_ZERO_IN_DATE 模式会影响 MySQL 是否允许 "year为不为0, 但month或day为0的 date". (此模式会影响 date 类型,
+例如 "2010-00-01" 或 "2010-01-00", 但不会要控制 MySQL 是否允许 '0000-00-00', 可以设置NO_ZERO_DATE模式.)
+NO_ZERO_IN_DATE 的效果还取决于是否启用了严格的SQL模式.
+  1.如果未设置此模式, 则允许 "month或day为0"的日期, 并且插入不会产生警告.
+  2.如果设置此模式, 则 "month或day为0" 的日期将作为 "0000-00-00" 插入并生成警告.
+  3.如果设置此模式和严格模式, 则不允许 "month或day为0" 的日期, 并且插入会产生错误. 除非同时给出IGNORE.
+    对于 INSERT IGNORE 和 UPDATE IGNORE, "month或日期为0" 的日期将作为 '0000-00-00' 插入并产生警告。
 
-注: NO_ZERO_IN_DATE已弃用. NO_ZERO_IN_DATE不是严格模式的一部分, 但应与严格模式一起使用, 默认情况下启用.
-如果启用NO_ZERO_IN_DATE而未启用严格模式, 则会发出警告,反之亦然.
+注: NO_ZERO_IN_DATE 已弃用. NO_ZERO_IN_DATE不是严格模式的一部分, 但应与严格模式一起使用, 默认情况下启用.
+如果设置 NO_ZERO_IN_DATE 而未启用严格模式, 则会发出警告, 反之亦然.
 
 错误: Error 1292: Incorrect date|datetime value
 ```
 
+> 注: `NO_ZERO_IN_DATE` 模式可能会对修改插入的结果.
+
 - STRICT_TRANS_TABLES
 ```
 只对支持事务的表启用严格模式.
-    1. 对于事务性存储引擎, 在语句中任何地方出现的不良数据值(包括类型不符合, 数据值越界,等)均会导致语句终止,
-    并执行回滚操作.
-    2. 对于非事务性存储引擎, 如果错误出现在插入或更新的第一行, 将终止该语句. 首行之后出现的错误不会导致该语
-    句终止, 取而代之的是, 将调整不良数据值, 并且给出警告, 而不是错误. 
+  1.对于事务性存储引擎, 在语句中任何地方出现的不良数据值(包括类型不符合, 数据值越界,等)均会导致语句终止, 并执行回滚
+操作.
+  2.对于非事务性存储引擎, 如果错误出现在插入或更新的第一行, 将终止该语句. 首行之后出现的错误不会导致该语句终止, 取而
+代之的是, 将修正不良数据值, 并且给出警告, 而不是错误. 
 ```
 
 - STRICT_ALL_TABLES
 ```
 对所有引擎的表都启用严格模式.
-    1. 对于事务性存储引擎, 在语句中任何地方出现的不良数据值(包括类型不符合, 数据值越界,等)均会导致放弃语句,
-    并执行回滚操作.
-    2. 对于非事务性存储引擎, 在语句中任何地方出现的不良数据值, 在该行数据之前的插入或者更新操作执行, 而该行(
-    包括该行)之后的插入或者更新操作终止.
+  1.对于事务性存储引擎, 在语句中任何地方出现的不良数据值(包括类型不符合, 数据值越界,等)均会导致放弃语句, 并执行回滚
+操作.
+  2.对于非事务性存储引擎, 在语句中任何地方出现的不良数据值, 在该行数据之前的插入或者更新操作执行, 而该行(包括该行)之
+后的插入或者更新操作终止.
 ```
+
+> STRICT_TRANS_TABLES 和 STRICT_ALL_TABLES 的区别在于 `非事务性存储引擎` 上. `STRICT_TRANS_TABLES` 是修正数
+据值, 而 `STRICT_ALL_TABLES` 是直接终止 SQL.
 
 - ERROR_FOR_DIVISION_BY_ZERO 
 ```
@@ -164,7 +172,7 @@ mysql> SET sql_mode = '';
 mysql> SELECT CAST(0 AS UNSIGNED) - 1;
 ERROR 1690 (22003): BIGINT UNSIGNED value is out of range in '(cast(0 as unsigned) - 1)'
 
-如果启用了NO_UNSIGNED_SUBTRACTION SQL模式，则结果为负:
+如果启用了NO_UNSIGNED_SUBTRACTION SQL模式,则结果为负:
 
 mysql> SET sql_mode = 'NO_UNSIGNED_SUBTRACTION';
 mysql> SELECT CAST(0 AS UNSIGNED) - 1;

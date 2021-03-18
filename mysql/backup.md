@@ -2,7 +2,7 @@
 
 ## mysqldump备份, mysql,source恢复
 
-使用mysqldump可以将数据备份sql文件. 
+使用 mysqldump 可以将数据备份sql文件. 
 
 使用mysql或者source去执行备份的sql文件从而恢复数据.
 
@@ -97,7 +97,7 @@ mssql, db2, maxdb, no_key_options, no_table_options或no_field_options. 要使�
 转储为xml格式
 
 
-# MySQL导入导出excel
+# MySQL导入导出 excel
 
 ## 导出excel
 
