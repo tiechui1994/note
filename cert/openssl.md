@@ -17,59 +17,34 @@ openssl程序是一个命令行工具, 用于从shell中使用OpenSSL的加密�
 
 ```
 openssl command [ COMMAND_OPTS ] [ COMMAND_ARGS ]
-
-openssl [ list-standard-commands
-          list-message-digest-commands
-          list-cipher-commands
-          list-cipher-algorithms
-          list-message-digest-algorithms
-          list-public-key-algorithms
-        ]
 ```
 
 openssl程序提供了丰富的命令(上面的概要中的命令), 每个命令通常都有丰富的选项和参数(概要中的command_opts和command_args).
 
-命令list-standard-commands, list-message-digest-commands和list-cipher-commands分别输出所有标准命令,
-消息摘要命令或密码命令的名称列表(每行一个条目), 在本openssl实用程序中可用.
 
-命令list-cipher-algorithms 和 list-message-digest-algorithms列出所有密码和消息摘要名称, 每行一个条目. 别名列为:
-from => to
+**command**
 
-命令 list-public-key-algorithms 列出了所有支持的公钥算法.
+- `ciphers`, Cipher Suite Description(密码套件描述列表, 查询)
 
-命令 no-XXX 测试指定名称的命令是否可用. 如果不存在名为XXX的命令, 则返回0(成功)并打印no-XXX; 否则返回1并打印XXX. 
-在这两种情况下, 输出都转到stdout, 并且没有任何内容打印到stderr. 始终忽略其他命令行参数. 因为对于每个密码, 都有一个相同
-名称的命令, 这为shell脚本提供了一种简单的方法来测试openssl程序中密码的可用性. (no-XXX无法检测伪命令, 例如 quit, 
-list-...-commands 或 no-XXX本身)
+- `cms`, CMS(Cryptographic Message Syntax) (加密消息语法)
 
+- `clr`, CLR(Certificate Revocation List) Management (证书撤销)
 
-### STANDARD COMMANDS
+- `dgst`, Message Digest Calculation
 
-- ciphers, Cipher Suite Description(密码套件描述列表, 查询)
+- `ec`, EC(Elliptic Curve) key processing (椭圆曲线)
 
-- cms, CMS(Cryptographic Message Syntax) (加密消息语法)
-
-- clr, CLR(Certificate Revocation List) Management (证书撤销)
-
-- dgst, Message Digest Calculation
-
-- ec, EC(Elliptic Curve) key processing (椭圆曲线)
-
-- enc, Encoding with Ciphers
+- `enc`, Encoding with Ciphers
 
 
-- gendh, 生成DH秘钥
-
-参数:
+- `gendh`, 生成 DH key
 ```
 openssl gendh [args] [numbits]
 -out file, key的文件
 numbits, 大质数的位数
 ```
 
-- dsaparam, 生成DSA的参数文件
-
-参数:
+- `dsaparam`, 生成DSA的参数文件
 ```
 openssl dsaparam [args] [bits] 
 
@@ -82,9 +57,7 @@ openssl dsaparam [args] [bits]
 bits, 生成private key的长度
 ```
 
-- gendsa, 生成DSA秘钥
-
-参数:
+- `gendsa`, 生成DSA秘钥
 ```
 openssl gendsa [args] dsaparam-file
 
@@ -98,9 +71,7 @@ openssl gendsa [args] dsaparam-file
 dsaparam-file, 使用dsaparam生成的文件
 ```
 
-- genrsa, 生成RSA秘钥
-
-参数:
+- `genrsa`, 生成RSA秘钥
 ```
 openssl genrsa [args] [bits]
 
@@ -114,9 +85,7 @@ openssl genrsa [args] [bits]
 bits, 秘钥位数
 ```
 
-- genpkey, 生成秘钥
-
-参数:
+- `genpkey`, 生成秘钥
 ```
 openssl genpkey [args]
 
@@ -128,9 +97,7 @@ openssl genpkey [args]
 -paramfile file, 参数文件, dsa就需要参数文件
 ```
 
-- req  PKCS#10 X.509 Certificate Signing Request (CSR, 证书签名请求) Management.
-
-参数:
+- `req`  PKCS#10 X.509 Certificate Signing Request (CSR, 证书签名请求) Management.
 ```
 openssl req [arg]
 
@@ -175,9 +142,7 @@ openssl req [arg]
 -config file   证书请求的配置文件.
 ```
 
-- ca, CA (Certificate Authority) Management.
-
-参数:
+- `ca`, CA (Certificate Authority) Management. 一般是进行签名或自签名
 ```
 openssl ca [args]
 
@@ -203,9 +168,7 @@ openssl ca [args]
 -utf8          输入字符集是UTF8(默认是ASCII)
 ```
 
-- x509, X.509 Certificate Data Management
-
-参数:
+- `x509`, X.509 Certificate Data Management. x509 证书数据转换 
 ```
 -inform arg
 -outform arg 

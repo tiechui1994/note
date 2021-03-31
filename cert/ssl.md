@@ -2,7 +2,142 @@
 
 ## 证书标准
 
-X.509, 一种证书的标准, 定义了证书中包含的内容.
+X.509, 一种证书的标准, 定义了证书中包含的内容. 下面介绍下 `数字签名`, `数字证书`,  `数字证书的颁发形式`, 以及 `系统
+如何导入Root CA`
+
+### 数字签名 (Digital Signature)
+
+数字签名, 包含两项主要的工作, 签名(Signing) 和 检验 (Verification). 前者是创建一个数字签名, 后者是验证签名的有效性.
+
+签名过程: 
+
+- 第一步, 发送方采用某种算法对整个消息的内容实施哈希算法, 得到一个哈希值.
+
+- 第二步, 发送方使用自己的 **私钥** 对哈希码进行加密, 加密后得到的密文就是一个数字签名. 该数字签名最终会连同发送方密钥
+中公钥(该公钥一般会内嵌于一个数字证书中)附加到原消息上一起发给接收方.
+
+
+接收方接收之后, 它可以借助这个数字签名验证发送方的真实身份和消息的完整性, 这个过程称为数字签名的验证.
+
+验证过程:
+
+- 第一步, 原消息被提取出来, 通过相同的哈希算法得到一个得到一个哈希值.
+
+- 第二步, 数字签名被提取出来, 采用相同的算法利用 **公钥** 对数字签名进行解密, 得到生成数字签名的那个哈希值. 两个哈希值
+进行比较, 如果一致则可以证明数字签名的有效性以及消息本身的完整性.
+
+### 数字证书 (Digital Certificate)
+
+证书, 又称数字证书, 或者公钥证书(Public Key Certificate), 是一种数字签名的声明, 它将公钥的值绑定到持有对应私钥的个
+人,设备或服务的标识.
+
+由于大多数普通用途的证书基于 `X.509 V3` 证书标准, 因此有将其称为 `X.509` 证书. `X.509` 证书被广泛地应用于加密和数字
+签名, 以提供认证的实现和确保数据的一致性和机密性.
+
+在公钥密码学的角度, `X.509` 证书就是将一个某个密钥对中的公钥与某个主题(Subject)进行绑定的文件. 具体来讲, 和公钥进行绑
+定是不仅仅包括相应主题的可辨别名称(DN: Distinguished Name), 可以包含主题相关的其它可选名称, 比如 Email 地址, DNS名
+称等.
+
+下面的代码片段体现了一个 `X.509` 证书的大体结构. 
+
+```
+Certificate:
+   Data:
+       Version: V3
+       Serial Number: 7829 (0x1e95)
+       Signature Algorithm: md5WithRSAEncryption
+       Issuer: CN=Root Agency
+       Validity   
+           Not Before: ‎Thursday, ‎April ‎07, ‎2011 3:37:45 PM
+           Not After : ‎Sunday, ‎January ‎01, ‎2040 7:59:59 AM
+       Subject: 
+           CN = www.artech.com
+       Subject Public Key Info:
+           Public Key Algorithm: rsaEncryption
+           RSA Public Key: (1024 bit)
+               Modulus (1024 bit):
+                    00:b4:31:98:... 52:7e:41:8f
+               Exponent: 65537 (0x10001)
+   Signature Algorithm: md5WithRSAEncryption
+   93:5f:8f:5f: ... b5:22:68:9f
+```
+
+其中包括以下内容:
+
+```
+版本号: V3
+序列号: 7829
+签名算法: md5WithRSAEncryption
+颁发者: CN=Root Agency
+有效日期: April ‎07, ‎2011 3:37:45 PM到January ‎01, ‎2040 7:59:59 AM
+主题信息: CN=www.artech.com
+公钥: 00:b4:31:98:… 52:7e:41:8f
+公钥算法: rsaEncryption
+颁发者的数字签名: 93:5f:8f:5f:… b5:22:68:9f
+```
+
+### 数字证书的颁发机制
+
+对于数字证书, 尤其是用于商业用途的数字证书, 也具有相应的官方办法机构, 我们将这样的机构称之为认证权威机构(CA: 
+Certification Authority, 简称CA).
+
+从上面给出的数字证书可知, 证书中不仅仅包括 CA 的基本信息, 还包括一个数字签名和签名采用的算法. CA 通过自己的私钥对证书的
+数据部分进行签名, 并将此签名连同签名采用的算法置于证书之中. 按照前面介绍的关于数字签名的原理, 如果我们具有 CA 的公钥, 
+我们不仅仅可以验证证书的 CA, 也能校验证书的内容是否被篡改. 那么在对证书进行验证的时候, CA 的公钥从何而来呢?
+
+实际上, CA 的公钥也保存在一个数字证书之中, 并存储于一个受信任的证书存储之中. 按照证书代表身份的不同, 可以将其分为两种: 
+
+- 根CA证书(CA Certificate), 代表 CA
+- 终端实体证书 (End Entity Certificate), 受 CA 证书信任的实体
+
+> 实际上, CA 证书和终端实体证书并没有本质区别. 除了最顶层的 Root CA, 所有的 CA 证书颁发者是它的上一级 CA, 即上一级的
+作为该 CA 证书的 Root CA. CA 的这种层级关系组成了一种信任链(Trust Chain).
+
+为了存储数字证书, 操作系统都有存储相应的 Root CA, 根据目的或者信任范围的不同, 不同的证书被存储于不同的存储区. 在若干证
+书存储区中, 有一个被称为 "受信任的根证书颁发机构" (Trusted Root Certificate Authorities) 的存储区, 它里面存储了
+所有 CA 证书代表所信任的证书颁发机构. 默认情况下, 对于一个待验证的证书, 如果基于该证书 CA 信任链上的任何一个 CA 在该存
+储区中存在一个证书, 那么这个证书就是合法的.
+
+
+### Linux 系统导入根 Root CA
+
+> 注: 这里 Linux 系统是 Ubuntu 16.04, 其他的 Linux 发行版本需要谨慎.
+
+在进行系统证书导入之前, 先要弄清楚 Linux 系统与系统证书相关的几个文件/目录. 
+
+`/usr/share/ca-certificates`, 这个目录存放了系统内置的证书. 一般在 `mozilla` 目录下, 保存为 `crt`文件.
+
+`/usr/local/share/ca-certificates`, 这个目录是本地的证书.(这个一般是用户的证书, 一般没怎么使用)
+
+`/etc/ca-certificates/update.d`, 这个目录主要存放 hooks 脚本. 在执行 `update-ca-certificates` 命令的使用进
+行执行.
+
+`/etc/ca-certificates.conf`, 这个文件是配置系统内置的证书文件名称列表. 所有的文件都是相对于 `/usr/share/ca-certificates`
+目录的. 如果以 `!` 开始的行, 表示要取消选择这个证书文件名. 根据这个配置文件最终, 生成 `/etc/ssl/certs/ca-certificates.crt`
+文件内容. 使用命令 `dpkg-reconfigure ca-certificates` 可以自动生成此文件, 使用命令 `update-ca-certificates` 
+可以根据此文件内容更新 `/etc/ssl/certs/ca-certificates.crt` 文件.
+
+`/etc/ssl/certs`, 这个目录存储的证书 (包括系统内置的证书和用户的生成的证书)
+
+`/etc/ssl/certs/ca-certificates.crt`, 系统内置的证书文件内容的集合 (就是将所有系统内置的证书的文件内容放到一个文件
+当中), 在 Go 当中, 就是使用此目录作为系统内置的证书加载文件. 使用 `update-ca-certificates` 可以更新此文件.
+
+`/etc/ssl/private`, 这个目录存储的用户的私钥.
+
+导入系统证书的一般过程:
+
+- 生成一个证书. 可以 Google `如果使用openssl生成证书`.
+
+- 将生成的证书放到 `/usr/share/ca-certificates/mozilla` 目录下, 文件后缀 `.crt`, 文件内容是 `pem` 格式.
+
+- 更新系统证书的配置, 执行 `dpkg-reconfigure ca-certificates` 命令(注意: 要使用 root 权限执行). 这个时候会跳出
+来一个弹出框, 第一步选择 `yes`, 第二步将新添加的证书打上星号(新添加的证书是一个空白).
+
+- 更新系统证书文件, 执行 `update-ca-certificates` 命令(注意: 要使用 root 权限执行). 到这里, 就内置了一个自己的系
+统证书.
+
+> 注意: 目前 Chrome 浏览器对于自己生成的系统证书, 在进行 ssl 连接的时候还是会发出告警的信息的, 这个需要将自己的系统证
+书添加到 Chrome 浏览器的 `chrome://settings/certificates` 当中导入自己生成证书, 以消除告警.
 
 ## 编码格式
 
@@ -155,41 +290,6 @@ openssl x509 -req -days 365 -CA ca.crt -CAkey ca.key -CAcreateserial -set_serial
 加密操作是 `发送方`(客户端) 用接受方的证书进行加密, `接受方`(服务器) 用自己的私钥进行解密.
 
 因此, 如果说数字证书是电子商务应用者的网上数字身份证话, 那么证书相应的私钥则可以说是用户的私章或公章.
-
-## 常用的 TLS/SSL 支持的算法集合
-
-> Go1.13 版本提供的支持
-
-```
-// TLS 1.0 - 1.2 cipher suites.
-TLS_RSA_WITH_RC4_128_SHA                uint16 = 0x0005
-TLS_RSA_WITH_3DES_EDE_CBC_SHA           uint16 = 0x000a
-TLS_RSA_WITH_AES_128_CBC_SHA            uint16 = 0x002f
-TLS_RSA_WITH_AES_256_CBC_SHA            uint16 = 0x0035
-TLS_RSA_WITH_AES_128_CBC_SHA256         uint16 = 0x003c
-TLS_RSA_WITH_AES_128_GCM_SHA256         uint16 = 0x009c
-TLS_RSA_WITH_AES_256_GCM_SHA384         uint16 = 0x009d
-TLS_ECDHE_ECDSA_WITH_RC4_128_SHA        uint16 = 0xc007
-TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA    uint16 = 0xc009
-TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA    uint16 = 0xc00a
-TLS_ECDHE_RSA_WITH_RC4_128_SHA          uint16 = 0xc011
-TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA     uint16 = 0xc012
-TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA      uint16 = 0xc013
-TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA      uint16 = 0xc014
-TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 uint16 = 0xc023
-TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256   uint16 = 0xc027
-TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256   uint16 = 0xc02f
-TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 uint16 = 0xc02b
-TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384   uint16 = 0xc030
-TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 uint16 = 0xc02c
-TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305    uint16 = 0xcca8
-TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305  uint16 = 0xcca9
-
-// TLS 1.3 cipher suites.
-TLS_AES_128_GCM_SHA256       uint16 = 0x1301
-TLS_AES_256_GCM_SHA384       uint16 = 0x1302
-TLS_CHACHA20_POLY1305_SHA256 uint16 = 0x1303
-```
 
 ## TLS/SSL 协议
 
