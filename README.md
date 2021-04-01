@@ -19,7 +19,7 @@
 - [token过期解决方案](http/token.md)
 
 ## CERT
-- [TLS/SSL 证书解读](cert/tls.md)
+- [TLS/SSL 证书解读](cert/ssl.md)
 
 
 ## Redis相关
