@@ -48,6 +48,8 @@ jobs:
           echo name is $MY_NAME
 ```
 
+workflow 语法:
 
+- `name`, name 字段是 workflow 的名称. 若忽略此字段, 则默认使用 workflow 文件名 
 
 
