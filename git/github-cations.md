@@ -17,6 +17,8 @@ Github Actions 是 Github 推出的持续集成(CI)服务, 基于它可以进行
 
 ### workflow
 
+[详细文档](https://docs.github.com/cn/actions/reference/workflow-syntax-for-github-actions)
+
 Github Actions 的配置文件叫做 workflow 文件, 存放在代码仓库的 `.github/workflows` 目录中. workflow 采用 YAML
 格式, 文件名可以任意取, 但是后缀名统一为 `.yml`. 一个库可以有多个 workflow 文件, Github 只要发现 `.github/workflows`
 目录里面的 `.yml` 文件, 就会按照文件中所指定的触发条件自动运行该文件中的工作流程.
@@ -29,7 +31,7 @@ on: push
 jobs:
   first_job:
     name: first job
-    runs-on: ubuntu-lastest
+    runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@master
@@ -37,7 +39,7 @@ jobs:
         run: echo "Hello world"
   second_job:
     name: second job
-    runs-on: macos-lastest
+    runs-on: macos-latest
     steps:
       - name: run multi-line script
         env: 
@@ -50,6 +52,93 @@ jobs:
 
 workflow 语法:
 
-- `name`, name 字段是 workflow 的名称. 若忽略此字段, 则默认使用 workflow 文件名 
+- `name`, name 字段是 workflow 的名称. 若忽略此字段, 则默认使用 workflow 文件名.
 
+- `on`, on 字段指定 workflow 被触发条件, 通常是某些事件. 例如: push, 即在代码push到仓库后被触发. on 字段也可以是
+事件数组, 多种事件触发.
+ 
+```yaml
+on: [push, pull_request]
+```
+
+常见的事件:
+
+```yaml
+# push 指定分支
+on:
+  push:
+    branches:
+      - master
+
+# push 指定tag
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 定时
+schedule:
+  - cron: 0 */6 * * *
+
+# 发布 release 触发
+on:
+  release:
+    types: [published]
+
+# 仓库被 star
+on:
+  watch:
+    types: [started]
+```
+
+- `jobs`, jobs 表示要执行一项或多项任务. 每一项任务必须关联一个ID(`job_id`), 例如: 案例中的 `first_job`, `second_job`
+job_id 里面的 `name` 字段是任务名称. job_id 不能有空格, 只能使用数字,英文字母,`-`和`_`符号. name 名称随意, 若忽略
+name 字段, 则默认会设置为 job_id.
+
+当有多个任务时, 可以指定任务的依赖关系, 即顺序执行, 否则是并发执行.
+
+```yaml
+# 顺序执行 job1, job2, job3
+jobs:
+  job1:
+  job2:
+    needs: job1
+  job3:
+    needs: [job1, job2]
+```
+
+- `runs-on`, runs-on 指定任务运行所需的虚拟服务器环境, 是必填字段, 目前可用的虚拟机如下:
+
+| 虚拟环境 | YAML workflow |
+| ------ | -------------- |
+| Windows Server 2019 | windows-latest |
+| Ubuntu 20.04 | ubuntu-20.04 或 ubuntu-latest |
+| Ubuntu 18.04 | ubuntu-18.04 |
+| Ubuntu 16.04 | ubuntu-16.04 |
+| macOS X 10.15 | macos-latest |
+
+> 注: 每个 job 的虚拟环境都是独立的.
+
+- `steps`, steps 字段指定每个任务的运行步骤, 可用包含一个或多个步骤. 步骤开头使用 `-` 符号. 每个步骤可用指定下面的字
+段:
+  - `name`, 步骤名称
+  - `uses`, 步骤使用的 action 或 docker 镜像, 必填.
+  - `run`, 步骤运行的 bash 命令, 必填.
+  - `env`, 步骤需要的环境变量
+
+## action
+
+action 是 Github Actions 中的重要组成部分. action 是已经编写好的步骤脚本, 存放在 Github 仓库中.
+
+获得action的途径, [官方的action仓库](https://github.com/actions), [Github Marketplace](https://github.com/marketplace?type=actions),
+或者是自己手动编写.
+
+既然 action 是代码仓库, 当然就有版本的概念. 引用某个具有版本的 action:
+
+```yaml
+steps:
+  - uses: actions/setup-node@74bc508 # commit
+  - uses: actions/setup-node@v1.2    # tag
+  - uses: actions/setup-node@master  # branch
+```
 
