@@ -4,7 +4,6 @@ TCP的状态转换图:
 
 ![image](/images/tcp_state.png)
 
-
 TCP 状态转换的两条主线:
 
 对客户端(也可以是服务器, 客户端主动打开链接, 服务器被动打开):
@@ -147,7 +146,7 @@ TCP 协议在关闭连接的四次握手过程中, 最终的 ACK 是由主动关
 状态, 而是处于 CLOSED 状态, 那么 A 端将响应 RST 分节, B 端收到后将此分节解释成一个错误(在 java 中会抛出 connection 
 reset 的 SocketException).
 
-因而，要实现 TCP 全双工连接的正常终止, 必须处理终止过程中四个分节任何一个分节的丢失情况, 主动关闭连接的 A 端必须维持 
+因而, 要实现 TCP 全双工连接的正常终止, 必须处理终止过程中四个分节任何一个分节的丢失情况, 主动关闭连接的 A 端必须维持 
 TIME_WAIT 状态.
 
 
@@ -160,9 +159,72 @@ TCP 分节可能由于路由器异常而"迷途", 在迷途期间, TCP 发送端
 候, 来自旧连接重复分组已经在网络中消逝.`
 
 
-3）关闭 TCP 连接一定需要四次挥手吗?
+3) 关闭 TCP 连接一定需要四次挥手吗?
 
 不一定, 四次挥手关闭 TCP 连接是最安全的做法. 但在有些时候, 我们不喜欢 TIME_WAIT 状态 (如当 MSL 数值设置过大导致服务器
 端有太多 TIME_WAIT 状态的 TCP 连接, 减少这些条目数可以更快地关闭连接, 为新连接释放更多资源), 这时我们可以通过设置 
 SOCKET 变量的 SO_LINGER 标志来避免 SOCKET 在 close() 之后进入 TIME_WAIT 状态, 这时将通过发送 RST 强制终止 TCP 
 连接(取代正常的 TCP 四次握手的终止方式). 但这并不是一个很好的主意, TIME_WAIT 对于我们来说往往是有利的.
+
+## TCP KeepAlive 机制
+
+KeepAlive 机制是 TCP 的一种扩展功能, 用于探测连接的对端是否存活.
+
+需要注意的点:
+
+1. TCP KeepAlive 默认状况下是关闭, 可以被上层应用开启和关闭.
+
+2. TCP KeepAlive 必须在**没有任何数据(包括ACK包)接收之后的周期内才会被发送**, 允许配置这个周期的时间, 默认是7200秒
+
+3. 不包含数据的ACK段被TCP发送时没有可靠性保证, 即一旦发送, 不确保一定发送成功. 
+
+4. TCP 保活探测报文序列号 = 前一个TCP报文序列号 - 1. 即下一次正常报文号等于ACK序列号.
+
+KeepAlive的相关参数:
+
+```
+tcp_keepalive_time, 在 TCP KeepAlive开启的状况下, 最后一次数据交换到TCP发送第一个保活探测包的间隔, 即允许持续空闲
+的时长, 或者说正常发送心跳的周期, 默认值是 7200 秒. socket 选项是 TCP_KEEPIDLE
+
+tcp_keepalive_probes, 在 tcp_keepalive_time 之后, 没有接收到对方确认, 继续发送保活探测包的次数, 默认值是9. socket
+选项是 TCP_KEEPCNT
+
+tcp_keepalive_intvl, 在 tcp_keepalive_time 之后, 没有接收到对方确认, 继续发送保活探测包的发送频率, 默认值是 75
+秒. socket的选项是 TCP_KEEPINTVL
+```
+
+开启 TCP KeepAlive: 设置 socket 的 `SO_KEEPALIVE` 选项为 `true`.
+
+在 Go 当中, 提供了 `SetKeepAlive()` (开启/关闭 keepalive) 和 `SetKeepAlivePeriod()` (设置 keepalive 的选项 
+`tcp_keepalive_time` 和 `tcp_keepalive_intvl`, 两个参数的值是一样的)
+
+> 在 Go 的 TCP 的客户端连接的时候, 默认是开启 KeepAlive, 并且 `TCP_KEEPINTVL` 和 `TCP_KEEPIDELE` 的默认时长是
+15秒(除非设置 Dialer.KeepAlive 参数)
+>
+> 在 Go 的 TCP Server 端 Accept 接收连接的时候, 默认是开启 KeepAlive, 并且`TCP_KEEPINTVL` 和 `TCP_KEEPIDELE` 的默认时长是
+15秒(除非设置 ListenConfig.KeepAlive 参数)
+
+使用场景:
+
+- 检测挂掉的连接(导致挂掉的原因很多,服务停止, 网络波动, 宕机, 服务重启等)
+
+- 防止因为网络不活动而断连(NAT代理或者防火墙的时候, 经常出现这种问题)
+
+- TCP层面的心跳检测.
+
+KeepAlive 通过定时发送探测包来探测连接的对端是否存活, 但是通常也会在业务层面处理的, 它们之间的区别:
+
+1. TCP 自带的 KeepAlive 使用简单, 发送的数据包相比应用层心跳检测更小, 仅提供检测连接功能.
+
+2. 应用层心跳包不依赖于传输协议, 无论传输层协议是TCP还是UDP都可以使用.
+
+3. 应用层心跳包可以定制, 可以应对更复杂的情况或传输一些额外信息.
+
+4. KeepAlive 仅代表连接保持着, 而心跳往往代表客户端可正常工作.
+
+
+TCP KeepAlive 与 HTTP KeepAlive 的区别:
+
+1. HTTP 的 KeepAlive 意图在于连接复用, 同一个连接上串行方式请求-响应数据.
+
+2. TCP 的 KeepAlive 机制意图在于保活, 心跳, 检测连接错误.
