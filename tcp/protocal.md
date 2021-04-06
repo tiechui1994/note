@@ -6,8 +6,6 @@
 
 ![image](/images/protocol_802.png)
 
-- SLIP (Serial Line IP, 串行线路IP). 一种在串行线路上对IP数据报进行封装的简单形式
-
 - PPP
 
 ![image](/images/protocal_ppp.png)
