@@ -183,11 +183,11 @@ steps:
 
 引用输出/上下文:
 
-- 在同job下引用: `${{ steps.{stepid}.outputs.{key} }}`, `{stepid}` 是 stepid, `{key}` 是输出名称
+- 在同job下引用: `${{ steps.<stepid>.outputs.<key> }}`, `<stepid>` 是step的id, `<key>` 是输出名称
 
-- 跨job引用: `${{ jobs.{jobid}.steps.{stepid}.outputs.{key} }}`
+- 跨job引用: `${{ jobs.<jobid>.steps.<stepid>.outputs.<key> }}`
 
-- 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xx }}`(用户设置的secret变量)
+- 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xxx }}`(用户设置的secret变量)
 
 
 案例:
