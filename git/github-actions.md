@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@master # 拉取当前项目文件, 经常使用
       - name: run single-line script
         run: echo "Hello world"
   second_job:
@@ -142,3 +142,96 @@ steps:
   - uses: actions/setup-node@master  # branch
 ```
 
+## 经常使用的 action
+
+[设置输出文档](https://trstringer.com/github-actions-multiline-strings/)
+
+> 拉取当前仓库文件
+
+```yaml
+steps:
+  - name: checkout
+    uses: actions/checkout@master 
+    with:
+      persist-credentials: false
+```
+
+> 文件上传
+
+```yaml
+- uses: actions/upload-artifact@v2
+  with:
+    name: my-artifact
+    path: path/to/artifact/world.txt
+```
+
+> 设置输出, 引用上下文和环境变量
+
+```yaml
+steps:
+  - id: build
+    name: build code
+    run: |
+      python3 version.py
+      echo "::set-output name=version::$(cat /tmp/version)"
+      echo "version: ${{ steps.build.outputs.version }}"
+    shell: bash
+```
+
+设置输出(一般是run当中执行shell命令): `echo "::set-output name={key}::{value}"`, 其中 `{key}` 是输出名称,
+`{value}` 是输出的值.
+
+引用输出/上下文:
+
+- 在同job下引用: `${{ steps.{stepid}.outputs.{key} }}`, `{stepid}` 是 stepid, `{key}` 是输出名称
+
+- 跨job引用: `${{ jobs.{jobid}.steps.{stepid}.outputs.{key} }}`
+
+- 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xx }}`(用户设置的secret变量)
+
+
+案例:
+
+```yaml
+name: generate tzdb
+on:
+  schedule:
+    - cron: '*/30 12 * * *'
+
+jobs:
+  build-job:
+    name: build source code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - id: build
+        name: build code
+        run: |
+          python3 version.py
+          echo "::set-output name=version::$(cat /tmp/version)"
+          echo "version: ${{ steps.build.outputs.version }}"
+        shell: bash
+      
+      - name: upload tzdb
+        if: ${{ steps.build.outputs.version }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ steps.build.outputs.version }}_zoneinfo.zip
+          path: ${{ github.workspace }}/${{ steps.build.outputs.version }}_zoneinfo.zip
+      
+      - name: release version
+        if: ${{ steps.build.outputs.version }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.TOKEN }}
+          file: ${{ github.workspace }}/${{s teps.build.outputs.version }}_zoneinfo.zip
+          asset_name: ${{ steps.build.outputs.version }}_zoneinfo.zip
+          tag: ${{ steps.build.outputs.version }}
+          overwrite: true
+          body: "release tzdb ${{steps.build.outputs.version}}"
+```
