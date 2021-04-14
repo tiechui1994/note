@@ -165,27 +165,64 @@ steps:
     path: path/to/artifact/world.txt
 ```
 
-> 设置输出, 引用上下文和环境变量
+> 设置输出, 相同 job 引用
 
 ```yaml
 steps:
   - id: build
-    name: build code
     run: |
       python3 version.py
       echo "::set-output name=version::$(cat /tmp/version)"
-      echo "version: ${{ steps.build.outputs.version }}"
     shell: bash
+  
+  -name: use
+    run: |
+      echo "version: ${{ steps.build.outputs.version }}"
 ```
+
+> 设置输出, 跨越 job 引用
+
+```yaml
+job1:
+  runs-on: ubuntu-latest
+  outputs:
+    version: ${{steps.build.outputs.version}}
+  
+  steps:
+    - id: build
+      run: |
+        python3 version.py
+        echo "::set-output name=version::$(cat /tmp/version)"
+        
+job2:
+  runs-on: ubuntu-latest
+  needs: [job1]
+  
+  steps:
+    - id: use
+      run: |
+         echo "version: ${{ needs.job1.outputs.version }}"
+```
+
 
 设置输出(一般是run当中执行shell命令): `echo "::set-output name={key}::{value}"`, 其中 `{key}` 是输出名称,
 `{value}` 是输出的值.
 
 引用输出/上下文:
 
-- 在同job下引用: `${{ steps.<stepid>.outputs.<key> }}`, `<stepid>` 是step的id, `<key>` 是输出名称
+- 在同job下引用:
+首先, 再当前 `<stepid>` 可以直接引用其值.
 
-- 跨job引用: `${{ jobs.<jobid>.steps.<stepid>.outputs.<key> }}`
+其次, 对于不同的 `<stepid>`, 可以采用 `${{ steps.<stepid>.outputs.<key> }}` 的方式引用输出的值, 其中 `<stepid>` 
+是step的id, `<key>` 是输出名称.
+
+- 跨越job引用: 
+
+首先, 要想跨越job使用, 则在输出结果的 job 当中需要添加 `outputs`, 设置对应的结果.  
+
+其次, 在引用的job当中, 必须添加 `needs` 依赖, 保证被引用结果的 job 在此之前执行.
+
+最后, 引用的方式是 `${{ needs.<jobid>.outputs.<key> }}`
 
 - 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xxx }}`(用户设置的secret变量)
 
