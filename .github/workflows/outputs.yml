@@ -1,7 +1,5 @@
 name: output test
-on:
-  schedule:
-    - cron: '*/30 12 * * *'
+on: push
 
 jobs:
   job1:
