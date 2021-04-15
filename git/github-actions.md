@@ -77,8 +77,9 @@ on:
       - 'v*'
 
 # 定时
-schedule:
-  - cron: 0 */6 * * *
+on:
+  schedule:
+    - cron: 0 */6 * * *
 
 # 发布 release 触发
 on:
@@ -251,7 +252,6 @@ jobs:
         run: |
           python3 version.py
           echo "::set-output name=version::$(cat /tmp/version)"
-          echo "version: ${{ steps.build.outputs.version }}"
         shell: bash
       
       - name: upload tzdb
