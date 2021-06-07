@@ -201,5 +201,3 @@ Running as unit: toptest.service
 
 若要在系统启动时，配置一个自动启动的单位， systemctl enable 指令. 自动运行在/etc/systemd/system目录下创建
 的单位文件. 
-
-

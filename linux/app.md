@@ -10,7 +10,7 @@ sudo apt-get install mpv
 > 最新版本的 SMPlayer 是基于 mpv 开发的
 
 
-- API (Postman)
+- 禁用的IP地址列表
 
 [下载页面](https://www.fosshub.com/Postman-old.html)
 
@@ -18,4 +18,7 @@ sudo apt-get install mpv
 
 ```
 0.0.0.0	    dl.pstmn.io
+0.0.0.0		account.jetbrains.com
+0.0.0.0		www.jetbrains.com
 ```
+
