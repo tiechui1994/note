@@ -84,7 +84,7 @@ t.c1的值为10的行.
 记录锁也始终锁定索引记录, 即使是一个没有索引的表. 对于这种情况, InnoDB创建一个隐藏的 `clustered index` 并使用此索引进行
 记录锁定.
 
-记录锁的事务数据在 `SHOW ENGINE INNODB STATUS` 和 InnoDB监视器输出中显示类似于以下内容:
+记录锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `LATEST DETECTED DEADLOCK` 行当中显示类似于以下内容:
 ```
 RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` 
 trx id 10078 lock_mode X locks rec but not gap
@@ -94,15 +94,19 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  2: len 7; hex b60000019d0110; asc        ;;
 ```
 
-### Gap Lock (间隙锁定)
+### Gap Lock (间隙锁)
 
-间隙锁定是锁定索引记录之间的间隙, 或锁定在第一个或最后一个索引记录之前的间隙. 
-例如, `SELECT c1 FROM t WHERE c1 BETWEEN 10和20 FOR UPDATE;` 会阻止其他事务将值15插入到列t.c1中, 无论列中是否
-已存在任何此类值, 因为该范围内所有现有值之间的间隔都被锁定.
+间隙锁是对 **索引记录中** 的一段连续区域的锁. 间隙锁是锁定索引记录之间的间隙, 或锁定在第一个或最后一个索引记录之前的间隙. 
+
+例如, `SELECT c1 FROM t WHERE c1 BETWEEN 10 AND 20 FOR UPDATE;` 会阻止其他事务向表中插入 id=15 的记录. 无论
+列中是否已存在任何此类值, 因为 **该范围内所有现有值之间的间隔** 都被锁定.
 
 间隙可能跨越单个索引值或多个索引值, 甚至可能为空.
 
-> 间隙锁定是性能和并发之间权衡的一部分, 用于某些事务隔离级别而不是其他级别.
+> 间隙锁定是性能和并发之间权衡的一部分, 并且只用于某些事务隔离级别.
+
+虽然间隙锁中也分为共享锁和互斥锁, 不过它们之间并不是互斥的, 也就是不同的事务可以同时持有一段相同范围的共享锁和排他锁, 它唯一阻
+止的就是**其它事务向这个范围中添加新的记录**. 
 
 使用唯一索引锁定行以搜索唯一行的语句不需要间隙锁定. (这不包括搜索条件仅包含多列唯一索引的某些列的情况; 在这种情况下, 确实
 会发生间隙锁定.) 例如, 如果id列具有唯一索引, 则以下语句仅使用具有id值100的行的索引记录锁定, 其他会话是否在前一个间隙中插
