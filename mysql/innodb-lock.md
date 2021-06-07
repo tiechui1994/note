@@ -47,24 +47,42 @@ InnoDB有两种类型的意向锁使用:
 | S | ✗ | ✗ | ✔ | ✔ |
 | IS | ✗ | ✔ | ✔ | ✔ |
 
-如果请求的事务与现有的锁定兼容, 授予锁定, 但如果它与现有的锁定冲突, 则锁定将被拒绝. 事务一直等到有冲突的锁被释放. 如果加
-锁请求与现有的锁发生冲突, 锁无法被授予, 因为它会导致死锁, 且会发生错误.
+> X 与其它任何锁都不兼容
+> IX 只与意向锁兼容(IX, IS)
+> S 只与共享锁兼容(S, IS)
+> IS 与意向锁和共享锁兼容
 
-因此, 意图锁只会阻塞全表请求(例如, LOCK TABLES ... WRITE). 意图锁的主要目的是显示某人正锁定一行, 或将要锁定表中的一
+
+如果请求的事务与现有的锁定兼容, 授予锁定, 但如果它与现有的锁定冲突, 则锁定将被拒绝. 事务一直等到有冲突的锁被释放. 如果加锁请
+求与现有的锁发生冲突, 锁无法被授予, 因为它会导致死锁, 且会发生错误.
+
+因此, 意向锁只会阻塞全表请求(例如, LOCK TABLES ... WRITE). 意向锁的主要目的是显示某人正锁定一行, 或将要锁定表中的一
 行.
 
-意图锁定的事务数据在 `SHOW ENGINE INNODB STATUS` 和 InnoDB 监视器输出中的以下内容类似:
+意向锁定的事务数据在 `SHOW ENGINE INNODB STATUS` 和 InnoDB 监视器输出中的以下内容类似:
+
 ```
 TABLE LOCK table `test`.`t` trx id 10080 lock mode IX
 ```
 
-## Record Locks (记录锁定)
+意向锁其实不会阻塞全表扫描之外的任何请求, 它的主要目的是为了表示**是否有人请求锁定表中的某一行数据**.
 
-记录锁定是对索引记录的锁定. 例如, SELECT c1 FROM t WHERE c1 = 10 FOR UPDATE; 阻止其他任何事务插入, 更新 或 删除
+> 例: 如果没有意向锁, 当已经有请求使用行锁对表中的某一行进行修改时, 如果另外一个请求要对全表进行修改, 那么就需要对所有的行是
+否被锁定进行扫描, 这种状况下效率非常的低; 在引入意向锁之后, 当使用行锁对表中的某一行进行修改之前, 会先为表添加意向互斥锁(IX),
+再为行记录添加互斥锁(X), 在这时尝试对全表进行修改时不需要判断表中的每一行数据是否被加锁了, 只需要通过等待意向互斥锁(IX)被释放
+就可以了.
+
+## 锁的算法
+
+锁的算法: Record Lock, Gap Lock, Next-Key Lock
+
+### Record Lock (记录锁)
+
+记录锁是加到**索引记录**上的锁. 例如, `SELECT c1 FROM t WHERE c1 = 10 FOR UPDATE;` 阻止其他任何事务插入, 更新 或 删除
 t.c1的值为10的行.
 
-记录锁也始终锁定索引记录, 即使是一个没有索引的表. 对于这种情况, InnoDB创建一个隐藏的clustered index并使用此索引进行记
-录锁定.
+记录锁也始终锁定索引记录, 即使是一个没有索引的表. 对于这种情况, InnoDB创建一个隐藏的 `clustered index` 并使用此索引进行
+记录锁定.
 
 记录锁的事务数据在 `SHOW ENGINE INNODB STATUS` 和 InnoDB监视器输出中显示类似于以下内容:
 ```
@@ -76,7 +94,7 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  2: len 7; hex b60000019d0110; asc        ;;
 ```
 
-## Gap Locks (间隙锁定)
+### Gap Lock (间隙锁定)
 
 间隙锁定是锁定索引记录之间的间隙, 或锁定在第一个或最后一个索引记录之前的间隙. 
 例如, `SELECT c1 FROM t WHERE c1 BETWEEN 10和20 FOR UPDATE;` 会阻止其他事务将值15插入到列t.c1中, 无论列中是否
@@ -109,7 +127,7 @@ InnoDB 中的间隙锁定是"purely inhibitive(纯粹的抑制)", 这意味着�
 不匹配行的记录锁. 对于UPDATE语句, InnoDB执行"semi-consistent(半一致)"读取, 以便将最新提交的版本返回给MySQL, 以便
 MySQL可以确定该行是否与 UPDATE 的 WHERE条件匹配.
 
-## Next-Key Locks (下一键锁定)
+### Next-Key Lock (下一键锁定)
 
 下一键锁定是索引记录上的记录锁定和索引记录之前的间隙上的间隙锁定的组合.
 
@@ -146,13 +164,13 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  2: len 7; hex b60000019d0110; asc        ;;
 ```
 
-## Insert Intention Locks (插入意图锁定)
+### Insert Intention Locks (插入意向锁定)
 
-插入意图锁定是在行插入之前由INSERT操作设置的一种间隙锁定. 该锁定表示以这样的方式插入的意图: 如果插入到相同索引间隙中的多
+插入意向锁定是在行插入之前由INSERT操作设置的一种间隙锁定. 该锁定表示以这样的方式插入的意图: 如果插入到相同索引间隙中的多
 个事务不插入间隙内的相同位置, 则不需要等待彼此. 假设存在值为4和7的索引记录. 分别尝试插入值5和6的单独事务, 在获取插入行上
-的互斥锁之前, 每个锁定4和7之间的间隙和插入意图锁, 但是不要互相阻塞因为行是非冲突的.
+的互斥锁之前, 每个锁定4和7之间的间隙和插入意向锁, 但是不要互相阻塞因为行是非冲突的.
 
-以下示例演示了在获取插入记录的独占锁之前采用插入意图锁定的事务. 该示例涉及两个客户端, A和B.
+以下示例演示了在获取插入记录的独占锁之前采用插入意向锁定的事务. 该示例涉及两个客户端, A和B.
 
 客户端A创建一个包含两个索引记录(90和102)的表, 然后启动一个事务, 该事务对ID大于100的索引记录放置独占锁. 独占锁包括记录
 102之前的间隙锁:
@@ -164,13 +182,13 @@ mysql> START TRANSACTION;
 mysql> SELECT * FROM child WHERE id > 100 FOR UPDATE;
 ```
 
-客户端B开始事务以将记录插入间隙. 该事务在等待获取独占锁时采用插入意图锁.
+客户端B开始事务以将记录插入间隙. 该事务在等待获取独占锁时采用插入意向锁.
 ```
 mysql> START TRANSACTION;
 mysql> INSERT INTO child (id) VALUES (101);
 ```
 
-插入意图锁的事务数据 `SHOW ENGINE INNODB STATUS` 和InnoDB监视器输出中的以下内容类似:
+插入意向锁的事务数据 `SHOW ENGINE INNODB STATUS` 和InnoDB监视器输出中的以下内容类似:
 ```
 RECORD LOCKS space id 31 page no 3 n bits 72 index `PRIMARY` of table `test`.`child`
 trx id 8731 lock_mode X locks gap before rec insert intention waiting
@@ -180,7 +198,7 @@ Record lock, heap no 3 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  2: len 7; hex 9000000172011c; asc     r  ;;...
 ```
 
-## AUTO-INC Locks
+### AUTO-INC Locks
 
 AUTO-INC锁定是由插入到具有 `AUTO_INCREMENT` 列的表中的事务所采用的特殊表级锁. 在最简单的情况下, 如果一个事务正在向表
 中插入值, 则任何其他事务必须等待对该表执行自己的插入, 以便第一个事务插入的行接收连续的主键值.
@@ -189,7 +207,6 @@ innodb_autoinc_lock_mode配置选项控制用于自动增量锁定的算法. 它
 并发之间进行权衡.
 
 ---
-
 
 # Transaction (事物)
 
@@ -547,7 +564,7 @@ UPDATE操作还会在受影响的辅助索引记录上执行共享锁定.
 
 在插入行之前, 设置一种称为"插入意图间隙锁定"的间隙锁定. 该锁定表示以这样的方式插入的意图: 如果插入到相同索引间隙中的多个
 事务不插入间隙内的相同位置, 则不需要等待彼此.  假设存在值为4和7的索引记录. 尝试插入值5和6的单独事务在获取插入行上的排它
-锁之前使用插入意图锁定锁定4和7之间的间隙, 但不因为行是非冲突的, 所以互相阻塞.
+锁之前使用插入意向锁定锁定4和7之间的间隙, 但不因为行是非冲突的, 所以互相阻塞.
 
 如果发生重复键错误, 则设置重复索引记录上的共享锁. 如果有多个会话尝试插入同一行, 如果另一个会话已经具有独占锁, 则使用共享
 锁可能导致死锁. 如果另一个会话删除该行, 则会发生这种情况. 假设InnoDB表t1具有以下结构:
