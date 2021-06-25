@@ -2,15 +2,13 @@
 
 IP的分类:
 
-```
-|            16bit              |            16bit              |
-
-|0|network(7bit)|                 host(24bit)                   |   A类
-|10|      network(14bit)        |           host(16bit)         |   B类
-|110|         network(21bit)                    |   host(8bit)  |   C类
-|1110|                    broadcast(28)                         |   D类
-|11110|                         unused(27)                      |   E类
-```
+|  32bit | desc | type |
+|  --- | --- | --- |
+| `0nnnnnnnhhhhhhhhhhhhhhhhhhhhhhhh` | net(7)  host(24) | A | 
+| `10nnnnnnnnnnnnnnhhhhhhhhhhhhhhhh` | net(14) host(16) | B |
+| `110nnnnnnnnnnnnnnnnnnnnnhhhhhhhh` | net(21) host(8)  | C |
+| `1110xxxxxxxxxxxxxxxxxxxxxxxxxxxx` | broadcast(28)    | D |
+| `11110---------------------------` | unused(27)       | E |
 
 - A类: 0.0.0.0 ~ 127.255.255.255       
 
