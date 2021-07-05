@@ -7,7 +7,7 @@ JavaScript 经常会用到遍历 `数组` 或 `对象` 的元素. 虽然很简�
 
 - 使用 `Object.keys()` 遍历, 返回一个数组, 包括对象自身的(不含继承的)所有可枚举属性(不含Symbol属性).
 
-```js
+```
 const obj = {
     'key1':'val1',
     'key2':'val2'
@@ -21,7 +21,7 @@ Object.keys(obj).forEach((key, index, arr) => {
 - 使用 `for..of` + `Object.entries(object)` 遍历, 返回一个包括对象自身的(不含继承的)所有可枚举属性(不含Symbol属
 性)的 `[key, value]` 数组.
 
-```js
+```
 const obj = {
     'key1':'val1',
     'key2':'val2'
@@ -34,7 +34,7 @@ for (let [key,value] of Object.entries(obj)){
 
 - 使用 `for...in` 遍历, 循环遍历对象 `自身的` 和 `继承的` 可枚举属性(不包含Symbol熟悉).
 
-```js
+```
 const obj = {
     'key1':'val1',
     'key2':'val2'
@@ -48,7 +48,7 @@ for(let key in obj) {
 - 使用 `Object.getOwnPropertyNames(object)` 遍历, 返回一个数组, 包含对象自身的所有属性(不含Symbol熟悉, 但是`包
 括不可枚举属性`)
 
-```js
+```
 const obj = {
     'key1':'val1',
     'key2':'val2'
@@ -64,7 +64,7 @@ Object.getOwnPropertyNames(obj).forEach((key,index)=> {
 
 > es6 语法
 
-```js
+```
 const obj = {
     'key1':'val1',
     'key2':'val2'
@@ -81,7 +81,7 @@ Reflect.ownKeys(obj).forEach((key,index)=> {
 
 - `for...in` 遍历
 
-```js
+```
 const arr = ["张三", "李四", "王五"];
 
 for (let i in arr) {
@@ -91,7 +91,7 @@ for (let i in arr) {
 
 - `for...of` 遍历, 不仅支持数组, 还支持大多数类数组对象, 也支持字符串遍历
 
-```js
+```
 const arr = ["张三", "李四", "王五"];
 
 for (let value of arr) {
@@ -101,7 +101,7 @@ for (let value of arr) {
 
 - `forEach()` 方法
 
-```js
+```
 const arr = ["张三", "李四", "王五"];
 
 arr.forEach((value, index) => {
