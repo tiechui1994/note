@@ -1,6 +1,5 @@
 # MySQL 日志
 
-
 文档:
 
 [后台清理](https://www.cnblogs.com/geaozhang/p/7225340.html)
@@ -27,57 +26,54 @@ MySQL 中有六种日志文件, 分别是: 重做日志(redo log), 回滚日志(
 
 确保事务的持久性.
 
-防止在发生故障的时间点, 尚有脏页面未写入磁盘, 在重启MySQL服务的时候, 根据redo log进行重做, 从而达到
-事务的持久性这一特性.
+防止在发生故障的时间点, 尚有脏页面未写入磁盘, 在重启MySQL服务的时候, 根据redo log进行重做, 从而达到事务的持久性这一特性.
 
 #### 内容
 
-`物理格式的日志`, 记录的是 `物理数据页面的修改信息`, 其 redo log 是顺序写入redo log file的物理文
-件中去的.
+`物理格式的日志`, 记录的是 `物理数据页面的修改信息`, 其 redo log 是顺序写入redo log file的物理文件中去的.
 
 redo log包含两部分:
 一是内存中的日志缓冲(redo log buffer), 该部分日志是易失性的; 
 二是磁盘上的重做日志文件(redo log file), 该部分日志是持久的.
 
-在概念上, InnoDB 通过 `force log at commit` 机制实现事务的持久性, 即在事务提交的时候, 必须先将事
-务的所有事务日志写入到磁盘上的 redo log file 和 undo log file中进行持久化.
+在概念上, InnoDB 通过 `force log at commit` 机制实现事务的持久性, 即在事务提交的时候, 必须先将事务的所有事务日志写入
+到磁盘上的 redo log file 和 undo log file中进行持久化.
 
-为了确保每次日志都能写入到事务日志文件中, 在每次将 log buffer的日志写入到日志文件的过程中都会调用一次
-fsync操作. 因为MySQL工作在用户空间, MySQL的log buffer处于用户空间的内存中. 要写入到磁盘上的log file
-(redo: ib_logfileN文件, undo: ibdataN 或 .ibd文件) 当中, 中间还要经过操作系统内核空间os buffer,
-调用 fsync 的作用就是将 OS buffer中的日志刷到磁盘的log file中.
+为了确保每次日志都能写入到事务日志文件中, 在每次将 log buffer的日志写入到日志文件的过程中都会调用一次 fsync操作. 因为MySQL
+工作在用户空间, MySQL的log buffer处于用户空间的内存中. 要写入到磁盘上的log file (redo: ib_logfileN文件, undo: ibdataN 
+或 .ibd文件) 当中, 中间还要经过操作系统内核空间os buffer, 调用 fsync 的作用就是将 OS buffer中的日志刷到磁盘的log file中.
 
 ![image](/images/mysql_log_innodb_log.png)
 
 
 #### 日志块 (log block)
 
-InnoDB 存储引擎当中, redo log 以块为单位进行存储的, 每个块占 512 字节, 这称为redo log bolck. 所以不
-管是`log buffer`中, `os buffer`中 以及 `redo log file on disk`中, 都是以这样512字节的块存储的.
+InnoDB 存储引擎当中, redo log 以块为单位进行存储的, 每个块占 512 字节, 这称为redo log bolck. 所以不管是`log buffer`中, 
+`os buffer`中 以及 `redo log file on disk`中, 都是以这样512字节的块存储的.
 
-每个 `redo log block` 由3部分组成: **日志块头, 日志块尾, 日志主体**. 其中日志块头占用12字节, 日志块尾
-占用4字节, 因此日志主体只有496字节.
+每个 `redo log block` 由3部分组成: **日志块头, 日志块尾, 日志主体**. 其中日志块头占用12字节, 日志块尾占用4字节, 因此
+日志主体只有496字节.
 
 
-由于redo log记录的是数据页的变化, 当一个数据页产生的变化需要使用超过496字节redo log来记录, 那么记忆会使用
-多个redo log block来记录数据页的变化.
+由于redo log记录的是数据页的变化, 当一个数据页产生的变化需要使用超过496字节redo log来记录, 那么记忆会使用多个redo log 
+block来记录数据页的变化.
 
 日志块头:
 ```
 log_block_hdr_no: (4字节), 该日志块在redo log buffer中的位置ID
 
-log_block_hdr_data_len: (2字节), 该log block中已经记录的log大小. 写满该log block时为0x200, 表示
-512字节.
+log_block_hdr_data_len: (2字节), 该log block中已经记录的log大小. 写满该log block时为0x200, 表示512字节.
 
-log_block_first_rec_group: (2字节) 表示该log block中作为第一个新的mtr开始log record的偏移量. 如果
-一个mtr日志横跨多个log block时, 只设置最后一个 log block.
+log_block_first_rec_group: (2字节) 表示该log block中作为第一个新的mtr开始log record的偏移量. 如果一个mtr日志横跨
+多个log block时, 只设置最后一个 log block.
 
 log_block_checkpoint_no: (4字节) 写入检查点信息的位置
 ```
-关于 log_block_first_rec_group, 因为有时候一个数据页产生的日志量超出一个日志块, 那么需要用多个日志块来
-记录该页的相关日志. 例如, 某一个数据页产生552字节的日志量, 需要两个日志块, 第一个日志块占用492字节, 第二个
-日志块占用60字节. 对于第二个日志块来说, 它的第一个log开始的位置就是73字节 (60+12). 如果该部分值和 
-log_block_hdr_data_len 相等, 则说明该log block中没有新开始的日志块, 即表示该日志块延续了前一个日志块.
+
+关于 log_block_first_rec_group, 因为有时候一个数据页产生的日志量超出一个日志块, 那么需要用多个日志块来记录该页的相关日
+志. 例如, 某一个数据页产生552字节的日志量, 需要两个日志块, 第一个日志块占用492字节, 第二个日志块占用60字节. 对于第二个日志
+块来说, 它的第一个log开始的位置就是73字节 (60+12). 如果该部分值和 log_block_hdr_data_len 相等, 则说明该log block
+中没有新开始的日志块, 即表示该日志块延续了前一个日志块.
 
 
 日志块尾:
@@ -98,15 +94,14 @@ LOG_GROUP_ID, (4字节) 该log文件所属的日志组
 LOG_FILE_START_LSN, (8字节), 该log文件记录的开始日志的lsn
 LOG_FILE_WAS_CREATED_BY_HOT_BACKUP, (32字节), 备份程序所占用的字节数
 
-LOG_CHECKPOINT_1/LOG_CHECKPOINT_2, (512字节) 两个记录InnoDB checkpoint信息的字段, 分别从文件头
-的第二个和第四个 log block 开启记录. 只使用日志文件组的第一个日志文件
+LOG_CHECKPOINT_1/LOG_CHECKPOINT_2, (512字节) 两个记录InnoDB checkpoint信息的字段, 分别从文件头的第二个和第四个
+log block 开启记录. 只使用日志文件组的第一个日志文件
 ```
 
 #### redo log的格式
 
-因为InnoDB存储引擎存储数据的单元是页, 所以redo log也是基于页的格式记录的. 默认情况下, InnoDB的页大小是
-16KB(由innodb_page_size设置) 一个页内可以存储非常多的log block(512字节), 而log block中记录的又是数
-据页的变化.
+因为InnoDB存储引擎存储数据的单元是页, 所以redo log也是基于页的格式记录的. 默认情况下, InnoDB的页大小是16KB(由innodb_page_size
+设置) 一个页内可以存储非常多的log block(512字节), 而log block中记录的又是数据页的变化.
 
 其中 log block 中的 496 字节部分是log body, 该body的格式分为4部分:
 
@@ -122,12 +117,11 @@ redo_log_body: 表示每个redo log的数据部分, 恢复时调用相应的函�
 
 #### 产生时间
 
-事务开始之后就会产生redo log, redo log 落盘并不是随着日志的提交才写入的, 而是在事务的执行过程中, 便
-开始写入redo log文件中.
-
-之所以说重做日志是在事务开始之后逐步写入重做日志文件, 而不一定是事务提交才写入重做日志文件, 原因是: 重做
-日志有一个缓存区innodb_log_buffer, 其默认的大小是 16M, InnoDB 存储引擎先将重做日志写入innodb_log_buffer
+事务开始之后就会产生redo log, redo log 落盘并不是随着日志的提交才写入的, 而是在事务的执行过程中, 便开始写入redo log文件
 中.
+
+之所以说重做日志是在事务开始之后逐步写入重做日志文件, 而不一定是事务提交才写入重做日志文件, 原因是: 重做日志有一个缓存区innodb_log_buffer,
+其默认的大小是 16M, InnoDB 存储引擎先将重做日志写入innodb_log_buffer中.
 
 
 InnoDB redo log 刷盘的规则:
@@ -141,32 +135,27 @@ InnoDB redo log 刷盘的规则:
 4) 当有checkpoint时, checkpoint在一定程度上代表了刷到磁盘时日志所处的LSN位置.
 
 
-内存中 (buffer pool)未刷到磁盘的数据称为脏数据(dirty data). 由于数据和日志都页的形式存在, 所以脏页
-表示脏数据和脏日志.
+内存中 (buffer pool)未刷到磁盘的数据称为脏数据(dirty data). 由于数据和日志都页的形式存在, 所以脏页表示脏数据和脏日志.
 
-在InnoDB中, 数据刷盘的规则只有一个, checkpoint. 但是触发checkpoint的情况却有几种. 不管怎样, checkpoint
-触发后, 会将buffer中数据页和脏日志都刷到磁盘.
+在InnoDB中, 数据刷盘的规则只有一个, checkpoint. 但是触发checkpoint的情况却有几种. 不管怎样, checkpoint 触发后, 会
+将buffer中数据页和脏日志都刷到磁盘.
 
 InnoDB中的checkpoint分为两种:
 
-a) sharp checkpoint: 在重用redo log文件(例如切换日志文件)的时候,会将所有已记录到redo log中对应的
-脏数据刷到磁盘.
+a) sharp checkpoint: 在重用redo log文件(例如切换日志文件)的时候,会将所有已记录到redo log中对应的脏数据刷到磁盘.
 
-b) fuzzy checkpoint: 一次只刷一小部分的日志到磁盘, 而非将所有脏日志刷盘. 有以下几种情况会触发该检查
-点:
+b) fuzzy checkpoint: 一次只刷一小部分的日志到磁盘, 而非将所有脏日志刷盘. 有以下几种情况会触发该检查点:
 
 master thread checkpoint: 由master线程控制, 每秒或每10秒刷入一定比例的脏页到磁盘.
 
-flush_lru_list checkpoint: 从MySQL 5.6开始, 可以通过 innodb_page_cleaners 变量指定专门负责
-脏页刷盘的page cleaner线程的个数, 该线程的目的是为了保证lru列表有可用的空闲页.
+flush_lru_list checkpoint: 从MySQL 5.6开始, 可以通过 innodb_page_cleaners 变量指定专门负责脏页刷盘的page cleaner
+线程的个数, 该线程的目的是为了保证lru列表有可用的空闲页.
 
-aysnc/sync flush checkpoint: 同步刷盘还是异步刷盘. 如果有非常多的脏页没刷到磁盘(有比例控制),这个
-时候会选择同步刷到磁盘, 但是很少出现; 如果脏页不是很多, 可用选择异步刷到磁盘, 如果脏页很少, 可用暂时不
-刷脏页到磁盘.
+aysnc/sync flush checkpoint: 同步刷盘还是异步刷盘. 如果有非常多的脏页没刷到磁盘(有比例控制), 这个时候会选择同步刷到磁
+盘, 但是很少出现; 如果脏页不是很多, 可用选择异步刷到磁盘, 如果脏页很少, 可用暂时不刷脏页到磁盘.
 
-dirty page too much checkpoint: 脏页太多时强制触发检查点. 目的是为了保证缓存有足够的空闲空间. too
-much的比例由变量 innodb_max_dirty_pages_pct 控制, MySQL 5.6 以后默认值是 75, 即当脏页站缓冲池的
-百分之75后, 强制刷一部分脏页到磁盘.
+dirty page too much checkpoint: 脏页太多时强制触发检查点. 目的是为了保证缓存有足够的空闲空间. too much的比例由变量 
+innodb_max_dirty_pages_pct 控制, MySQL 5.6 以后默认值是 75, 即当脏页站缓冲池的百分之75后, 强制刷一部分脏页到磁盘.
 
 
 #### 对应的物理文件
@@ -181,19 +170,19 @@ innodb_log_file_size 重做日志文件的大小, 默认值是 512MB
 
 innodb_log_buffer_size 重做日志文件缓存区 `innodb_log_buffer` 的大小, 默认是 16M
 
-innodb_flush_log_at_trx_commit=1, 指定了 `InnoDB` 在事务提交后的日志写入频率. 
+innodb_flush_log_at_trx_commit=1, 指定了 `InnoDB` 在事务提交后的日志写入频率.
+
 ````
-值设置为 `0`, 每隔1秒log buffer刷到文件系统(os buffer)去, 并且调用文件系统的"flush"操作将缓存刷新到磁
-盘上去. 也就是说一秒前的日志都保存到log buffer, 也就是内存上, 也就是 log buffer 的刷新操作和事务提交操作
-没有关联. 在这种情况下, MySQL性能最好. 如果mysqld进程崩溃, 通常导致最后1s的日志丢失.
+值设置为 `0`, 每隔1秒log buffer刷到文件系统(os buffer)去, 并且调用文件系统的"flush"操作将缓存刷新到磁盘上去. 也就是说
+一秒前的日志都保存到log buffer, 也就是内存上, 也就是 log buffer 的刷新操作和事务提交操作没有关联. 在这种情况下, MySQL性
+能最好. 如果mysqld进程崩溃, 通常导致最后1s的日志丢失.
 
-值设置为 `1`, 每次事务提交, log buffer 会被写入到文件系统中(os buffer)去, 并且调用文件系统的"flush"操
-作将缓存刷新到磁盘上去. 这个是默认值. 效率最慢. 
+值设置为 `1`, 每次事务提交, log buffer 会被写入到文件系统中(os buffer)去, 并且调用文件系统的"flush"操作将缓存刷新到磁
+盘上去. 这个是默认值. 效率最慢. 
 
-值设置为 `2`, 每次事务提交, log buffer 会被写入到文件系统中(os buffer)去, 但是每隔1秒调用文件系统(os buffer)
-的"flush"操作将缓存刷新到磁盘上去. 这时如果mysqld进程崩溃, 由于日志已经写入到系统缓存, 所以并不会丢失数据; 
-在操作系统崩溃的情况下, 通常会导致最后1s的日志丢失. 这里的 "1秒" 是可以使用 `innodb_flush_log_at_timeout`
-来控制时间间隔的
+值设置为 `2`, 每次事务提交, log buffer 会被写入到文件系统中(os buffer)去, 但是每隔1秒调用文件系统(os buffer) 的"flush"
+操作将缓存刷新到磁盘上去. 这时如果mysqld进程崩溃, 由于日志已经写入到系统缓存, 所以并不会丢失数据; 在操作系统崩溃的情况下, 
+通常会导致最后1s的日志丢失. 这里的 "1秒" 是可以使用 `innodb_flush_log_at_timeout` 来控制时间间隔的
 ````
 
 ![image](/images/mysql_log_innodb_flush_log_at_trx_commit.png)
@@ -205,16 +194,16 @@ innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到
 
 在启动 innodb 的时候, 不管上次是正常关闭还是异常关闭, 总是会进行恢复操作.
 
-因为 redo log 记录的是数据页的物理变化, 因此恢复的时候速度比逻辑日志(二进制日志)要快很多. 而且, innodb 自身
-也做了一定程度的优化, 让恢复速度变得更快.
+因为 redo log 记录的是数据页的物理变化, 因此恢复的时候速度比逻辑日志(二进制日志)要快很多. 而且, innodb 自身也做了一定程度
+的优化, 让恢复速度变得更快.
 
-重启 innodb 时, checkpoint 表示已经完整刷到磁盘上 data page 上的 LSN, 因此恢复时仅需要恢复从 checkpoint
-开始的日志部分. 例如, 当数据库在上一次 checkpoint 的 LSN 是 10000 时宕机, 且事务是已经提交的状态. 启动数据库
-时会检查磁盘中数据页的 LSN, 如果数据页的 LSN 小于日志中的 LSN, 则会从 checkpoint 开始恢复.
+重启 innodb 时, checkpoint 表示已经完整刷到磁盘上 data page 上的 LSN, 因此恢复时仅需要恢复从 checkpoint 开始的日志
+部分. 例如, 当数据库在上一次 checkpoint 的 LSN 是 10000 时宕机, 且事务是已经提交的状态. 启动数据库时会检查磁盘中数据页
+的 LSN, 如果数据页的 LSN 小于日志中的 LSN, 则会从 checkpoint 开始恢复.
 
-还有一种状况, 在宕机前正处于 checkpoint 的刷盘过程, 且数据页的刷盘进度超过了日志页的刷盘进度. 这时候宕机, 数据
-页中记录的 LSN 就会大于日志页中的 LSN, 在重启的恢复过程中检查到这一状况, 这时超过日志进度的部分不会重做, 因为这
-本身就表示已经做过的事情, 无需重做.
+还有一种状况, 在宕机前正处于 checkpoint 的刷盘过程, 且数据页的刷盘进度超过了日志页的刷盘进度. 这时候宕机, 数据页中记录的 
+LSN 就会大于日志页中的 LSN, 在重启的恢复过程中检查到这一状况, 这时超过日志进度的部分不会重做, 因为这本身就表示已经做过的事
+情, 无需重做.
 
 事务日志具有幂等性, 所以多次操作得到同一结果的行为在日志中只记录一次.
 
@@ -226,22 +215,19 @@ innodb_flush_log_at_timeout=1, 指定了 `InnoDB` 日志由系统缓存刷写到
 
 #### 作用
 
-保存了事务发生之前的数据的一个版本, 可以用于事务回滚; 同时可以提供多版本并非控制下的读(MVCC), 即非锁
-定读.
-
+保存了事务发生之前的数据的一个版本, 可以用于事务回滚; 同时可以提供多版本并非控制下的读(MVCC), 即非锁定读.
 
 #### 内容
 
-`逻辑格式的日志`, 在执行undo的时候, 仅仅是将数据从逻辑上恢复至事务之前的状态, 而不是从物理层面上操作
-实现的, 这一点不同于 redo log.
+`逻辑格式的日志`, 在执行undo的时候, 仅仅是将数据从逻辑上恢复至事务之前的状态, 而不是从物理层面上操作实现的, 这一点不同于 redo log.
 
-> 可以认为当delete一条记录时, undo log中记录一条对应的insert记录, 反之亦然, 当update一条记录时,
-> 它记录一条对应相反的update记录.
+> 可以认为当delete一条记录时, undo log中记录一条对应的insert记录, 反之亦然, 当update一条记录时, 它记录一条对应相反的
+update记录.
 
 当执行 rollback 时, 也就可以从 undo log 中的逻辑记录读取到相应的内容并进行回滚. 
 
-有时候应用到行版本控制的时候, 也是通过 undo log 来实现的: 当读取的某一行被其他事物锁定时, 它可以从
-undo log 中分析出该行记录以前的数据是什么, 从而提供行版本信息, 让用户实现非锁定一致性读取.
+有时候应用到行版本控制的时候, 也是通过 undo log 来实现的: 当读取的某一行被其他事物锁定时, 它可以从 undo log 中分析出该行
+记录以前的数据是什么, 从而提供行版本信息, 让用户实现非锁定一致性读取.
 
 undo log 是采用段(segment)的方式来记录的, 每个undo操作在记录的时候占用一个 undo log segment.
 
@@ -250,52 +236,49 @@ undo log 是采用段(segment)的方式来记录的, 每个undo操作在记录�
 
 #### 产生的时间
 
-当事务提交之后, undo log 并不能立马被删除, 而是放入待清理的链表, 由 `purge` 线程判断是否有其它
-的事务在使用 undo 段中表的上一个事务之前的版本信息, 决定是否可以清理undo log的日志空间.
+当事务提交之后, undo log 并不能立马被删除, 而是放入待清理的链表, 由 `purge` 线程判断是否有其它的事务在使用 undo 段中表的
+上一个事务之前的版本信息, 决定是否可以清理undo log的日志空间.
 
 
 #### 对应的物理文件
 
-MySQL 5.6 之前, undo 表空间位于共享表空间的回滚段中, 共享表空间的默认名称是 ibdata, 位于数据文
-件目录中.
+MySQL 5.6 之前, undo 表空间位于共享表空间的回滚段中, 共享表空间的默认名称是 ibdata, 位于数据文件目录中.
 
-MySQL 5.6 以后, undo 表空间可以配置成独立的文件, 但是提前需要在配置文件中配置, 完成数据库初始化
-之后生效且不能改变undo log文件的个数.
+MySQL 5.6 以后, undo 表空间可以配置成独立的文件, 但是提前需要在配置文件中配置, 完成数据库初始化之后生效且不能改变undo log
+文件的个数.
 
 MySQL 5.7 之后undo表空间配置参数如下:
 
-innodb_file_per_table=ON, 表示为数据库的每张表使用独立的表空间, 数据库的每个表使用一个单独的 '.ibd'
-文件存储数据和索引. 默认值是ON. 如果是 OFF, 数据库的所有数据和索引都存储在 `ibdata` 文件当中 
+innodb_file_per_table=ON, 表示为数据库的每张表使用独立的表空间, 数据库的每个表使用一个单独的 '.ibd' 文件存储数据和索引.
+默认值是ON. 如果是 OFF, 数据库的所有数据和索引都存储在 `ibdata` 文件当中 
 
 > 修改这个系统变量并不能带来性能提升. 
 
-innodb_undo_directory 指定单独存放undo表空间的目录, 默认为./ (即datadir), 可以设置相对路径或者绝对
-路径.
+innodb_undo_directory 指定单独存放undo表空间的目录, 默认为./ (即datadir), 可以设置相对路径或者绝对路径.
  
-> 该参数实例初始化之后虽然不可直接改动, 但是可以通过先停库, 修改配置文件, 然后移动undo表空间文件的方式去修
-改该参数;
+> 该参数实例初始化之后虽然不可直接改动, 但是可以通过先停库, 修改配置文件, 然后移动undo表空间文件的方式去修改该参数;
 
-innodb_undo_tablespaces 指定单独存放的undo表空间个数, 例如如果设置为3, 则undo表空间为undo001, undo002,
-undo003, 每个文件初始大小默认为10M.
+innodb_undo_tablespaces 指定单独存放的undo表空间个数, 例如如果设置为3, 则undo表空间为undo001, undo002, undo003,
+每个文件初始大小默认为10M.
 
 > 该参数推荐设置为大于等于3, 原因下文将解释. 该参数实例初始化之后不可改动;
 >
-> 因为 truncate table 表空间时, 该文件处于 inactive 状态, 如果只有一个 undo 表空间, 那么整个系统在此过程
-> 都将处于不可用状态, 为了尽可能降低 truncate 对系统的影响, 建议将该参数最少设置为 3;
+> 因为 truncate table 表空间时, 该文件处于 inactive 状态, 如果只有一个 undo 表空间, 那么整个系统在此过程都将处于不可
+> 用状态, 为了尽可能降低 truncate 对系统的影响, 建议将该参数最少设置为 3;
 
-innodb_undo_logs   指定回滚段的个数, 默认是128个. 每个回滚段可同时支持1024个在线事物. 这些回滚段会平均分布到
-各个 undo 表空间中. 
+innodb_undo_logs 指定回滚段的个数, 默认是128个. 每个回滚段可同时支持1024个在线事物. 这些回滚段会平均分布到各个 undo 表
+空间中. 
 
 > 该变量可以动态调整, 但是物理上的回滚段不会减少, 只是会控制用到的回滚段的个数.
 >
-> 在 MySQL 5.7 中, 第一个 undo log 永远在系统表空间中, 另外 32 个 undo log 分配给了临时表空间, 即ibtemp1,
-> 至少还有2个undo log, 才能保证 undo 表空间中每个里面至少有1个undo log;
+> 在 MySQL 5.7 中, 第一个 undo log 永远在系统表空间中, 另外 32 个 undo log 分配给了临时表空间, 即ibtemp1, 至少还
+> 有2个undo log, 才能保证 undo 表空间中每个里面至少有1个undo log;
 
 innodb_max_undo_log_size undo表空间文件超过此值即标记为可收缩, 默认是1G, 可在线修改.
 
-innodb_purge_rseg_truncate_frequency, 指定 purge 操作被唤起多少次之后才释放rollback segments. 当undo 
-表空间里面的 rollback segments 被释放时, undo 表空间才会被 truncate. 由此可见, 该参数越小, undo 表空间被
-尝试truncate的频率越高. 建议值是 10, 默认值是 128
+innodb_purge_rseg_truncate_frequency, 指定 purge 操作被唤起多少次之后才释放rollback segments. 当 undo 表空间
+里面的 rollback segments 被释放时, undo 表空间才会被 truncate. 由此可见, 该参数越小, undo 表空间被尝试truncate的
+频率越高. 建议值是 10, 默认值是 128
 
 innodb_undo_log_truncate, 启用 truncate undo 表空间. MySQL 5.7 版本才出现的参数.
 
@@ -309,32 +292,27 @@ innodb_data_file_path  文件路径,大小配置, "ibdata1:1G:autoextend"
 
 ### 存储方式
 
-innodb 引擎对 undo 的管理采用段的方式. rollback segment称为回滚段, 每个回滚段中有 1024 个 undo log
-segment.
+innodb 引擎对 undo 的管理采用段的方式. rollback segment称为回滚段, 每个回滚段中有 1024 个 undo log segment.
 
-MySQL 5.5 可以支持 128 个 rollback segment, 即支持 128 * 1024 个 undo 操作, 还可以通过修改变量
-innodb_undo_logs(MySQL 5.6版本之前变量是 innodb_rollback_segments) 自定义支持多少个 rollback
-segment, 默认值是 128
+MySQL 5.5 可以支持 128 个 rollback segment, 即支持 128 * 1024 个 undo 操作, 还可以通过修改变量 innodb_undo_logs(
+MySQL 5.6版本之前变量是 innodb_rollback_segments) 自定义支持多少个 rollback segment, 默认值是 128
 
-默认 rollback segment 全部写在一个文件中, 但可以通过设备变量 innodb_undo_tablespaces 平均分配到
-多少个文件中, 该变量的默认值是0, 即全部写入一个表空间文件. 该变量为静态变量, 只能在数据库停止状态下修改,
-如果写入配置文件或启动时带上对应的参数. 但是 innodb 引擎在启动过程中提示, 不建议修改为非0的值.
+默认 rollback segment 全部写在一个文件中, 但可以通过设备变量 innodb_undo_tablespaces 平均分配到多少个文件中, 该变
+量的默认值是0, 即全部写入一个表空间文件. 该变量为静态变量, 只能在数据库停止状态下修改, 如果写入配置文件或启动时带上对应的参
+数. 但是 innodb 引擎在启动过程中提示, 不建议修改为非0的值.
 
 
 #### delete/update 操作的内部机制
 
-当事物提交的时候, innodb 不会立即删除 undo log, 因为后续还可能用到 undo log, 如隔离级别是 repeatable
-read 时, 事物读取的都是开启事物时的最新提交版本, 只要该事物不结束, 该版本就不能删除, 即 undo log 不能
-删除.
+当事物提交的时候, innodb 不会立即删除 undo log, 因为后续还可能用到 undo log, 如隔离级别是 repeatable read 时, 事物
+读取的都是开启事物时的最新提交版本, 只要该事物不结束, 该版本就不能删除, 即 undo log 不能删除.
 
-在事物提交的时候, 会将该事物对应的 undo log 放入到删除列表中, 未来通过 purge 线程删除. 并且提交事物,
-还会判断 undo log 分配的页是否可以重用, 如果可以重用, 则会分配给后面来的事物, 避免为每个独立的事物分配
-独立的 undo log 页而浪费存储空间和性能.
+在事物提交的时候, 会将该事物对应的 undo log 放入到删除列表中, 未来通过 purge 线程删除. 并且提交事物, 还会判断 undo log
+分配的页是否可以重用, 如果可以重用, 则会分配给后面来的事物, 避免为每个独立的事物分配独立的 undo log 页而浪费存储空间和性能.
 
 undo log 记录delete和update操作的结果:
 
-- delete 操作实际上不会直接删除, 而是将delete对象打上delete flag, 标记为删除, 最终的删除操作是 purge
-线程完成的.
+- delete 操作实际上不会直接删除, 而是将delete对象打上delete flag, 标记为删除, 最终的删除操作是 purge 线程完成的.
 
 - update 分为两种情况: update 的列是否是主键列
 
@@ -343,17 +321,15 @@ undo log 记录delete和update操作的结果:
 2) 如果是主键列, update 分为两部分执行: 先删除该行, 再插入一行目标行.
 
 
-
 #### 其他
 
-undo 是事务开始之前的保存的被修改的数据的一个版本, 产生undo日志的时候, 同样会伴随类似于保护事务持久化
-机制的redo log的产生.
+undo 是事务开始之前的保存的被修改的数据的一个版本, 产生undo日志的时候, 同样会伴随类似于保护事务持久化机制的redo log的产生.
 
-默认情况下, undo文件是保持在共享表空间的, 即ibdata文件当中, 当数据库中发生一些大的事务性操作的时候, 
-要产生大量的undo信息, 全部保存在共享表空间中.
+默认情况下, undo文件是保持在共享表空间的, 即ibdata文件当中, 当数据库中发生一些大的事务性操作的时候, 要产生大量的undo信息,
+全部保存在共享表空间中.
 
-因此, 共享表空间可能会变得很大, 默认情况下, 也就是undo日志使用共享表空间的时候, 被 "撑大" 的共享表空
-间是不会自动收缩的.
+因此, 共享表空间可能会变得很大, 默认情况下, 也就是undo日志使用共享表空间的时候, 被 "撑大" 的共享表空间是不会自动收缩的.
+
 
 ---
 
@@ -369,11 +345,11 @@ undo 是事务开始之前的保存的被修改的数据的一个版本, 产生u
 
 #### 内容
 
-`逻辑格式的日志`, 可以简单的认为就是执行过过的事务中的sql语句. 但又不完全是sql语句这么简单, 而且包含了
-执行的sql语句(增删改)反向的信息.
+`逻辑格式的日志`, 可以简单的认为就是执行过过的事务中的sql语句. 但又不完全是sql语句这么简单, 而且包含了执行的sql语句(增删改)
+反向的信息.
 
-也就意味着 `delete` 对应着 `delete` 本身和其反向的 `insert`; `update` 对应着 `update` 执行前后
-的版本信息; `insert` 对应着 `insert` 本身和其反向的 `delete`.
+也就意味着 `delete` 对应着 `delete` 本身和其反向的 `insert`; `update` 对应着 `update` 执行前后的版本信息; `insert` 
+对应着 `insert` 本身和其反向的 `delete`.
 
 在使用 mysqlbinlog 解析 binlog 会展示相关情况.
 
@@ -389,14 +365,14 @@ undo 是事务开始之前的保存的被修改的数据的一个版本, 产生u
 
 #### 删除时间
 
-binlog 的默认保存时间由参数 expire_logs_days 配置, 也就是说对于非活动的日志文件, 在生成时间超过 `expire_log_days`
+binlog 的默认保存时间由参数 expire_logs_days 配置, 也就是说对于非活动的日志文件, 在生成时间超过 `expire_log_days` 
 配置的天数之后, 会被自动删除.  默认值是0, 表示永不过期
 
 
 #### 对应的物理文件
 
-配置文件的路径 `log_bin_basename`, binlog文件按照指定的大小, 当日志文件达到指定的最大的大小之后, 进行
-滚动更新, 生成新的日志文件.
+配置文件的路径 `log_bin_basename`, binlog文件按照指定的大小, 当日志文件达到指定的最大的大小之后, 进行滚动更新, 生成新的
+日志文件.
 
 log_bin={OFF|/tmp/binlog}, 开启bin log, 并且设置binlog的路径, 文件格式 binlog.xx
 

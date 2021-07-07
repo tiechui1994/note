@@ -1,4 +1,4 @@
-# mysql 参数解析
+# sqlmode 解析
 
 ## sql_mode
 

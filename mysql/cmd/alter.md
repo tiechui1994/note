@@ -1,4 +1,4 @@
-## ALTER TABLE 操作
+## ALTER
 
 > ALTER TABLE
 

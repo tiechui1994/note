@@ -1,4 +1,4 @@
-## GRANT SYNTAX
+## GRANT
 
 ```
 GRANT  privilege_type [(column_list)], privilege_type [(column_list)]...
