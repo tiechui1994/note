@@ -1,4 +1,4 @@
-## git checkout 使用
+## git checkout
 
 `git-checkout` 的作用是 `切换分支 或 还原工作树的文件(撤销修改的文件)`
 

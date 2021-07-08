@@ -1,4 +1,4 @@
-## git diff 使用
+## git diff
 
 ### git diff 基础相关命令
 

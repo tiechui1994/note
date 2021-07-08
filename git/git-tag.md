@@ -1,4 +1,4 @@
-## git tag 的使用
+## git tag
 
 ### git tag 基础相关命令
 

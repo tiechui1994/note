@@ -1,4 +1,4 @@
-# gitlab-ci.yml 配置
+# gitlab-ci
 
 在每个项目中, 使用名为 `.gitlab-ci.yml` 的 YAML 文件配置 GitLab CI/CD piplines.
 
