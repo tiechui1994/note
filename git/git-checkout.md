@@ -2,7 +2,7 @@
 
 `git-checkout` 的作用是 `切换分支 或 还原工作树的文件(撤销修改的文件)`
 
-### git checkout 命令使用
+### 命令
 
 ```
 git checkout [-q] [-f] [-m] [<branch>]
@@ -96,9 +96,3 @@ HEAD的情况下检出该分支).
 - `-m, --merge`
 
 - `-p, --patch`
-
-
-
-
-
-

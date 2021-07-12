@@ -1,9 +1,7 @@
-# github action
+# github-action
 
 Github Actions 是 Github 推出的持续集成(CI)服务, 基于它可以进行构建, 测试, 打包, 部署项目. 简单说就是将软件开发中的
 的一些流程交给云服务器自动化处理. 例如: 开发者把代码push到Github后会自动测试, 编译, 发布.
-
-## action 使用
 
 基础概念:
 
@@ -15,7 +13,7 @@ Github Actions 是 Github 推出的持续集成(CI)服务, 基于它可以进行
 
 - action(动作): 每个 step 可以依次执行一个或多个命令(action).
 
-### workflow
+## workflow
 
 [详细文档](https://docs.github.com/cn/actions/reference/workflow-syntax-for-github-actions)
 
@@ -24,8 +22,8 @@ Github Actions 的配置文件叫做 workflow 文件, 存放在代码仓库的 `
 目录里面的 `.yml` 文件, 就会按照文件中所指定的触发条件自动运行该文件中的工作流程.
 
 案例:
-
 ```yaml
+# workflow
 name: Hello World
 on: push
 jobs:
@@ -50,7 +48,8 @@ jobs:
           echo name is $MY_NAME
 ```
 
-workflow 语法:
+
+语法:
 
 - `name`, name 字段是 workflow 的名称. 若忽略此字段, 则默认使用 workflow 文件名.
 
@@ -61,32 +60,32 @@ workflow 语法:
 on: [push, pull_request]
 ```
 
-常见的事件:
+常见的事件种类:
 
 ```yaml
-# push 指定分支
+# when push BRANCH
 on:
   push:
     branches:
       - master
 
-# push 指定tag
+# when push TAG
 on:
   push:
     tags:
       - 'v*'
 
-# 定时
+# when schedule
 on:
   schedule:
     - cron: 0 */6 * * *
 
-# 发布 release 触发
+# when release EVENT
 on:
   release:
     types: [published]
 
-# 仓库被 star
+# when watch EVENT
 on:
   watch:
     types: [started]
@@ -96,10 +95,10 @@ on:
 job_id 里面的 `name` 字段是任务名称. job_id 不能有空格, 只能使用数字,英文字母,`-`和`_`符号. name 名称随意, 若忽略
 name 字段, 则默认会设置为 job_id.
 
-当有多个任务时, 可以指定任务的依赖关系, 即顺序执行, 否则是并发执行.
+jobs 里的 job 是并行执行的, 当需要串行执行时, 可以指定job的依赖关系, 即顺序执行.
 
 ```yaml
-# 顺序执行 job1, job2, job3
+# in order exec job1, job2, job3
 jobs:
   job1:
   job2:
@@ -107,6 +106,10 @@ jobs:
   job3:
     needs: [job1, job2]
 ```
+
+### job 选项
+
+- `name`, job 名称
 
 - `runs-on`, runs-on 指定任务运行所需的虚拟服务器环境, 是必填字段, 目前可用的虚拟机如下:
 
@@ -120,12 +123,9 @@ jobs:
 
 > 注: 每个 job 的虚拟环境都是独立的.
 
-- `steps`, steps 字段指定每个任务的运行步骤, 可用包含一个或多个步骤. 步骤开头使用 `-` 符号. 每个步骤可用指定下面的字
-段:
-  - `name`, 步骤名称
-  - `uses`, 步骤使用的 action 或 docker 镜像, 必填.
-  - `run`, 步骤运行的 bash 命令, 必填.
-  - `env`, 步骤需要的环境变量
+- `steps`, steps 字段指定每个任务的运行步骤, 可用包含一个或多个步骤. 步骤开头使用 `-` 符号. 每个步骤可以包含的选项有,
+`name`(步骤名称), `uses`(步骤使用的 action 或 docker 镜像, 必填), `run`(步骤运行的命令, 必填), `env`(步骤需要
+的环境变量). `timeout-minutes`(超时, 单位是分钟)
 
 ## action
 
@@ -143,11 +143,11 @@ steps:
   - uses: actions/setup-node@master  # branch
 ```
 
-## 经常使用的 action
+## 常用的 action
 
 [设置输出文档](https://trstringer.com/github-actions-multiline-strings/)
 
-> 拉取当前仓库文件
+- 拉取当前仓库文件
 
 ```yaml
 steps:
@@ -157,7 +157,7 @@ steps:
       persist-credentials: false
 ```
 
-> 文件上传
+- 文件上传
 
 ```yaml
 - uses: actions/upload-artifact@v2
@@ -166,31 +166,62 @@ steps:
     path: path/to/artifact/world.txt
 ```
 
-> 设置输出, 相同 job 引用
+- 系统环境变量
 
 ```yaml
 steps:
-  - id: build
+  - name: set env
+    run: |
+      echo "TAG=mysql_5.1" >> ${{github.env}}
+```
+
+> 后续的 step 可以使用通过 ${{env.TAG}} 来引用设置的环境变量. ${{github.env}} <=> ${GITHUB_ENV}
+
+- 条件判断
+
+```yaml
+steps:
+  - name: run when success
+    if: ${{ success() }}
+    run: |
+      echo "success"
+  
+  - name: run when failure
+    if: ${{ failure() }}
+    run: |
+      echo "failure"
+  
+  - name: run when env
+    if: ${{ success() && env.TAG }}
+    run: |
+      echo "${{env.TAG}}"
+```
+
+- 设置输出, 同一个 job 引用
+
+```yaml
+steps:
+  - id: xxx
     run: |
       python3 version.py
       echo "::set-output name=version::$(cat /tmp/version)"
     shell: bash
   
-  -name: use
+  - name: use
     run: |
-      echo "version: ${{ steps.build.outputs.version }}"
+      echo "version: ${{ steps.xxx.outputs.version }}"
 ```
 
-> 设置输出, 跨越 job 引用
+- 设置输出, 跨越 job 引用
 
 ```yaml
 job1:
   runs-on: ubuntu-latest
   outputs:
-    version: ${{steps.build.outputs.version}}
+    version: ${{steps.xxx.outputs.version}}
   
   steps:
-    - id: build
+    - id: xxx
       run: |
         python3 version.py
         echo "::set-output name=version::$(cat /tmp/version)"
@@ -212,10 +243,9 @@ job2:
 引用输出/上下文:
 
 - 在同job下引用:
-首先, 再当前 `<stepid>` 可以直接引用其值.
 
-其次, 对于不同的 `<stepid>`, 可以采用 `${{ steps.<stepid>.outputs.<key> }}` 的方式引用输出的值, 其中 `<stepid>` 
-是step的id, `<key>` 是输出名称.
+可以采用 `${{ steps.<stepid>.outputs.<key> }}` 的方式引用输出的值, 其中 `<stepid>` 是step的id, `<key>` 是输
+出名称.
 
 - 跨越job引用: 
 
@@ -228,7 +258,7 @@ job2:
 - 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xxx }}`(用户设置的secret变量)
 
 
-案例:
+一个完整案例:
 
 ```yaml
 name: generate tzdb
@@ -272,4 +302,3 @@ jobs:
           overwrite: true
           body: "release tzdb ${{steps.build.outputs.version}}"
 ```
-

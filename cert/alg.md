@@ -101,6 +101,62 @@ Cipher, 对称加密
 Hash, 数字签名
 Compression, 压缩
 
+gpg 命令:
+
+```
+gpg [选项]
+```
+
+- `-a, --armor` 输出经 ASCII 封装.
+
+- `-o, --output [FILE]` 输出到指定文件
+
+秘钥管理:
+
+- `--gen-key` 生成秘钥
+
+- `--list-keys` 查看已有的秘钥
+
+- `--delete-key [UID]` 删除秘钥
+
+- `--export [UID]`, `--export-secret-keys` 导出公钥, 私钥
+
+```
+gpg --armor --output public.key --export UID
+
+gpg --armor --output secret.key --export-secret-keys
+```
+
+- `--send-keys [UID]` 上传公钥
+
+```
+gpg --send-keys UID --keyserver hkp://subkeys.pgp.net
+```
+
+加密与解密:
+
+- `-e, --encrypt [FILE]`, 加密(需要秘钥), 默认生成 `FILE.asc` 或 `FILE.gpg` 文件
+
+```
+gpg -a --recipient UID --encrypt FILE
+```
+
+- `-d, --decrypt [FILE]`, 解密(需要公钥)
+
+```
+gpg --local-user UID --decrypt FILE
+```
+
+签名与验证:
+
+- `-s, --sign [FILE]`, 签名(需要秘钥), 默认生成 `FILE.asc` 或 `FILE.gpg` 文件
+
+```
+gpg --sign-with UID --sign FILE
+```
+
+- `--verify FILE`, 签名验证
+
 ## OpenSSL
 
 OpenSSL是一个加密工具包, 它实现了安全套接字层(SSL v2/v3)和传输层安全性(TLS v1)网络协议以及它们所需的相关加密标准.
@@ -116,7 +172,7 @@ openssl程序是一个命令行工具, 用于从shell中使用OpenSSL的加密�
 - 处理S/MIME签名或加密邮件
 - 时间戳请求,生成和验证
 
-### openssl使用
+openssl 命令:
 
 ```
 openssl command [ COMMAND_OPTS ] [ COMMAND_ARGS ]
@@ -125,7 +181,7 @@ openssl command [ COMMAND_OPTS ] [ COMMAND_ARGS ]
 openssl程序提供了丰富的命令(上面的概要中的命令), 每个命令通常都有丰富的选项和参数(概要中的command_opts和command_args).
 
 
-**command**
+**command:**
 
 - `ciphers`, Cipher Suite Description(密码套件描述列表, 查询)
 

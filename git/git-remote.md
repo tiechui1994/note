@@ -16,9 +16,8 @@ git remote set-url --delete [--push] <name> <url>
 git remote [-v | --verbose] show [-n] <name>...
 ```
 
-- `add`
-
-在<url>添加一个名为<name>的远程仓库. 然后可以使用命令 `git fetch <name>` 创建和更新远程跟踪分支`<name>/<branch>`.
+- `add`, 在 <url> 添加一个名为 <name> 的远程仓库. 然后可以使用命令 `git fetch <name>` 创建和更新远程跟踪分支
+`<name>/<branch>`.
 
 1) `-f` 参数, 在设置 "remote" 信息后立即执行 `get fetch <name>` 命令.
 
@@ -31,15 +30,13 @@ git remote [-v | --verbose] show [-n] <name>...
 
 4) `-m <master>` 参数, 设置符号引用 `refs/remotes/<name>/HEAD` 指向远程的 `<master>` 分支.
 
-- `rename`
-远程仓库重命名
+- `rename`: 远程仓库重命名
 
-- `remove`
-远程仓库删除
+- `remove`: 远程仓库删除
 
-- `set-head`
-设置或者删除远程仓库默认的branch. 对于远程仓库而言, 一个默认的branch并不是必须的, 但是允许指定远程的名称来代替特定的分
-支. 例如, 如果远程仓库 origin 的默认分支设置为 master, 那么在指定 origin/master 的任何地方指定 origin
+- `set-head`: 设置或者删除远程仓库默认的branch. 对于远程仓库而言, 一个默认的branch并不是必须的, 但是允许指定远程的
+名称来代替特定的分支. 例如, 如果远程仓库 origin 的默认分支设置为 master, 那么在指定 origin/master 的任何地方指定 
+origin
 
 1) `-d`, `--delete`, 将删除符号引用 `refs/remotes/<name>/HEAD` 
 
@@ -52,14 +49,10 @@ git remote [-v | --verbose] show [-n] <name>...
 已经存在时, 这才起作用; 如果不是, 则必须先获取它.
 
 
-- `set-branches`
-设置追踪的分支
+- `set-branches`: 设置追踪的分支
 
-- `get-url`
-获取url
+- `get-url`: 获取url
 
-- `set-url`
-设置新的 url
+- `set-url`: 设置新的 url
 
-- `show`
-查看 remote 信息.
+- `show`: 查看 remote 信息.
