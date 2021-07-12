@@ -13,8 +13,10 @@ https://md.aclickall.com/
     word-spacing: 0.8px; /*更改默认的词间距*/
     letter-spacing: 0.3px;
     font-family: "Helvetica Neue", Helvetica, "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
-    background-image: linear-gradient(90deg, rgba(50, 0, 0, 0.05) 3%, rgba(0, 0, 0, 0) 3%), linear-gradient(360deg, rgba(50, 0, 0, 0.05) 3%, rgba(0, 0, 0, 0) 3%);
-    background-position: center center;
+    background-image: linear-gradient(90deg, rgba(50, 0, 0, 0.05) 3%, rgba(0, 0, 0, 0) 3%),
+                      linear-gradient(360deg, rgba(50, 0, 0, 0.05) 3%, rgba(0, 0, 0, 0) 3%);
+    background-position-x: center;
+    background-position-y: center;
     background-size: 20px 20px;
 }
 
@@ -231,7 +233,6 @@ table tr {
     border: 0;
     border-top: 1px solid #CCC;
     background-color: white;
-
 }
 
 /*隔行改变行的背景色*/

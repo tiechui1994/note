@@ -214,3 +214,16 @@ Trying to open a VM config [...] which has the same UUID as an existing virtual 
 ```
 
 3.在上述修改之后重新打开arm.vbox即可.
+
+### 本地 github 加速
+
+```
+Host github.com
+     User git
+     HostName git.zhlh6.cn
+     Port 22
+     IdentityFile ~/.ssh/id_rsa
+     LogLevel ERROR
+```
+
+> IdentityFile 是 github 的秘钥文件位置. HostName 配置的是远程 ssh 加速访问的代理服务器.
