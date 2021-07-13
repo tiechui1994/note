@@ -1,0 +1,46 @@
+name: Node.js Build
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: pull project [blog]
+        uses: actions/checkout@v2
+        with:
+          repository: tiechui1994/blog
+          fetch-depth: 1
+          ref: master
+          persist-credentials: false
+          token: ${{secrets.TOKEN}}
+
+      - name: pull project [note]
+        uses: actions/checkout@v2
+        with:
+          repository: tiechui1994/note
+          fetch-depth: 1
+          ref: master
+          path: static/md/note
+          persist-credentials: false
+
+      - name: install
+        run: |
+          ls -al ${{github.workspace}}/static/md/note
+          npm install
+
+      - name: deploy vercel project [note]
+        if: ${{ success() }}
+        run: node src/deploy/vercel.js --project note --token ${{secrets.VERCEL}}

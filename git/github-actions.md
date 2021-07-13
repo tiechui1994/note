@@ -123,6 +123,36 @@ jobs:
 
 > 注: 每个 job 的虚拟环境都是独立的.
 
+- `container`, 指定job所使用的容器镜像.
+
+- `services`, 服务容器. 服务容器是 Docker 容器. github 为工作流中配置的每个 service 创建一个新的Docker容器, 并在
+job 完成后销毁. job 当中的 steps 可以同一 job 的所有服务容器通信. 可以使用工作流程中配置的标签访问服务容器, 服务容器
+的主机名自动映射到标签名称. 默认状况下, 属于同一 Docker 网络的所有容器之间相互显示所有端口, 但在 Docker 网络外部不会显
+示任何端口. 可以指定服务的 `image` (镜像), `env` (环境变量), `volumes`(挂载), `ports`(服务外部端口映射)
+
+```yaml
+jobs:
+  container-job:
+    runs-on: ubuntu-latest
+    # define `container-job` exec container
+    container: node:10.18-jessie
+
+    services:
+      postgres:
+        # Docker Hub image
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+      mysql:
+        image: mysql:5.7.23
+        env:
+          USERNAME: root
+          PASSWORD: root
+        # Port mappping
+        ports:
+          - 6379:6379
+```
+
 - `steps`, steps 字段指定每个任务的运行步骤, 可用包含一个或多个步骤. 步骤开头使用 `-` 符号. 每个步骤可以包含的选项有,
 `name`(步骤名称), `uses`(步骤使用的 action 或 docker 镜像, 必填), `run`(步骤运行的命令, 必填), `env`(步骤需要
 的环境变量). `timeout-minutes`(超时, 单位是分钟)
