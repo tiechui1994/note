@@ -45,7 +45,6 @@ stripped
 	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f532fac7000)
 ```
 
-
 ### ltrace
 
 作用: 库调用跟踪器
@@ -84,7 +83,6 @@ fclose(0x7efe30f30540)                                       = 0
 +++ exited (status 0) +++
 ```
 
-
 ### hexdump
 
 作用: 以ASCII, 十进制, 十六进制 或 八进制显示文件内容.
@@ -102,7 +100,6 @@ fclose(0x7efe30f30540)                                       = 0
 
 在开发软件的时候, 各种文件/ASCII信息会被添加到其中, 比如打印的信息, 调试信息, 帮助信息, 错误信息等. 只要这些信息都存在于二
 进制当中, 就可以使用 `strings` 命令将其转储到屏幕上.
-
 
 ### readelf
 
@@ -135,7 +132,6 @@ ELF 头：
   节头数量：         29
   字符串表索引节头： 28 
 ```
-
 
 ### strace
 
@@ -256,4 +252,3 @@ Startup:
 Miscellaneous:
   -d             允许 debug 信息输出到 stderr
   -v             详细模式: 打印未缩写的 `argv`, `stat`, `termios`等. args
-

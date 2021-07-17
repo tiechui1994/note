@@ -328,14 +328,14 @@ systemctl cat unit  查看unit配置文件的内容
 journalctl 查看所有的日志(内核日志和应用日志)
 
 ```
-sudo journalctl -k 查看内核日子
-sudo journalctl -b 查看系统本次启动的日志
+journalctl -k 查看内核日子
+journalctl -b 查看系统本次启动的日志
 
-sudo journalctl _PID=PID 查看指定进程的日志
-sudo journalctl SCRIPT 查看指定脚本的日志
-sudo journalctl -u unit 查看unit的日志
+journalctl _PID=PID 查看指定进程的日志
+journalctl SCRIPT 查看指定脚本的日志
+journalctl -u unit 查看unit的日志
 
-sudo journalctl -n NUM  尾部最新NUM行日志
+journalctl -n NUM  尾部最新NUM行日志
 
-sudo journalctl -f  实时显示最新日志
+journalctl -f  实时显示最新日志
 ```
