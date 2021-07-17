@@ -1,5 +1,4 @@
-## postgres 创建用户和DB
-
+## postgres 用户授权
 
 - 先切换到 Linux 用户 `postgres`, 并执行 psql:
 
@@ -42,17 +41,4 @@ ALTER ROLE admin WITH SUPERUSER;
 
 ```
 postgres=# \q
-```
-
-
-## DB导出为CSV格式
-
-- 导出csv, 必须使用`SUPERUSER`权限的用户
-```sql
-COPY(select * from torder_stus) to '/tmp/tank.csv' with csv header;
-```
-
-- 导入csv
-```sql
-COPY torder_stus from '/tmp/tank.csv' with csv header;
 ```

@@ -1,4 +1,4 @@
-# makefile
+# makefile 编译
 
 ## makefile 规则
 

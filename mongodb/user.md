@@ -1,4 +1,4 @@
-# MongoDB 用户授权
+# MongoDB 授权
 
 ## 用户创建和授权
 

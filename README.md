@@ -1,11 +1,10 @@
 # Note
 
 ## 权限控制
-- [访问权限列表](access/acl.md)
-- [基于角色的访问控制](access/rbac.md)
-- [基于属性的访问控制](access/abac.md)
-- [casbin解决权限控制方案 - 介绍](access/casbin)
-- [casbin解决权限控制方案 - 配置](access/casbin)
+- [访问权限列表](auth/acl.md)
+- [基于角色的访问控制](auth/rbac.md)
+- [基于属性的访问控制](auth/abac.md)
+- [casbin](auth/casbin.md)
 
 ## TCP
 - [TCP状态迁移](tcp/state.md)
@@ -16,7 +15,6 @@
 - [时间格式](http/timezone.md)
 - [跨域共享方案](http/cors.md)
 - [跨域解决方案](http/cross-method.md)
-- [token过期解决方案](http/token.md)
 
 ## CERT
 - [TLS/SSL 证书解读](cert/ssl.md)
@@ -44,7 +42,7 @@
 - [function](mysql/function.md)
 - [show](mysql/cmd/show.md)
 
-- [时间函数](mysql/time-function.md)
+- [时间函数](mysql/time.md)
 
 ## PgSQL 
 - [table](pgsql/table.md)
@@ -60,7 +58,6 @@
 - [log配置](nginx/log.md)
 - [rewrite配置](nginx/redirect.md)
 - [upstream配置](nginx/upstream.md)
-- [虚拟主机配置](nginx/virtual-host.md)
 
 - [代理配置](nginx/nginx-proxy.md)
 - [代理缓存配置](nginx/nginx-proxy-cache.md)
@@ -74,11 +71,7 @@
 
 ## Linux
 - [vim](linux/vim.md)
-- [cmake](linux/cmake.md)
 - [io](linux/io.md)
-- [link](linux/link.md)
-- [top](linux/top.md)
-- [xargs](linux/xargs.md)
 
 
 ## DNS 
@@ -87,7 +80,6 @@
 
 ## Docker 
 - [Dockerfile文件](docker/dockerfile.md)
-- [Cgroup基础](docker/cgroup.md)
 - [docker-compose](docker/docker-compose.md)
 
 

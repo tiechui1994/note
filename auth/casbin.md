@@ -1,4 +1,47 @@
-# Model语法
+# casbin
+
+## 概述
+
+- **casbin可以做的事情:**
+
+```
+  - 支持自定义请求的格式, 默认的请求格式为 {subject, object, action}.
+  - 具有访问控制模型model 和 策略policy两个核心概念.
+  - 支持RBAC中的多层角色继承,不止主体可以有角色,资源也可以具有角色.
+  - 支持超级用户,如root或administrator, 超级用户可以不受授权策略的约束访问任意资源.
+  - 支持多种内置的操作符,如keyMatch, 方便对路径式的资源进行管理, 如 /foo/bar 可以映射到 /foo*
+```
+
+- **casbin不做的事情:**
+
+```
+  - 身份认证authentication(即验证用户的用户名,密码),casbin只负责访问控制.应该有其他专门的组件负责身份认证,
+  然后由casbin进行访问控制,二者是相互配合的关系.
+  
+  - 管理用户列表或角色列表. casbin认为由项目自身来管理用户,角色列表更为合适, 用户通常有他们的密码,但是casbin 
+  的设计思想并不是把它作为一个存储密码的容器. 而是存储RBAC方案中用户和角色之间的映射关系.
+```
+
+## 支持的模型
+
+1. **`ACL(Access Control List, 访问控制列表)`**
+2. 具有**超级用户**的ACL
+3. **没有用户的ACL:** 对于没有身份验证或用户登录的系统尤为有用.
+4. **没有资源的ACL:** 某些场景可能只针对资源的类型, 而不是单个资源, 诸如 `write-article`, `read-log`等
+   权限. 它不控制对特定文章或日志的访问.
+
+5. **`RBAC(基于角色的访问控制)`**
+6. **支持资源角色的RBAC:** 用户和资源可以同时具有角色(或组).
+7. **支持域/租户的RBAC:** 用户可以为不同的域/租户设置不同的角色集.
+
+8. **`ABAC(基于属性的权限控制):`** 支持利用`resource.Owner`这种语法糖获取元素的属性
+
+9. **`RESTful:`** 支持路径, 如 `/res/*`, `/res/:id` 和 HTTP方法, 如`GET`, `POST`, `PUT`, `DELETE`.
+
+10. **拒绝优先:** 支持允许和拒绝授权, 拒绝优先级高于允许.
+11. **优先级:** 策略规则按照先后次序确定优先级, 类似于防火墙规则.
+
+## Model语法
 
 - Model CONF至少应包含四个部分: `[request_definition]`, `[policy_definition]`, `[policy_effect]`, 
 `[matchers]`.
@@ -7,7 +50,7 @@
 
 - Model CONF 可以包含注释. 注释以`#`开头, `#`将注释整行.
 
-## request 定义
+### request 定义
 
 `[request_definition]` 部分用于request的定义, 它明确了 `e.Enforce()` 函数中参数的含义.
 
@@ -20,7 +63,7 @@ r = sub, obj, act
 但是, 可以自定义自己的请求表单, 如果不需要指定特定资源, 则可以这样定义 `sub, act`, 或者如果有两个
 访问实体, 则为 `sub sub2, obj, act`
 
-## policy定义
+### policy定义
 
 `[policy_definition]` 部分用于policy的定义, 以下文的mode配置为例:
 
@@ -51,8 +94,7 @@ policy定义.
 
 注2: policy定义中的元素始终被视为字符串对待.
 
-
-## policy effect定义
+### policy effect定义
 
 `[policy_effect]` 部分是对policy生效范围的定义, 原语定义了当多个policy rule同时匹配访问请求
 request时, 该如何对多个决策结果进行集成以实现统一决策. 以下示例展示了**一个只有一条规则生效,其余都被拒绝
@@ -91,8 +133,7 @@ e = some(where (p.eft == allow)) && !some(where (p.eft == deny))
 该effect原语表示当至少存在一个决策结果为 `allow` 的匹配规则, 且不存在决策结果为 `deny`的匹配规则时, 
 则最终决策结果为 `allow`. 这时 `allow` 授权 和 `deny`授权同时存在, 但是 `deny` 优先.
 
-
-## matchers
+### matchers
 
 `[matchers]`原语定义了策略规则如何与访问请求进行匹配的匹配器, 其本质是布尔表达式, 可以理解为request,
 policy 等原语定义了关于策略和请求的变量, 然后将这些变量代入matche原语中进行求值, 从而进行策略决策.
@@ -171,7 +212,7 @@ e.AddFunction("my_func", KeyMatchFunc)
 m = r.sub == p.sub && my_func(r.obj, p.obj) && r.act == p.act
 ```
 
-## role 定义
+### role 定义
 
 `[role_definition]`原语定义了RBAC中的角色继承关系.casbin支持RBAC系统的多个实例, 例如, 用户可以有角色和继承关系,
 而资源也可以有角色和继承关系. 这两个RBAC系统不会干扰.
@@ -215,7 +256,7 @@ casbin无法得出这个字面量到底指代用户 alice 还是角色 alice. �
 4.假设A具有角色B, B具有角色C,并且A有角色C, 这种传递性在当前版本会造成死循环.
 ```
 
-## 域租户的角色定义
+### 域租户的角色定义
 
 在casbin中的RBAC角色可以是全局域或者基于特定域的. 特定域的角色意味着当用户处于不同的域/租户群体时,
 用户所表现的角色也不尽相同. 这对于像云服务这样的大型系统非常有用, 因为用户通常分属于不同的租户群体.

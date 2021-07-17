@@ -1,4 +1,6 @@
-# Postgre 主键自增
+# postgre 操作
+
+## postgre 主键自增
 
 在 postgre 当中, 主键约束只是唯一约束和非空约束的组合.
 
@@ -53,3 +55,14 @@ CREATE TABLE t (
 
 上述的两种方式的语法是等价的, 为每一行生成一个"序列号"(serial number)
 
+## DB导出为CSV格式
+
+- 导出csv, 必须使用`SUPERUSER`权限的用户
+```sql
+COPY(select * from torder_stus) to '/tmp/tank.csv' with csv header;
+```
+
+- 导入csv
+```sql
+COPY torder_stus from '/tmp/tank.csv' with csv header;
+```

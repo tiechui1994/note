@@ -107,5 +107,3 @@ ip link set dev eth0 up
 br0:
 ip link set veth0 up
 ```
-
-
