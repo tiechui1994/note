@@ -75,4 +75,3 @@ read -p "Enter password: " -t 30 -s pwd
 
 echo "pwd: $pwd"
 ```
-

@@ -1,4 +1,4 @@
-## shell 当中的循环
+## shell 循环
 
 shell 当中循环命令存在三种, 分别是: for, while 和 until. for和while属于"当型循环", until属于"直到型循环".
 
