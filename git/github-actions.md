@@ -35,6 +35,7 @@ jobs:
         uses: actions/checkout@master # 拉取当前项目文件, 经常使用
       - name: run single-line script
         run: echo "Hello world"
+    
   second_job:
     name: second job
     runs-on: macos-latest
@@ -60,35 +61,79 @@ jobs:
 on: [push, pull_request]
 ```
 
-常见的事件种类:
+事件(event):
 
 ```yaml
-# when push BRANCH
+# when push BRANCH (WEB EVENT)
 on:
   push:
     branches:
       - master
 
-# when push TAG
+# when push TAG (WEB EVENT)
 on:
   push:
     tags:
       - 'v*'
 
-# when schedule
-on:
-  schedule:
-    - cron: 0 */6 * * *
-
-# when release EVENT
+# when release (WEB EVENT)
 on:
   release:
     types: [published]
 
-# when watch EVENT
+# when fork (WEB EVENT)
+on:
+  fork
+
+# when deployment (WEB EVENT)
+on:
+  deployment
+
+# when create tag or branch (WEB EVENT)
+on:
+  create
+
+# when delete tag or branch (WEB EVENT)
+on:
+  delete
+
+# when status (git提交的状态发生变化) (WEB EVENT)
+on:
+  status
+
+# when watch (有人查看你的github项目时) (WEB EVENT)
 on:
   watch:
     types: [started]
+
+# when schedule (SCHEDULE EVENT)
+on:
+  schedule:
+    - cron: 0 */6 * * *
+
+# when trigger event by hand [REST API] (MANUAL EVENT)
+# curl \
+#   -H "Accept: application/vnd.github.v3+json" \
+#   https://api.github.com/repos/tiechui1994/jobs/actions/workflows
+#
+# curl -X POST \
+#   https://api.github.com/repos/tiechui1994/jobs/actions/workflows/ID/dispatches \
+#   -H 'Accept: application/vnd.github.v3+json' \
+#   -H 'Authorization: token TOKEN' \
+#   -H 'Content-Type: application/json' \
+#   -d '{
+#	  "ref":"TAG|BRANCH",
+#     "inputs": {
+#        "name": "NAME",
+#        "url": "URL"
+#     }
+#   }'
+workflow_dispatch:
+  inputs:
+    xxx:
+      description: 'xxx'
+      required: true|false
+      default: ''
 ```
 
 - `jobs`, jobs 表示要执行一项或多项任务. 每一项任务必须关联一个ID(`job_id`), 例如: 案例中的 `first_job`, `second_job`
@@ -153,6 +198,8 @@ jobs:
           - 6379:6379
 ```
 
+- `strategy`, 使用 strategy 定义矩阵. 在 `matrix` 定义矩阵. 在 `matrix` 当中定下选项的键和值.
+
 - `steps`, steps 字段指定每个任务的运行步骤, 可用包含一个或多个步骤. 步骤开头使用 `-` 符号. 每个步骤可以包含的选项有,
 `name`(步骤名称), `uses`(步骤使用的 action 或 docker 镜像, 必填), `run`(步骤运行的命令, 必填), `env`(步骤需要
 的环境变量). `timeout-minutes`(超时, 单位是分钟)
@@ -169,7 +216,7 @@ action 是 Github Actions 中的重要组成部分. action 是已经编写好的
 ```yaml
 steps:
   - uses: actions/setup-node@74bc508 # commit
-  - uses: actions/setup-node@v1.2    # tag
+  - uses: actions/setup-node@v2    # tag
   - uses: actions/setup-node@master  # branch
 ```
 
@@ -195,6 +242,21 @@ steps:
     name: my-artifact
     path: path/to/artifact/world.txt
 ```
+
+- 不同版本的运行环境(使用矩阵)
+
+```yaml
+strategy:
+  matrix:
+    node: [14.x]
+
+steps:
+  - uses: actions/setup-node@v2
+    with:
+      node-version: ${{ matrix.node-version }}
+```
+
+使用到的 action 有 `actions/setup-node@v2`, `actions/setup-go@v2`, `actions/setup-python@v2`, `actions/setup-java@v2`
 
 - 系统环境变量
 
