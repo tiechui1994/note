@@ -45,4 +45,3 @@ redo log, 在事务提交时进行一次 flush 操作, 保证数据写入到磁�
 实现 MVCC.
 
 undo log 与版本:
-
