@@ -110,87 +110,139 @@ network connectivity 状态发生改变(`no connectivity`, `went online`等)
 
 1, 读取配置文件 `/etc/NetworkManager/NetworkManager.conf`, 同时会读取以下目录的配置文件:
 
-- `/usr/lib/NetworkManager/conf.d`
-- `/run/NetworkManager/conf.d`
-- `/etc/NetworkManager/conf.d`
+- `/usr/lib/NetworkManager/conf.d/NAME.conf`
+- `/etc/NetworkManager/conf.d/NAME.conf`
+- `/var/lib/NetworkManager/NetworkManager-intern.conf`
+
+> 1. `/usr/lib/NetworkManager/conf.d/NAME.conf` 最先被解析, 甚至在 NetworkManager.conf 之前.
+> 2. 可以通过添加 `/etc/NetworkManager/conf.d/NAME.conf` 文件来覆盖  `/usr/lib/NetworkManager/conf.d/NAME.conf`
+当中的配置.
+> 3. NetworkManager 可以通过 D-Bus 或其他内部操作覆盖某些用户配置选项. 这种状况下, 它会将这些更改写入到文件
+`/var/lib/NetworkManager/NetworkManager-intern.conf`. 该文件不打算由用户修改, 但它最后读取并且可以覆盖某些用户
+的配置.
 
 > `/etc/netplan` (Ubuntu18.04之后新的网络配置方式) 目录下的 yaml 文件最终会转换成 conf 文件, 存放在 
-`/run/NetworkManager/conf.d/netplan.conf`.
-> 如果一个 key 出现多次, 则使用最后一次出现的 key.
+`/run/NetworkManager/conf.d/netplan.conf`. 如果一个 key 出现多次, 则使用最后一次出现的 key.
 
 配置文件的格式:
 
 ```
+# no-mac-addr-change.conf
 [device-mac-addr-change-wifi]
 match-device=driver:rtl8723bs,driver:rtl8189es,driver:r8188eu,driver:8188eu,driver:eagle_sdio,driver:wl
 wifi.scan-rand-mac-address=no
+wifi.cloned-mac-address=preserve
+ethernet.cloned-mac-address=preserve
 ```
 
 将上面目录下所有的 `.conf` 的内容都合并成一个, 作为最终 NetworkManager 的配置. 在此过程中NetworkManger 会校验每一
 个 `[section].key` 是否合法, 如果非法, 则会忽略, 并在日志当中记录.
 
-2, 读取 state 文件
+当文件读取完成之后, 会形成一个 NetworkManger 配置文件.
+
+包含的 section 有:
+
+- `[main]`
+
+- `[keyfile]`
+
+- `[ifupdown]`
+
+- `[logging]`
+
+- `[connection]`
+
+- `[connectivity]`
+
+- `[global-dns]`
+
+全局DNS设置, 会覆盖 connection 当中的 DNS 设置
+
+1) searches, 在主机名查找期间使用的搜索域列表.
+2) options, 传递给主机名解析的选项参数列表.
+
+- `[global-dns-domain-xxx]`
+
+以 `global-dns-domain-` 前缀开头 section 可用为特定域定义全局DNS配置. `global-dns-domain-` 之后的内容指定了域
+名. 默认域名由通配符 "*" 表示. 默认域名是强制性的.
+
+1) servers, 域名解析的 DNS 主机地址列表
+
+- `[.config]`
+
+
+2, 读取 state 文件.
 
 - `/var/lib/NetworkManager/NetworkManager.state`
 
-3, netns 
+文件内容是: 
+```
+[main]
+NetworkingEnabled=true
+WirelessEnabled=true
+WWANEnabled=true
+```
 
-- 创建新的 netns (network namaespace), 参数 `(net:8, mnt:9)`
+该文件是在解析 `NetworkManager` 之后动态生成的.
 
-- 针对 lo, 
+3, 创建网卡
 
-4, monitoring
+- 创建 netns (network namaespace), 参数 `(net:8, mnt:9)`, 相当于命令 `ip netns add NAME`
 
-- `monitoring kernel firmware directory '/lib/firmware'` 
-- `monitoring ifupdown state file '/run/network/ifstate'`
+- 为网络设置进行 `link`, `address`, `route`.
 
-5, hostname
+4, 设置 hostname (`/etc/hostname` 文件的内容)
 
-- `create NMHostnameManager`
-- 设置 `hostname` 为 `/etc/hostname` 配置的内容
+5, 启动 dns-mgr.
 
-6, dns
+- 根据 `main.dns` 的配置初始化 `dns-mgr`, `init: dns=xxx, rc-manager=resolvconf, plugin=xxx`.
 
-- `create NMDnsManager`
+其中的 `xxx` 有如下的值:
 
-- 根据 `main.dns` 的配置初始化 `dns-mgr`, `init: dns=dnsmasq, rc-manager=resolvconf, plugin=dnsmasq` (
-这个 dns 使用的是 `dnsmasq`), `init: dns=systemd-resolved rc-manager=symlink, plugin=systemd-resolved`(
-这个 dns 使用的是 `systemd-resolved`)
+> `dns=default` 是 debian10 当中的配置, 这是一个默认值.
+> `dns=dnsmasq` 是 ubuntu 16.04 中的配置.
+> `dns=systemd-resolved` 是 ubuntu 18.04 之后的配置
 
-> `dnsmasq` 是 Ubuntu 16.04 当中的配置, `systemd-resolved` 是 Ubuntu 18.04 之后的配置
+5, 执行 dispatcher 脚本
 
-6, dispatcher
+- 执行 `/etc/NetworkManager/dispatcher.d` 下的脚本.
 
-- dhcp-init
+- 执行 `/etc/NetworkManager/dispatcher.d/NAME` 下的脚本.
 
-7, settings
+6, interface 解析
 
-- `timestamps-keyfile`
-- `seen-bssids-keyfile`
+- 解析 `/etc/network/interfaces` 文件.
 
-8, ifupdown
-- `management mode`
-- `interfaces file`
-- `unmanaged-specs`
-- `load connections`
+7, 根据一开始生成的 NetworkManager 配置文件, 开始逐个执行.
 
-9, settings
-- `settings-connection`
+常用的插件(plugins), 在 `[main]` 当中配置:
 
-10, new connection
-- `new connection`
+- keyfile, 通用插件. 执行 NetworkManager 所有 connection types 和 capabilities. 它在 system-connections
+中以 `ini` 风格的格式写文件.  存储的 connection 文件包含纯文本形式的 passwords, secrets 和 private keys, 因此
+它只能被root读取.
+
+- ifupdown, 该插件用于 Debian 和 Ubuntu 发行版本, 并从 `/etc/network/interfaces` 读取以太网和WIFI连接. 这个插
+件是只读的; 使用此插件时, 从 NetworkManager 添加的任何 connection (any types) 都将使用 keyfile 保存.
+
+- ifcfg-rh, 该插件用于 Fedora 和 Red Hat 发行版本. 用于从标准 `/etc/sysconfig/network-scripts/ifcfg-*` 文件
+读取和写入配置. 目前支持读取 `Ethernet, Wi-Fi, InfiniBand, VLAN, Bond, Bridge, Team` 类型的 connection. 启
+用 ifcfg-rh 插件会隐式启用 ibft 插件(如果可用). 可用通过添加 `no-ibft` 来禁用.
 
 
-4, 按照配置文件的优先级, 初始化
+### 修改系统 DNS 的方法
 
-到此为止, NetworkManager 已经启动, 接下来是初始化 `network interface device`
+1) 修改 NetworkManager.conf
 
-5, 解析 `/etc/network/interfaces`, `/etc/network/interfaces.d` 下的 `interface` 配置文件.
+```toml
+[global-dns-domain-*]
+    servers=8.8.4.4,114.114.114.114
+```
 
-设置 `management mode`, `managed` 或者 `unmanaged`
+2) 修改 interfaces
 
-6, 创建 `network interface device`
-
+```
+dns-nameservers 8.8.4.4 4.4.4.4
+```
 
 ```
 <trace> [1598180286.9161] platform-linux: event-notification: RTM_NEWLINK, flags multi, seq 1, in-dump: 1: lo <UP,LOWER_UP;loopback,up,running,lowerup> mtu 65536 arp 772 loopback? not-init addrgenmode eui64 addr 00:00:00:00:00:00 rx:114675,294937541 tx:114675,294937541
