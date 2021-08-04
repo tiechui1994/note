@@ -1,3 +1,5 @@
+## vue 相关问题
+
 ### vue route 路由跳转传递参数
 
 - 使用 `$router` 方式
@@ -104,7 +106,6 @@ export default {
 
 2. 上述的参数传递过程中, 在跳转到目标页面是没有刷新操作的.
 
-
 ### vue 路由跳转
 
 路由参数类型 `Location`, `Route`:
@@ -148,3 +149,150 @@ Route {
 - `this.$router.resolve(Location, Route)`
 
 > 解析路由, Location是需要跳转的位置, Route是当前的路由信息
+
+### vue 组件事件无法使用
+
+例如:
+
+```html
+<div>
+    <icon @click="clickFunc"></icon>
+</div>
+```
+
+> icon 组件的点击事件无法被执行.
+
+解决方法:
+
+ ```html
+<div>
+    <icon @click.native="clickFunc"></icon>
+</div>
+```
+
+### vue 组件之间方法调用
+
+- 父组件调用子组件的方法
+
+1) 直接调用
+
+```
+this.$refs["xxx"].func()
+```
+
+
+- 子组件调用父组件的方法
+
+1) 在子组件中通过 `this.$parent.event` 来调用父组件方法.
+
+```
+<!--parent-->
+<template>
+    <child></child>
+</template>
+<script>
+    export default {
+       components: {
+          child
+       },
+       methods: {
+          parentMethod() {
+             console.log('parent');
+          }
+       }
+    }
+</script>
+
+<!--child-->
+<template>
+    <button @click="childMethod()">点击</button>
+</template>
+<script>
+    export default {
+       methods: {
+          childMethod() {
+              this.$parent.parentMethod();
+          }
+       }
+    }
+</script>
+```
+
+2) 父组件把方法作为参数传入子组件, 子组件直接调用
+
+```
+<!--parent-->
+<template>
+    <child :parentMethod="parentMethod"></child>
+</template>
+<script>
+    export default {
+       components: {
+          child
+       },
+       methods: {
+          parentMethod() {
+             console.log('parent');
+          }
+       }
+    }
+</script>
+
+<!--child-->
+<template>
+    <button @click="childMethod()">点击</button>
+</template>
+<script>
+    export default {
+       ptops:{
+           parentMethod: {
+              type: Function
+           }
+       },
+       methods: {
+          childMethod() {
+              this.parentMethod();
+          }
+       }
+    }
+</script>
+```
+
+> 首先父组件将函数作为参数传入子组件, 接着, 子组件触发事件 -> 子组件调用传入的函数参数
+
+3) 在子组件使用 `$emit` 触发一个事件, 父组件监听该事件. 在传递事件过程中可以携带参数.
+
+```
+<!--parent-->
+<template>
+    <child @parentMethod="parentMethod"></child>
+</template>
+<script>
+    export default {
+       components: {
+          child
+       },
+       methods: {
+          parentMethod() {
+             console.log('parent');
+          }
+       }
+    }
+</script>
+
+<!--child-->
+<template>
+    <button @click="childMethod()">点击</button>
+</template>
+<script>
+    export default {
+       methods: {
+          childMethod() {
+              this.$emit('parentMethod');
+          }
+       }
+    }
+</script>
+```
+
+> 首先父组件监听事件, 接着, 子组件触发事件 -> 父组件接收事件 -> 执行
