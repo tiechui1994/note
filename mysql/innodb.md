@@ -130,12 +130,80 @@ Buffer Pool 被划分为page. 使用链表的方式管理页面. 使用 LRU 算�
 用. 类似地, 由预读后台线程加载并仅访问移除的页面将被移动到新子链表的头部. 这些情况可能会将经常使用的页面推到旧子列表中,在
 那里被清除. 
 
+- Bufer Pool配置
 
+1. 配置 InnoDB Bufer Pool大小
 
+2. 配置多个Bufer Pool实例
 
+3. 使用 Bufer Pool Scan Resistant
 
+4. 配置 InnoDB Buffer Pool Prefetching (Read-Ahead). 
 
+5. 配置 Buffer Pool Flushing. 控制后台刷新已经根据工作负载动态调整刷新速率.
 
+6. 保存和恢复Buffer Pool状态. 保留Buffer Pool状态避免服务器重启后的长时间预热.
+
+- 使用 InnoDB 标准监视器监测Buffer Pool
+
+命令: `SHOW ENGINE InnoDB STATUS`. 在 `BUFFER POOL AND MEMORY` 当中输出.
+
+```
+...
+----------------------
+BUFFER POOL AND MEMORY
+----------------------
+Total large memory allocated 2198863872
+Dictionary memory allocated 776332
+Buffer pool size   131072
+Free buffers       124908
+Database pages     5720
+Old database pages 2071
+Modified db pages  910
+Pending reads 0
+Pending writes: LRU 0, flush list 0, single page 0
+Pages made young 4, not young 0
+0.10 youngs/s, 0.00 non-youngs/s
+Pages read 197, created 5523, written 5060
+0.00 reads/s, 190.89 creates/s, 244.94 writes/s
+Buffer pool hit rate 1000 / 1000, young-making rate 0 / 1000 not
+0 / 1000
+Pages read ahead 0.00/s, evicted without access 0.00/s, Random read
+ahead 0.00/s
+LRU len: 5720, unzip_LRU len: 0
+I/O sum[0]:cur[0], unzip sum[0]:cur[0]
+...
+```
+
+| 名词 | 含义 |
+| --- | --- |
+| Total memory allocated | 缓存池总内存(字节) |
+| Buffer pool size | 分配给缓存池的总页面大小 |
+| Free buffers | 缓存池空闲链表的总大小(页) |
+| Database pages | 缓存池LRU链表总大小(页) |
+| Old database pages | 缓存池old LRU子链表的总大小(页) |
+| Modified db pages | 当前在缓存池中修改的页数 |
+| Pending reads | 等待读入缓存池的页数量 |
+| Pending writes LRU | 要从LRU链表尾部写入旧脏数据页数 |
+| Pending writes flush list | 检查点期间要刷新的缓存池页数量 |
+| Pending writes single page | 缓存池当中等待写入的独立页面的大小 |
+| Pages made young | LRU链表中年轻的页面总数(移动到"new"子链表的头部) |
+| Pages made not young | LRU链表中年老的页面总数(保留在"old"子链表) |
+| youngs/s | 每秒平均访问LRU链表导致页面变"年轻"的旧页面. 该指标仅适用于old页面. 它基于页面访问次数. |
+| non-youngs/s | 每秒平均访问LRU链表导致页面变"年老"的旧页面. 该指标仅适用于old页面. 它基于页面访问次数. |
+| Pages read | 从缓存池读取的总页数 |
+| Pages created | 在缓存池中创建的页总数 |
+| Pages written | 在缓存池写入的总页数 |
+| reads/s | 平均每秒从缓存池读取的页数 |
+| create/s | 平均每秒创建缓存池页的数 |
+| write/s | 平均每秒缓存池写入的页数 |
+| Buffer pool hit rate | 从缓存池读取的页面与从磁盘读取页面的命中比率 |
+| young-making rate | 页面访问的平均命中率导致页面年轻. 考虑了所有缓存池页面访问, 而不仅仅是old子链表的页面访问. |
+| not(young-making) | 页面访问的平均命中率未导致页面年轻 |
+
+> - `youngs/s`, 如果在没有发生大扫描时看到非常低的值, 考虑减少延迟时间或用于增加old子链表的缓存池的百分比. 增加old子
+链表百分比, 使得该子链表的页面移动到尾部所需的时间变长, 这增加了再次访问这些页面并使其变得年轻的可能性.
+> - `non-young/s`, 在执行大型表扫描时没有看到更高的值. 请增加延迟时间.
 
 
 
