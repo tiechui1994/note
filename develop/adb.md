@@ -1,6 +1,6 @@
 # adb 常用的小技巧
 
-### 修改手机的全局代理(root权限)
+## 修改手机的全局代理(root权限)
 
 - 设置
 
@@ -29,7 +29,7 @@ adb shell settings put global http_proxy :0
 adb shell settings put global https_proxy :0
 ```
 
-### 私有 dns 
+## 私有 dns 
 
 - 开启 `private_dns_mode` 的模式为 `hostname`, 并且设置域名主机为 `one.one.one.one`
 
