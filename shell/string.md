@@ -1,4 +1,4 @@
-## shell 下字符串处理
+## Shell 字符串
 
 使用字符串的过程中, 既可以使用双引号, 也可以使用单引号, 也可以什么也不用.
 
@@ -123,10 +123,10 @@ echo "存在的变量2: ${!w@}"
 | `${string:pos}`       | 在`$string`中,从`$pos`开始提取子串 |
 | `${string:pos:len}`   | 在`$string`中,从`$pos`开始提取长度为`$len`的子串 |
 |                       |                                                             |
-| `${var#*string}`      | 从左到右截取 `第一个string后的字符串` |
-| `${var##*string}`     | 从左到右截取 `最后一个string后的字符串` |
-| `${var%string}`       | 从右到左截取 `第一个string后的字符串` |
-| `${var%%string}`      | 从右到左截取 `最后一个string后的字符串` |
+| `${var#*string}`      | 从左到右截取 `第一个string后的字符串`, `*`代表任意多个字符串 |
+| `${var##*string}`     | 从左到右截取 `最后一个string后的字符串`, `*`代表任意多个字符串 |
+| `${var%string}`       | 从右到左截取 `第一个string后的字符串`, `*`代表任意多个字符串 |
+| `${var%%string}`      | 从右到左截取 `最后一个string后的字符串`, `*`代表任意多个字符串 |
 |                       |                                                             |
 | `${string/sub/repl}`  | 使用`$repl`来替换第一个匹配`$sub`的子串(非正则) |
 | `${string//sub/repl}` | 使用`$repl`来替换所有匹配`$sub`的子串(非正则) |

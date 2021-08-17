@@ -1,4 +1,4 @@
-## MySQL 字符串类型
+## MySQL 字符串
 
 字符串数据类型为 `CHAR`, `VARCHAR`, `BINARY`, `VARBINARY`, `BLOB`, `TEXT`.
 
@@ -171,9 +171,6 @@ ENUM 值根据其索引排序, 该索引号取决于列规范列出的枚举成�
 
 2) 确保通过编码 `ORDER BY CAST(col AS CHAR)` 或 `ORDER BY CONCAT(col)` 对列进行词汇排序, 而不是按照索引号排序.
 
-
-
-
 ### SET 类型
 
 SET 是一个字符串对象, 可以具有0个或多个值, 每个值都必须从创建 table 时指定的允许列中选择. 由多个集合成员组成的 SET 列
@@ -208,4 +205,3 @@ SELECT * FROM myset WHERE col LIKE '%value%';
 第二条语句查询的是 `col` 是 'a,d' 的列(确定匹配). 需要注意, 如果匹配写成 'd,a', 则结构可能不一样.
 
 第三条语句查询的是模糊匹配.
-

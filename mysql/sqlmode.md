@@ -1,4 +1,4 @@
-# sqlmode 解析
+# SQL MODE
 
 ## sql_mode
 

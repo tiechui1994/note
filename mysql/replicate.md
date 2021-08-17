@@ -1,4 +1,4 @@
-## MySQL 复制
+# MySQL replication
 
 ### MySQL 主从原理
 
@@ -51,7 +51,6 @@ log 文件名和位置保存到master-info文件中, 以便下一次读取具体
 - slave的SQl线程检测到relay log中新增加了内容后, 会将relay log的内容解析成和master节点上实际执行过
 的操作, 并在本地数据库当中执行.
 
-
 ### 复制格式(binlog的三种记录模式)
 
 a) 基于SQL语句的复制(SBR), 默认
@@ -101,7 +100,6 @@ RBR:
 
 > 如果采用GRANT, REVOKE, SET PASSWORD等管理语句来做的话, 那么无论如何都采用SBR模式记录
 
-
 ### 同步模式
 
 - 异步模式(async-mode)
@@ -148,7 +146,6 @@ binlog至少传输到了一个从节点上, 不能保证从节点将此事务更
 5) 如果没有记录, 从节点就会从 relay log中执行该GTID的事务, 记录到bin log
 
 6) 在解析过程中会判断是否包含有主键, 如果没有就使用二级索引, 如果还没有就用全部扫描
-
 
 ## 主从复制关键点
 

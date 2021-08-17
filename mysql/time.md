@@ -1,4 +1,4 @@
-# MySQL 时间类型解析
+# MySQL 时间
 
 MySQL 表示时间值的日期和时间类型是`DATE`, `TIME`, `DATETIME`, `TIMESTAMP`. 每个时间类型都有一系列有
 效值, 以及当遇到了 MySQL *无法表示的无效值* 时可以使用的"零"值. `TIMESTAMP` 类型具有特殊的自动更新行为, 
