@@ -1,4 +1,4 @@
-# css 选择器
+# CSS 选择器
 
 > 注: 以下的 `element` 可以是 **tag**, **class**, 或者 **id**
 
@@ -26,7 +26,6 @@ eg: `[target=_blank]`, 选择所有 `target`属性值为 "_blank" 的元素.
 
 eg: `a[target=_blank]`, 选择所有 a 标签`target`属性值为 "_blank" 的元素.
 
-
 ## 分组选择器
 
 - 选择器列表: 将不同的选择器组合在一起的方法, 它选择所有能被列表中任意一个选择器选中的节点. 分隔符是 `,`
@@ -41,37 +40,14 @@ eg: `div, span` 会同时匹配 `<span>` 元素和 `<div>` 元素.
 
 语法: **A B**, 其中 A, B 是选择器. 优先级:1
 
-eg: `div p`, 选择 `<div>` 元素内部的所有 `<p>` 元素
-
-> 言外之意, div 和 p 是父子关系
-
-```
-<style>
-div > div {
-    color: red;
-}
-
-div > p {
-    color: blue;
-}
-</style>
-
-<div>
-   <div> 我是第一个div </div>
-   <p> 我是第一个p </p> 
-   <p> 我是第二个p  </p> 
-   <div> 我是第二个div </div>
-</div>
-```
-
-![image](/images/develop_css_contains.png)
+eg: `div p`, 匹配所有位于任意 `<div>` 元素之内的 `<p>` 元素.
 
 
 - 直接子代组合器: 组合器选择前一个元素的直接子代的节点. 分隔符是`>`.
 
 语法: **A > B**, 其中 A, B 是选择器. 优先级:2
 
-eg: `div > p`, 选择 `<div>` 元素内部所有的 `<p>` 元素.
+eg: `div > p`, 匹配**直接嵌套**在 `<div>` 元素内的所有 `<p>` 元素.
 
 > 言外之意, div 和 p 是父子关系
 
@@ -100,17 +76,17 @@ div > p {
 
 语法: **A ~ B**, 其中 A, B 是选择器.
 
-eg: `p ~ span`, 匹配同一父元素下, `<p>` 元素后的所有 `<span>` 元素.
+eg: `p ~ span`, 匹配**同一父元素**下, `<p>` 元素后的所有 `<span>` 元素.
 
 - 紧邻兄弟组合器: 组合器选择相邻元素, 即后一个元素紧跟前一个之后, 并且共享同一个父节点. 分隔符是`+`.
 
-语法: **A ~ B**, 其中 A, B 是选择器.
+语法: **A + B**, 其中 A, B 是选择器.
 
-eg: `div + p`, 选择紧跟在 `<div>` 元素之后的第一个 `<p>` 元素.
+eg: `div + p`, 匹配所有**紧邻**在 `<div>` 元素后的 `<p>` 元素.
 
 ```
 <style>
-div > p {
+div + p {
     color: blue;
 }
 </style>
@@ -130,8 +106,7 @@ div > p {
 
 语法: **A || B**, 其中 A, B 是选择器.
 
-eg: `col || td` 匹配所有 `<col>` 作用域内的 `<td>` 元素. 
-
+eg: `col || td`, 匹配所有 `<col>` 作用域内的 `<td>` 元素. 
 
 ## 伪选择器
 
@@ -306,3 +281,105 @@ eg: `p:nth-of-type(2)` 选择属于 *其父元素第二个 `<p>` 元素* 的 *�
 - 伪元素: 伪元素用于表示无法用 HTML 语义表达的实体. 分隔符是 `::`
 
 eg: `p::first-line` 匹配所有 `<p>` 元素的第一行.
+
+# 常用的CSS技巧
+
+1. 多边形函数: 
+
+```
+polygon( percentage | length);
+```
+
+函数接收两个百分比或长度, 用于保存多边形大小的值.
+
+```
+<style>
+    img {
+        width: 200px;
+        height: 200px;
+        clip-path: polygon(0 0, 100% 50%,0 100%)
+    }
+</style>
+
+<div>
+    <img src="https://cdn.pixabay.com/photo/2021/08/01/12/58/beach-6514331_960_720.jpg">
+<div>
+```
+
+![image](/images/develop_css_polygon.png)
+
+可以使用 `polygon` 的属性主要包括: `clip-path`(绘制路径), `basic-shape`.
+
+> basic-shape 属性的常用值:
+> - `inset(<length-percentage>{1,4} [ round <border-radius> ])` 定义一个矩形. 分别对应top,right,bottom,left
+的建材位置, 以及圆角.
+> - `circle(radius, [at postion])` 定义一个圆, radius 是半径
+> - `ellipse(xradius yradius [at postion])` 定义一个椭圆, xradius, yradius 分别是 x, y轴半径
+> - `polygon(fill-rule)`, 定义多边形, fill-rule 表示多边形的轨迹, 以点表示.
+
+2. 计算函数:
+
+calc 函数允许在声明 CSS 属性值时执行一些计算. 使用场合: length, frequency, angle, time, number, interger, 
+percentage.
+
+```
+calc()
+```
+
+eg:
+
+```
+// percentage
+width: calc(100% - 100px);
+
+// length
+font-size: calc(1.5rem + 3vw);
+```
+
+3. `@media` 使用
+
+基于给定的规则进行媒体查询.
+
+```
+@media <media-query-list> {
+    <css-style>
+}
+```
+
+eg:
+
+```
+@media only screen and (max-width:100px) {
+  body { font-size: 10pt; }
+}
+
+@media print {
+  body { font-size: 10pt; }
+}
+```
+
+4. `@font-face` 使用
+
+指定一个用于显示文本的自定义字体; 字体年能从远程服务器或本地安装的字体加载. 如果提供了 local() 函数, 从用户本地查找指定的字
+体名, 并且找到了一个匹配项, 本地字体就会被使用. 否则, 字体会使用 url() 函数下载的资源.
+
+```
+@font-face {
+    font-family: <family-name>;
+    src: <src>;
+}
+```
+
+eg:
+
+```
+@font-face {
+    font-family: "Open Sans";
+    src: url("/fonts/OpenSans-Regular-webfont.woff2") format("woff2"),
+         url("/fonts/OpenSans-Regular-webfont.woff") format("woff");
+}
+
+body {
+    font-family: "Open Sans", serif;
+}
+```
