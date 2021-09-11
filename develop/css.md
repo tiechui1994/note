@@ -14,17 +14,48 @@
 
 - 属性选择器: 按照给定的属性, 选择所有匹配的元素.
 
-1) **[attribute]** 优先级:2
+1) **[attr]**, 表示带有 attr 命名的属性的元素.
 
-eg: `[target]`, 选择所有带 `target` 属性的元素.
+2) **[attr=value]**, 表示带有 attr 命名的属性的元素, 且属性值为 value 的元素.
 
-2) **[attribute=value]** 优先级:2
+3) **[attr*=value]**, 表示带有 attr 命名的属性的元素, 并且属性值至少包含一个value值的元素.
 
-eg: `[target=_blank]`, 选择所有 `target`属性值为 "_blank" 的元素.
+4) **[attr~=value]**, 表示带有 attr 命名的属性的元素, 并且该属性是一个以空格作为分隔的值列表, 其中至少有一个值为 value
 
-3) **element[attribute=value]**
+5) **[attr^=value]**, 表示带有 attr 命名的属性的元素, 并且属性值是以 "value" 结尾的元素.
 
-eg: `a[target=_blank]`, 选择所有 a 标签`target`属性值为 "_blank" 的元素.
+6) **[attr$=value]**, 表示带有 attr 命名的属性的元素, 并且属性值是以 "value" 开头的元素.
+
+7) **[attr|=value]**, 表示带有 attr 命名的属性的元素, 属性值为 "value", 或以 "value-"为前缀开头.
+
+eg:
+
+```
+/* 存在title属性的<a> 元素 */
+a[title] {
+  color: purple;
+}
+
+/* 存在href属性并且属性值匹配"https://example.org"的<a> 元素 */
+a[href="https://example.org"] {
+  color: green;
+}
+
+/* 存在href属性并且属性值包含"example"的<a> 元素 */
+a[href*="example"] {
+  font-size: 2em;
+}
+
+/* 存在href属性并且属性值结尾是".org"的<a> 元素 */
+a[href$=".org"] {
+  font-style: italic;
+}
+
+/* 存在class属性并且属性值包含以空格分隔的"logo"的<a>元素 */
+a[class~="logo"] {
+  padding: 2px;
+}
+```
 
 ## 分组选择器
 
