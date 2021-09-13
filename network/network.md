@@ -185,7 +185,7 @@ symlink: 符号链接, 如果 resolv.conf 是一个普通文件, 在更新时 Ne
 一个符号链接, NetworkManager 会忽略它, 除非该符号链接指向 /run/NetworkManager/resolv.conf, 这种状况下, 符号链接
 也会被更新. 用户可以使用符号链接替换以摆脱 NetworkManager 管理 resolv.conf. 在 1.20.x 版本当中的默认配置.
 
-file: NetworkManager 会写入 /ect/resolv.conf 当中. 在任何情况下, 现有的符号链接都将不会被文件替换.
+file: NetworkManager 会写入 /ect/resolv.conf 当中. 在任何情况下, 现有的符号链接都不会被文件替换.
 
 注: 在低版本的 NetworkManager 当中, 会用 plain file 替换悬空的符号链接.
     在高版本的 NetworkManager 当中, 如果它找到符号链接 resolv.conf 的目标文件, 目标文件将会被更新.
@@ -271,13 +271,17 @@ WWANEnabled=true
 
 5. 启动 dns-mgr.
 
-- 根据 `main.dns` 的配置初始化 `dns-mgr`, `init: dns=xxx, rc-manager=resolvconf, plugin=xxx`.
+- 根据 `main.dns` 的配置初始化 `dns-mgr`, `init: dns=DNS, rc-manager=RC, plugin=PLUGIN`.
 
-其中的 `xxx` 有如下的值:
+这里的 dns, rc-manager, plugin 值对应是前面的 `[main]` 当中的配置选项.
 
 > `dns=default` 是 debian10 当中的配置, 这是一个默认值.
 > `dns=dnsmasq` 是 ubuntu 16.04 中的配置.
-> `dns=systemd-resolved` 是 ubuntu 18.04 之后的配置
+> `dns=systemd-resolved` 是 ubuntu 18.04 之后的配置.
+
+> 如果 dns 是 dnsmasq, 形成的 dns 的配置文件来自两部分: /etc/NetworkManager/NetworkManager.conf 当中的 `dns`
+相关section 和 /etc/NetworkManager/dnsmasq.d/*.conf 当中的 dnsmasq 配置文件. 
+> dnsmasq 相关的配置, 参考后面的 dnsmasq 配置.
 
 6. 执行 dispatcher 脚本
 
@@ -306,3 +310,107 @@ WWANEnabled=true
 ```
 dns-nameservers 8.8.4.4 4.4.4.4
 ```
+
+## 本地 DNS 解析器配置
+
+### dnsmasq
+
+- `resolv-file` 配置 dnsmasq 上游的 DNS 服务器. 如果不开启就使用 Linux 主机默认的 `/etc/resolve.conf` 里的
+nameserver.
+
+```
+resolv-file=/etc/resolv.dnsmasq.conf
+```
+
+配置 `/etc/resolv.dnsmasq.conf` 内容:
+
+```
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+```
+
+- `add-hosts`, 增加自定义 hosts 文件位置.
+
+```
+add-hosts=/etc/dnsmasq.hosts
+```
+
+在 `/etc/dnsmasq.hosts` 文件中添加 DNS 记录.
+
+```
+192.168.1.100 web01.mike.com web01
+192.168.1.100 web02.mike.com web02
+```
+
+- `server` 指定默认查询的上游服务器. `address` 设置本地DNS记录.
+
+```
+# 指定dnsmasq默认查询的上游服务器.
+server=8.8.8.8
+server=8.8.4.4
+
+# 把所有 .cn 的域名全部通过 114.114.114.114 这台国内DNS服务器来解析
+server=/cn/114.114.114.114
+
+# 给*.apple.com和taobao.com使用专用的DNS
+server=/taobao.com/223.5.5.5
+server=/.apple.com/223.5.5.5
+
+# 把www.hi-linux.com解析到特定的IP
+address=/www.hi-linux.com/192.168.101.107
+
+在这里hi-linux.com相当于*.mike.com泛解析
+address=/hi-linux.com/192.168.101.107
+```
+
+- `domain`, 给dhcp服务赋予域名.
+
+```
+# 给dhcp服务赋予域名
+domain=thekelleys.org
+
+# 给dhcp的一个子域名赋予一个不同的域名
+domain=wirless.thekelleys.org,192.168.2.0/24
+```
+
+> dnsmasq 选择最快的上游DNS服务器.
+
+```
+all-servers
+server=8.8.8.8
+server=8.8.4.4
+```
+
+`all-servers` 表示对以下设置的所有的 server 发起查询, 选择回应最快的一条作为查询记录.
+
+> 提升 dnsmasq 解析速度. 
+
+一般状况下, dnsmasq 需要经常载入并读取 `/etc/hosts` 文件, 这样会造成性能下降. 可以指定一个共享内存的文件, 比如下面案例
+当中的 `/dev/shm/dnsrecord.txt`, 这样可以提升性能. 但是由于内存非持久性, 需要定期同步某个文件到内存文件当中.
+
+```
+no-hosts
+addon-hosts=/dev/shm/dnsrecord.txt
+```
+
+`no-hosts` 表示不使用 `/etc/hosts` 文件.
+
+解决同步问题:
+
+```
+# 开机启动
+echo "cat /etc/hosts > /dev/shm/dnsrecord.txt" >> /etc/rc.local
+
+# 定时同步
+*/10 * * * * cat /etc/hosts > /dev/shm/dnsrecord.txt
+```
+
+### systemd-resolved
+
+配置文件: `/etc/systemd/resolved.conf` 或 `/etc/systemd/resolved.conf.d/*.conf`.
+
+systemd-resolved有4种不同方式来处理DNS解析, 其中2种是主要使用模式:
+
+- local DNS stub 模式
+
+
