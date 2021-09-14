@@ -107,6 +107,8 @@ network connectivity 状态发生改变(`no connectivity`, `went online`等)
 
 ## NetworkManger 启动流程分析
 
+[文档](https://developer-old.gnome.org/NetworkManager/stable/NetworkManager.conf.html)
+
 1. 读取配置文件 `/etc/NetworkManager/NetworkManager.conf`, 同时会读取以下目录的配置文件:
 
 - `/usr/lib/NetworkManager/conf.d/NAME.conf`
@@ -177,17 +179,23 @@ resolv.conf 将由 dnssec-trigger 守护进程管理.
 none: NetworkManager 不会修改 resolv.conf. 这意味着 rc-manager 不受管理.
 ```
 
+注意: 当 plugin 是 `dnsmasq`, `systemd-resolved`, 和 `unbound` 会缓存本地域名服务器. 因此. 当 NetworkManager
+写入 `/run/NetworkManager/resolv.conf` 和 `/etc/resolv.conf` (根据 rc-manager的设置) 时, 域名服务器只有localhost.
+NetworkManager 还会写入一个文件 `/run/NetworkManager/no-stub-resolv.conf`, 其中包含推送到 DNS 插件的原始域名服
+务器.
+
 3) rc-manager, 设置 DNS (resolv.conf) 的管理模式. 默认值取决于 NetworkManager 的编译选项, 无论如何设置, NetworkManager
-始终将 resolv.conf 写入其运行时状态(state)文件 /run/NetworkManager/resolv.conf 当中.
+始终将 resolv.conf 写入其运行时状态文件 `/run/NetworkManager/resolv.conf` 当中. 如果使用设置 `dns=none` 或使文件
+`/etc/resolv.conf` 不可变(`chattr +i`), NetworkManager 将忽略此设置并且始终选择 unmanaged.
 
 ```
-symlink: 符号链接, 如果 resolv.conf 是一个普通文件, 在更新时 NetworkManager 会替换该文件. 如果 resolv.conf 是
-一个符号链接, NetworkManager 会忽略它, 除非该符号链接指向 /run/NetworkManager/resolv.conf, 这种状况下, 符号链接
-也会被更新. 用户可以使用符号链接替换以摆脱 NetworkManager 管理 resolv.conf. 在 1.20.x 版本当中的默认配置.
+symlink: 符号链接, 如果 resolv.conf 是一个普通文件或不存在, 在更新时 NetworkManager 会替换该文件. 如果 resolv.conf 
+是一个符号链接, NetworkManager 会忽略它, 除非该符号链接指向 "/run/NetworkManager/resolv.conf", 否则, 符号链接将
+会被更新. 用户可以使用符号链接替换以摆脱 NetworkManager 管理 resolv.conf. 
 
 file: NetworkManager 会写入 /ect/resolv.conf 当中. 在任何情况下, 现有的符号链接都不会被文件替换.
 
-注: 在低版本的 NetworkManager 当中, 会用 plain file 替换悬空的符号链接.
+注: 在低版本的 NetworkManager 当中, 会用纯文件替换悬空的符号链接.
     在高版本的 NetworkManager 当中, 如果它找到符号链接 resolv.conf 的目标文件, 目标文件将会被更新.
 
 resolvconf: NetworkManager 将运行 resolvconf 来更新 DNS 配置. 在 1.2.x 版本当中的默认配置.
@@ -201,6 +209,11 @@ unmanaged: 不会创建 /ect/resolv.conf 文件.
 和 dhcpcd 选项需要安装指定的客户端. internal 使用内置的 DHCP 客户端.
 
 如果此选项缺失, 会按照 dhclient, dhcpcd, internal 的顺序查找可用的DHCP客户端.
+
+5) systemd-resolved 将连接 DNS 配置发送到 `systemd-resolved`. 默认值是 "true". 注意, 此设置是对 dns 的补充. 可
+以在设置 dns 为其它插件时, 启用 systemd-resolved, 或者 dns 设置为 systemd-resolved 时, 将系统解析器配置为使用 
+systemd-resolved. 
+
 
 - `[keyfile]`
 
@@ -412,5 +425,58 @@ echo "cat /etc/hosts > /dev/shm/dnsrecord.txt" >> /etc/rc.local
 systemd-resolved有4种不同方式来处理DNS解析, 其中2种是主要使用模式:
 
 - local DNS stub 模式
+
+使用 systemd DNS stub 文件 `/run/systemd/resolve/stu-resolv.conf`, 这个文件只包含 local stub `127.0.0.53`
+作为唯一 DNS 服务器, 以及一系列 search domains. 这是建议使用的操作模式. 原先传统的 `/ect/resolv.conf` 已经通过
+systemd-resolved 管理改为软连接到 DNS stub 文件.
+
+而且, `/run/systemd/resolve/resolv.conf` 配置则是 systemd-resolved 使用的上级 DNS 服务器, 也就是转发 DNS 请求
+给上级 DNS.
+
+- protect resolv.conf 模式
+
+在使用 protect 模式时, `/etc/resolv.conf` 依然存在, 而且可以由其它软件包管理. 此时 systemd-resolved 仅仅是这个文件
+的客户端.
+
+#### 自动管理 DNS
+
+systemd-resolved 默认可以和 NetworkManager 协作管理 `/etc/resolv.conf`, 不需要单独配置. 不过, 如果使用 DHCP 和
+VPN 客户端, 则会使用 resolvconf 程序设置 DNS 和 search domains.
+
+#### 手动配置 DNS
+
+在 local DNS stu 模式下, 要定制 DNS 服务器, 需要设置 `/etc/systemd/resolved.conf` 配置:
+
+```
+[Resolve]
+DNS=8.8.8.8 114.114.114.114
+FallbackDNS=127.0.0.1
+Domains=~.
+#LLMNR=no
+#MulticastDNS=no
+#DNSSEC=no
+#DNSOverTLS=no
+#Cache=yes
+#DNSStubListener=yes
+#ReadEtcHosts=yes
+```
+
+> 如果 systemd-resolved 没有从 NetworkManager 收到 DNS 服务器地址, 并且手工配置了 `FallbackDNS`, 那么它将使用配
+置的 `FallbackDNS` 地址解析域名.
+
+
+systemd-resolved 四种方式处理 `/etc/resolv.conf`:
+
+1. systemd-resolved 实时更新 `/run/systemd/resolve/stub-resolv.conf` 文件以确保兼容传统的 Linux 程序. 将软连
+接 `/etc/resolv.conf` 指向该文件. 该文件将 127.0.0.53 作为唯一的 DNS 服务器, 并包含 systemd-resolved 使用的搜索
+域列表. 搜索域列表将会保持实时更新. 推荐使用该方式.
+
+2. 一个静态的 `/usr/lib/systemd/resolv.conf` 文件, 此文件包含一个唯一的 127.0.0.53 DNS 服务器. 将软连接文件 
+`/etc/resolv.conf` 指向该静态文件. 注意: 该静态文件不包含任何搜索域.
+
+3. systemd-resolved 实时更新 `/run/systemd/resolve/resolv.conf` 文件以确保兼容传统的 Linux 程序. 将软连接 
+`/etc/resolv.conf` 指向该文件. 注意: 该文件只包含所有已知的全局 DNS 服务器, 而不包含针对特定网络接口设置的 DNS 服务器.
+
+4. 其它软件包或系统管理员维护 `/etc/resolv.conf` 内容. 
 
 
