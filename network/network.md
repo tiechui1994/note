@@ -49,18 +49,18 @@ NetworkManager 守护程序试图通过管理主网络连接和其他网络接�
 当网络连接可用时, NetworkManager会连接该网络设备, 除非该行为被禁用.
 
 为了响应网络事件, NetworkManager 将按字母顺序在 `/etc/NetworkManager/dispatcher.d` 目录或子目录中执行脚本. 每
-个脚本应该是 `root` 拥有的常规可执行文件. 此外, 它允许 `group` 或 `other` 的用户写入, 也不可以 `setuid`.
+个脚本应该是 `root` 权限可执行文件. 此外, 它允许 `group` 或 `other` 的用户写入.
 
 每个脚本都接收两个参数, 第一个是操作发生的设备的接口名称, 第二个是操作. 对于设备操作, 该接口是适合IP配置的内核接口的名称.
-因此, 如果适用, 它可以是 `VPN_IP_IFACE`, `DEVICE_IP_IFACE`, `DEVICE_IFACE`. 对于 `hostname`, 设备名称始终为
-"none", 对于 `connectivity-change`, 该名称为空.
+因此, 如果适用, 它可以是 `VPN_IP_IFACE`, `DEVICE_IP_IFACE`, `DEVICE_IFACE`. 对于 `hostname` 设备名称始终为
+"none", 对于 `connectivity-change` 该名称为空.
 
-*Action* 是:
+### Action
 
 - **pre-up**
 
 该 `interface` 已连接到网络, 但尚未完全激活. 必须将处理此事件的脚本放在 `dispatcher.d/pre-up.d` 目录中, 或将其符
-号链接到 `dispatcher.d/pre-up.d` 目录中, NetworkManager将等待脚本执行完成,然后再向应用程序指示该接口已完全激活.
+号链接到 `dispatcher.d/pre-up.d` 目录中, NetworkManager 将等待脚本执行完成, 然后再向应用程序指示该接口已完全激活.
 
 - **up**
 
@@ -104,6 +104,7 @@ DHCPv4租约发生改变(renewed, rebound等)
 - **connectivity-change**
 
 network connectivity 状态发生改变(`no connectivity`, `went online`等)
+
 
 ## NetworkManger 启动流程分析
 
