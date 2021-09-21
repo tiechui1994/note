@@ -77,6 +77,19 @@ CMD ["param1", "param2"]  # 提供给 ENTRYPOINT 的默认参数.
 
 如果用户启动容器时候指定了运行的命令, 则会覆盖掉 `CMD` 指定的命令.
 
+- ENTRYPOINT
+
+格式:
+
+```dockerfile
+ENTRYPOINT ["executable", "param1", "param2"]
+ENTRYPOINT command param1 param2
+```
+
+配置容器启动后执行的命令, 并且不可被 `docker run` 提供的参数覆盖.
+
+每个 Dockerfile 中只能有一个 `ENTRYPOINT`, 当指定多个时, 只有最后一个起效.
+
 
 - EXPOSE
 
@@ -125,19 +138,6 @@ COPY <src> <dext>
 
 当使用本地目录为源目录时, 推荐使用 `COPY`.
 
-
-- ENTRYPOINT
-
-格式:
-
-```dockerfile
-ENTRYPOINT ["executable", "param1", "param2"]
-ENTRYPOINT command param1 param2
-```
-
-配置容器启动后执行的命令, 并且不可被 `docker run` 提供的参数覆盖.
-
-每个 Dockerfile 中只能有一个 `ENTRYPOINT`, 当指定多个时, 只有最后一个起效.
 
 
 - VOLUME
