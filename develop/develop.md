@@ -215,6 +215,59 @@ Trying to open a VM config [...] which has the same UUID as an existing virtual 
 
 3.在上述修改之后重新打开arm.vbox即可.
 
+### virtualbox 当中使用U盘(Linux)
+
+1. 下载 virtualbox 扩展. https://www.virtualbox.org/wiki/Downloads 地址处寻找.
+
+一般情况下载地址是: `https://download.virtualbox.org/virtualbox/${VER}/Oracle_VM_VirtualBox_Extension_Pack-${VER}.vbox-extpack`
+
+其中, `${VER}` 是 virtualbox 的版本.
+
+2. 双击下载的扩展包, 进行安装.
+
+3. 添加当前的用户到 `vboxusers`, `usbfs` 当中.
+
+```
+sudo adduser USER vboxusers
+sudo groupadd usbfs
+sudo adduser USER usbfs
+```
+
+4. 重启宿主机.
+
+5. 重启之后, 先插入U盘, 在虚拟机的的 `设置 > USB设备 > USB设备筛选器` 当中添加相应的U盘.
+
+### virtualbox 从U盘当中安装系统
+
+1. 将当前的用户添加 `vboxusers` 当中.
+
+```
+sudo usermod -G vboxusers -a `whoami`
+```
+
+2. 创建 U 盘的虚拟磁盘
+
+```
+VBoxManage internalcommands createrawvmdk -filename /virtualbox/UsbDisk.vmdk -rawdisk /dev/sdc
+```
+
+> `/dev/sdc` 是磁盘符. 可通过 `df` 查看挂在的 U 盘的磁盘符.
+> `/virtualbox/UsbDisk.vmdk` 是生成的虚拟磁盘文件.
+
+这一步如果出现 `successfully` 字样则证明成功了.
+
+3. 增加 U 盘的读写权限
+
+```
+sudo chmod o+rw /dev/sdc
+```
+
+4. 注册虚拟磁盘
+
+`控制 > 注册`, 选择上面生成的 `/virtualbox/UsbDisk.vmdk` 文件.
+
+5. 创建虚拟机时, 对于 `虚拟硬盘` 选项, 选择 `使用已有的虚拟硬盘文件(U)` 即可.
+
 ### 本地 github 加速
 
 ```
