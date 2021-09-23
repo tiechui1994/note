@@ -42,3 +42,40 @@ ON DUPLICATE KEY UPDATE` 的时候就会id自增, 无论发生了 insert 还是 
 3) interleaved级别 (`innodb_atomic_lock_mode=2`), 所有的 insert 类的SQL都可以立马获取锁并释放, 效率最高. 但是
 引入一个新问题: 当 binlog_format 是 statement 时, 这时的复制没法保证安全, 因为批量的 insert, 例如 `INSERT INTO 
 ... SELECT ...` 语句在这个状况下, 也可以立马获取到一大批的自增id值, 不必锁整个表, slave 在回放时必然产生错乱.
+
+3. 数据库容量查询:
+
+- 查询所有数据库容量大小
+
+```
+SELECT 
+    table_schema AS 'database', 
+    sum(table_rows) AS 'rows', 
+    sum(TRUNCATE(data_length / 1024 / 1024, 2)) AS 'data(MB)', 
+    sum(TRUNCATE(index_length / 1024 / 1024, 2)) AS 'index(MB)'  
+FROM 
+    information_schema.TABLES  
+GROUP BY 
+    table_schema  
+ORDER BY 
+    sum( data_length ) DESC, 
+    sum( index_length ) DESC; 
+```
+
+- 查询数据库表容量大小:
+
+```
+SELECT 
+    table_schema AS 'database', 
+    table_name AS 'table', 
+    table_rows AS 'rows', 
+    TRUNCATE (data_length / 1024 / 1024, 2) AS 'data(MB)', 
+    TRUNCATE (index_length / 1024 / 1024, 2) AS 'index(MB)'  
+FROM 
+    information_schema.TABLES  
+WHERE 
+    table_schema = 'mysql'  
+ORDER BY 
+    data_length DESC, 
+    index_length DESC; 
+```
