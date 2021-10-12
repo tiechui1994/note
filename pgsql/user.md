@@ -1,4 +1,4 @@
-## postgres 用户授权
+## pgsql 用户授权
 
 - 先切换到 Linux 用户 `postgres`, 并执行 psql:
 
@@ -42,3 +42,17 @@ ALTER ROLE admin WITH SUPERUSER;
 ```
 postgres=# \q
 ```
+
+## pgsql 常用命令
+
+- 查看数据库: `\list`
+
+- 数据库切换: `\connect db`
+
+- 查看数据库表: `\d` 
+
+- 查看数据库表结构: `\d table`
+
+- 查看数据库索引: `\di`
+
+- 查看当前连接信息: `\conninfo`

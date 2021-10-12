@@ -59,6 +59,9 @@ Description: Essential admin GUI for mongodb
 
 - `postrm`: 软件卸载后需要执行的脚本.
 
+> 注: preinst, postinst, prerm, postrm 这些文件安装之后, 会被移动到 `/var/lib/dpkg/info` 目录下. 并在某些 trigger
+下, 执行其中的脚本. 
+
 
 ### 打包的目录结构(执行 dpkg-deb 前的目录结构)
 
@@ -149,13 +152,9 @@ COMMAND:
 
 在解压的时候会创建directory, 并修改其权限以匹配包的内容.
 
-- `-X, --vextract archive directory`
-
-等价于 --extract -v, 展示详情
-
 - `-R, --raw-extract archive directory`
 
-将文件系统树从包存档中提取到 '指定目录' 中. 并且 control 解压到指定目录的 DEBIAN 子目录中
+将文件系统树从包存档中提取到 '指定目录' 中. 并且 control, post* pre* 等文件解压到指定目录的 DEBIAN 子目录中
 
 
 OPTION:
