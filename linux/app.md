@@ -22,3 +22,22 @@ sudo apt-get install mpv
 0.0.0.0		www.jetbrains.com
 ```
 
+- Ubuntu18.04 删除 snap
+
+1) 删除 snap 和 snap gui tool
+
+```
+sudo apt autoremove --purge snapd gnome-software-plugin-snap
+```
+
+2) 清除 snap 垃圾
+
+```
+rm -rf ~/snap
+```
+
+3) put snap on hold
+
+```
+sudo apt-get hold snapd
+```
