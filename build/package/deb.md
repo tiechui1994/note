@@ -62,7 +62,6 @@ Description: Essential admin GUI for mongodb
 > 注: preinst, postinst, prerm, postrm 这些文件安装之后, 会被移动到 `/var/lib/dpkg/info` 目录下. 并在某些 trigger
 下, 执行其中的脚本. 
 
-
 ### 打包的目录结构(执行 dpkg-deb 前的目录结构)
 
 文件目录:

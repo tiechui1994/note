@@ -298,5 +298,5 @@ rm -rf ~/snap
 3) put snap on hold
 
 ```
-sudo apt-get hold snapd
+sudo apt-mark hold snapd
 ```
