@@ -280,3 +280,23 @@ Host github.com
 ```
 
 > IdentityFile 是 github 的秘钥文件位置. HostName 配置的是远程 ssh 加速访问的代理服务器.
+
+### ubuntu18.04 卸载 snap
+
+1) 删除 snap 和 snap gui tool
+
+```
+sudo apt autoremove --purge snapd gnome-software-plugin-snap
+```
+
+2) 清除 snap 垃圾
+
+```
+rm -rf ~/snap
+```
+
+3) put snap on hold
+
+```
+sudo apt-get hold snapd
+```
