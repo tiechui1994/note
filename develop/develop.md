@@ -268,18 +268,34 @@ sudo chmod o+rw /dev/sdc
 
 5. 创建虚拟机时, 对于 `虚拟硬盘` 选项, 选择 `使用已有的虚拟硬盘文件(U)` 即可.
 
-### 本地 github 加速
+### github ssh 加速
+
+github ssh 加速指的是在命令行当中加速 pull, push 远程代码. 对于浏览器当中加速访问 github, 则需要使用代理进行加速.
 
 ```
+# 使用远程代理
 Host github.com
      User git
      HostName git.zhlh6.cn
      Port 22
      IdentityFile ~/.ssh/id_rsa
      LogLevel ERROR
+     Compression yes
+
+# 使用本地代理
+Host github.com
+     User git
+     HostName github.com
+     Port 22
+     IdentityFile ~/.ssh/id_rsa
+     ProxyCommand nc -X connect -x 127.0.0.1:1080 %h %p
+     LogLevel ERROR
+     Compression yes
 ```
 
 > IdentityFile 是 github 的秘钥文件位置. HostName 配置的是远程 ssh 加速访问的代理服务器.
+
+> 对于本地代理, 这里使用的是 http 的方式.
 
 ### ubuntu18.04 卸载 snap
 
