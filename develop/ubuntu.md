@@ -76,19 +76,24 @@ google-stable, sogoupinyin, thunderbird 需要到各自官方下载最新版本,
 
 > `sogoupinyin` 安装好之后, 在 `fcitx configuration` 当中配置.
 
-- 安装系统工具 `gedit`(文本编辑), `gnome-system-monitor`(监控), `deepin-screenshot`(截屏), `deepin-image-viewer`(图片查看器)
+- 安装系统工具 `gedit`(文本编辑), `gnome-system-monitor`(监控), `deepin-screenshot`(截屏), `deepin-image-viewer`(图片查看器),
+`mpv 或 smplayer`(视频播放器)
 
 ```
 sudo apt-get install gedit
 sudo apt-get install gnome-system-monitor
 sudo apt-get install deepin-screenshot
 sudo apt-get install deepin-image-viewer
+
+audo apt-get install mpv --no-install-recommends --no-upgrade
+audo apt-get install smplayer --no-install-recommends --no-upgrade
 ```
 
 > 在 `deepin-screenshot` 安装好之后, 最好设置下快捷键.
 
-- 安装可选工具 `wireshark`(抓包工具)
+- 安装可选工具 `wireshark`(抓包工具), `ffmpeg`(视频处理工具)
 
 ```
 sudo apt-get install wireshark
+sudo apt-get install ffmpeg
 ```
