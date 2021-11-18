@@ -21,8 +21,7 @@ Host host
     DynamicForward forword
     PermitLocalCommand yes|no
     LocalCommand command
-    ProxyCommand command
-    
+    ProxyCommand command 
 ```
 
 `Host host`: 主机匹配, 其中 host 可以使用正则表达式.
@@ -48,6 +47,18 @@ Host host
 
 `RemoteForward`: 将发送到远程端口(`[local:]port`)的请求通过 `HostName` 转发到目标端口(`host:port`). 第一个参数
 是 `[local:]port`, 表示远程"监听"的端口号; 第二个参数是 `host:port`, 表示本地局域网监听的端口号.
+
+举个例子: A是本地主机, B是远程主机, 现在通过主机A连接到主机B
+
+```
+ssh -L 8080:127.0.0.1:80 root@B
+
+ssh -R 53:127.0.0.1:5353 root@B
+```
+
+对于情况1, 访问本地 http://127.0.0.1:8080 的请求会直接转发到远程主机 B 的 80 端口
+
+对于情况2, 访问远程主机 B http://1.1.1.1:53(假设B主机的IP为1.1.1.1) 的请求会直接转发到本地主机 A 的 5353 端口
 
 > LocalForward vs RemoteForward 
 > 相同: 先建立一个 ssh 连接, 然后将发送到远程或本地的数据通过连接进行转发.
