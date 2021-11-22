@@ -2,10 +2,6 @@
 
 ## 常见的模块
 
-- `nginx-rtmp-module`, 视频推流模块
-
-git地址: github.com/arut/nginx-rtmp-module
-
 - `ngx_http_proxy_connect_module`, HTTP代理的connect模块
 
 git地址: github.com/chobits/ngx_http_proxy_connect_module
@@ -14,7 +10,11 @@ git地址: github.com/chobits/ngx_http_proxy_connect_module
 
 安装文档: https://github.com/openresty/lua-nginx-module#installation
 
-- `nginx-http-flv-module`, HTTP方式访问 flv 视频模块
+- `nginx-rtmp-module`, 视频推流模块
+
+git地址: github.com/arut/nginx-rtmp-module
+
+- `nginx-http-flv-module`, HTTP方式访问 flv 视频模块, 该模块是在 `nginx-rtmp-module` 基础上开发的.
 
 git 地址: github.com/winshining/nginx-http-flv-module
 
