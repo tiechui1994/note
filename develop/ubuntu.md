@@ -97,3 +97,34 @@ audo apt-get install smplayer --no-install-recommends --no-upgrade
 sudo apt-get install wireshark
 sudo apt-get install ffmpeg
 ```
+
+- 安装可选工具 `SingleNote`(桌面笔记, 随时备份工具)
+
+deb 下载地址: `https://github.com/Automattic/simplenote-electron/releases`
+
+桌面图标: `https://github.com/Automattic/simplenote-electron/blob/develop/resources/images/icon_128x128.png`
+
+simplenote.desktop 文件:
+
+```
+[Desktop Entry]
+Comment=simplenote
+Exec=/opt/local/simplenote/simplenote
+Icon=/opt/local/simplenote/simplenote.png
+Name=SimpleNote
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=Office;WordProcessor;Qt;
+X-DBUS-ServiceName=
+X-DBUS-StartupType=
+X-KDE-SubstituteUID=false
+X-KDE-Username=
+InitialPreference=3
+```
+
+- 安装 `wps-office` (Office套件)
+
+deb 下载地址: `https://github.com/tiechui1994/jobs/releases/download/wps-office-2019-zh-CN/wps-office_11.1.0.8392_amd64.deb`
+
+中文语言安装: `https://gist.github.com/tiechui1994/2912e4d5990a0ab26ddd8db75c42ae57`

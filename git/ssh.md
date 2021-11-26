@@ -22,6 +22,8 @@ Host host
     PermitLocalCommand yes|no
     LocalCommand command
     ProxyCommand command 
+    ServerAliveInterval interval
+    ServerAliveCountMax count
 ```
 
 `Host host`: 主机匹配, 其中 host 可以使用正则表达式.
@@ -91,6 +93,15 @@ Host test
 ```
 
 > `-W host:port` 请求将客户端上的标准输入/输出通过安全通道转发到 `host:port`
+
+
+---
+
+`ServerAliveInterval` 指定向服务器发送 keepalive 消息的时间间隔. 消息通过加密通道发送, 用于检测服务器是否崩溃或网
+络是否出现故障. (seconds)
+
+`ServerAliveCountMax` 设置客户端可以发送 keepalive 消息的数量, 而客户端不会从服务器接收任何消息. 当达到此阈值时, 客户
+端将终止会话.
 
 ## 与 ssh 相关命令
 
