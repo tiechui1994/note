@@ -1,4 +1,4 @@
-# Shell 数据结构(map,array)
+# shell 数据结构(map,array)
 
 > 简介: shell 编程当中, 除了对常用的命令 `awk`, `sed`, `grep`, `find` 等命令要非常熟悉之外, 对于 map, array 
 等常用数据结构的操作也需要熟练掌握, 这样你的编程能力才有一个飞跃. 本文就简单的介绍下 shell 当中 map, array 这两种数
