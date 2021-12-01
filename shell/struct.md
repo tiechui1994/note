@@ -174,3 +174,39 @@ function div() {
     echo $(awk 'BEGIN{printf "%.2f\n", '${n}'/'${m}'}')
 }
 ```
+
+## 随机数
+
+1.随机正数
+
+```
+echo $RANDOM
+
+echo $(($RANDOM%100))
+```
+
+2.随机字符串($RANDOM)
+
+```
+echo $RANDOM|md5sum|cut -c 1-32
+
+echo $RANDOM|sha256sum|cut -c 1-64
+
+echo $RANDOM|sha384sum|cut -c 1-96
+
+echo $RANDOM|sha512sum|cut -c 1-128
+```
+
+3.随机字符串(openssl)
+
+```
+openssl rand -hex N // N是随机字符串长度, 输出格式是hex
+
+openssl rand -base64 N // N是随机字符串长度, 输出格式是 base64
+```
+
+4. uuid
+
+```
+cat /proc/sys/kernel/random/uuid
+```
