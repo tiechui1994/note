@@ -1,14 +1,15 @@
 # 网络配置
 
-## 网络IP配置 
+## 网口配置 
+
+### 永久配置网口
 
 大多数网络设置可以通过 `/etc/network/interfaces` 上的 interfaces 配置文件完成. 在这里, 可以为网卡提供IP address
 (或使用dhcp), 设置route, 配置IP masquerading, 设置default routes等等.
 
 > 记住将要在启动时启动的接口添加到 'auto' 行.
 
-
-### DHCP 自动配置IP
+- DHCP 自动获取IP
 
 ```
 auto eth0
@@ -16,7 +17,7 @@ allow-hotplug eth0
 iface eth0 inet dhcp
 ```
 
-### 手动配置IP
+- 手动设置静态IP
 
 如果是手动配置它, 则类似以下内容将设置 default gateway(network, broadcast 和 gateway是可选的):
 
@@ -26,6 +27,43 @@ iface eth0 inet static
     address 192.168.0.7
     netmask 255.255.255.0
     gateway 192.168.0.254
+```
+
+### 临时配置网口
+
+一般是使用 ip 或 ifconfig 命令可以进行网口的相关设置. 
+
+- 使用 ip 命令进行配置
+
+设置 ip 地址:
+```
+# 添加/替换
+sudo ip addr add 192.168.6.201/24 broadcast 192.168.6.254 dev eth0
+sudo ip addr replace 192.168.6.201/24 broadcast 192.168.6.254 dev eth0
+
+# 删除
+sudo ip addr del 192.168.6.201/24 dev eth0
+```
+
+重启启动网口:
+```
+sudo ip link set eth0 down
+sudo ip link set eth0 up
+```
+
+- 使用 ifconfig 命令进行配置
+
+设置 ip 地址:
+```
+sudo ifconfig eth0 add 192.168.6.201/24 broadcast 192.168.6.254 dynamic
+
+sudo ifconfig eth0 del 192.168.6.201/24 broadcast 192.168.6.254 dynamic
+```
+
+重启启动网口:
+```
+sudo ifconfig eth0 down
+sudo ifconfig eth0 up
 ```
 
 ### 设置速度与双工(duplex)
@@ -104,7 +142,6 @@ DHCPv4租约发生改变(renewed, rebound等)
 - **connectivity-change**
 
 network connectivity 状态发生改变(`no connectivity`, `went online`等)
-
 
 ## NetworkManger 启动流程分析
 
@@ -479,5 +516,3 @@ systemd-resolved 四种方式处理 `/etc/resolv.conf`:
 `/etc/resolv.conf` 指向该文件. 注意: 该文件只包含所有已知的全局 DNS 服务器, 而不包含针对特定网络接口设置的 DNS 服务器.
 
 4. 其它软件包或系统管理员维护 `/etc/resolv.conf` 内容. 
-
-
