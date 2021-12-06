@@ -1,19 +1,8 @@
-## Linux 系统
+## Linux 系统常见问题
 
-### 常用的应用软件
+### 常用的 ip 设置禁用
 
-- 音乐/视频播放 (SMPlayer, mpv)
-
-```
-sudo apt-get install smplayer
-sudo apt-get install mpv
-```
-
-> 最新版本的 SMPlayer 是基于 mpv 开发的
-
-- 禁用的IP地址列表
-
-[下载页面](https://www.fosshub.com/Postman-old.html)
+[Postman下载页面](https://www.fosshub.com/Postman-old.html)
 
 > 禁止自动更新设置, 在 /etc/hosts 文件当中添加如下配置 
 
@@ -25,7 +14,7 @@ sudo apt-get install mpv
 
 ### 系统动态库查询
 
-- Ubuntu 下查询动态库("软件包") 的方法
+- Ubuntu 下查询包查询("软件包") 的方法
 
 ```
 # 过滤安装包, 这种方式能查看到相关的版本, 架构, 包描述信息
@@ -36,7 +25,7 @@ dpkg -S xxx
 dpkg --search=xxx
 ```
 
-- Ubuntu 下查看头文件的路径
+- Ubuntu 下查看"头文件"的路径
 
 ```
 /usr/include
@@ -48,9 +37,27 @@ dpkg --search=xxx
 `/usr/local/include` 一般是用户手动编译lib时默认的头文件位置
 
 
-- Ubuntu 下查看和配置动态库的路径
+- Ubuntu 下动态库
 
-配置文件 `/etc/ld.so.conf`
+动态库路径配置文件: `/etc/ld.so.conf`, `/etc/ld.so.conf.d/*.conf`.
+
+动态库路径缓存文件: `/etc/ld.so.cache`
+
+使用 ldconfig 命令可以进行动态库更新和查看:
+
+```
+# 更新动态库缓存
+sudo ldconfig 
+
+# 查看动态库缓存当中的动态库路径
+ldconfig -p
+```
+
+使用 ldd 命令可以查看 `可执行程序(动态编译)`, `动态库` 依赖的动态库
+
+```
+ldd FILE
+```
 
 ### apt-get 介绍
 

@@ -35,7 +35,6 @@ sudoers.so之后). 可以指定多个参数, 用空格分隔. 例如:
      sudoers_mode=mode
         sudoers_mode参数可用于覆盖sudoers文件的默认文件模式. 应将其指定为八进制值.
 
-
 ### User Authentication
 
 sudoers安全策略要求大多数用户在使用sudo之前进行身份验证. 如果调用用户是root用户, 目标用户与调用用户相同, 或者策略已禁
@@ -60,7 +59,6 @@ sudoers可以将成功和不成功的尝试(以及错误)记录到syslog, 日志
 
 sudoers还能够在伪tty中运行命令并记录所有输入和/或输出. 即使与终端无关, 也可以记录标准输入, 标准输出和标准错误. 默认情况
 下, I/O日志记录未启用, 但可以使用log_input和log_output选项以及LOG_INPUT和LOG_OUTPUT命令标记启用. 
-
 
 ### Command environment
 
@@ -99,7 +97,6 @@ bash shell函数可以匹配如下:
 的内容. 将删除所有其他环境变量.
 
 最后, 如果定义了env_file选项, 则该文件中存在的任何变量都将设置为其指定值, 只要它们不与现有环境变量冲突即可.
-
 
 ## SUDOERS文件格式
 

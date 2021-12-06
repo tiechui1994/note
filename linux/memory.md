@@ -1,4 +1,4 @@
-# Linux 下的内存管理
+# Linux 内存管理
 
 [参考文档](https://github.com/Durant35/durant35.github.io/issues/24)
 
