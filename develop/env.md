@@ -284,7 +284,7 @@ xl2tpd 配置文件: /etc/xl2tpd/xl2tpd.conf
 ```
 [global]								
   port = 1701						 	; bind port to  1701
-  auth file = /etc/l2tpd/l2tp-secrets 	; auth secret file
+  auth file = /etc/ppp/chap-secrets 	; auth secret file
   access control = yes					; refuse connections without IP match
   rand source = dev                     ; 随机值的来源:
                                         ; dev - reads of /dev/urandom
@@ -299,7 +299,7 @@ refuse chap = no                        ; Refuse CHAP auth
 refuse authentication = no              ; 
 require authentication = yes            ; 要求对等方进行身份验证
 name = l2tpd                            ; 服务名称唯一标识
-pppoptfile = /etc/ppp/xl2tpd-options   ; ppp 的 option 选项文件
+pppoptfile = /etc/ppp/xl2tpd-options    ; ppp 的 option 选项文件
 length bit = yes                        ;
 ```
 
@@ -324,6 +324,33 @@ lcp-echo-interval 30
 接受对等方对 local/remote IP 地址的连接.
 
 ipsec 配置文件: /etc/ipesc.conf
+
+ipsec.conf 文件由三种不同的节类型组成: `config setup` 定义一般参数, `conn <name>` 定义一个连接. `ca <name>` 定
+义证书. 其中 `config setup` 只能有一个. 但是 `conn <name>` 和 `ca <name>` 可以有多个.
+
+属于一个section的所有参数必须至少缩进一个空格或制表符. 
+
+> 为了简化配置, 使用 left 和 right 表示一个连接的参与者. 一般情况下, 本地端使用 left, 远程端使用 right  
+
+常用的 `conn` 参数:
+
+```
+conn shared
+  # 左侧参与者的公共网络接口的IP地址或几个特殊值.
+  # %any(默认值), 表示在协商期间填充地址. 如果本地发起连接, 则查询路由表确定正确的本地IP地址, 如果本地响应连接, 则接受
+  # 分配给本地连接网卡的任何IP地址.
+  # 
+  # 要限制连接到特定范围的主机, 可以指定范围(10.1.0.0-10.2.0.100) 或子网 (10.1.0.0/16), 多个地址, 范围和子网可以
+  # 使用逗号分隔. 虽然这些可以自由组合, 但要发起连接, 至少需要一个 non-range/subnet.
+  # fqdn 或 ip address, 则隐式设置 leftallowany=yes
+  # 
+  left = <ip address> | <fqdn> | %any | <range> | <subnet>
+  
+  
+  leftid = 10.1.1.1 # 左侧参与者身份标识. 默认是left. 可以是IP地址或以@开头的完全限定性域名. 如果值是 %fromcert,
+                    # ID值是从加载的证书中获取DN. 如果值是 %none, 表示不设置ID.
+```
+
 
 ```
 version 2.0
@@ -413,13 +440,24 @@ www.xs.nl @www.vax.ru
 include ipsec.*.secrets
 ```
 
-ipsec密码配置: /ect/ipsec.d/password
-
-
-账号配置文件: /etc/ppp/chap-secrets
+xauth 密码文件: /ect/ipsec.d/passwd
 
 ```
-admin l2tpd password *
+admin:$1$P3Q2MST/$MjcjDrMUokEltHzYqSxTt0:xauth-psk
+```
+
+在 passwd 每一行是一个账号, 其包含三部分, 分别是 username, password, type. 使用冒号(:)进行分隔.
+
+这里的密码是签名后的密码. 加密命令 `openssl passwd -1|-5|-6 PASSWORD`, 使用 `-1` 表示使用 MD5 签名, `-5` 是使用
+SHA-256签名, `-6`是使用 SHA-512 签名.
+
+这里的 type, 常见的值有: xauth-psk, xauth-rsa
+
+
+auth认证文件: /etc/ppp/chap-secrets
+
+```
+admin l2tpd 12345678 *
 ```
 
 格式: `client server secret ip`, client是VPN client的用户名, server是在 xl2tpd 当中 `name` 配置的标识符号.
