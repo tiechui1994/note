@@ -256,18 +256,45 @@ TABLE
 
 ## L2TP
 
+- L2TP
+
 L2TP(第2层隧道协议)是一种允许远程用户访问公共网络的隧道协议. L2TP允许点对点协议(PPP)会话在多个网络和链路上传输. L2TP
 来源于微软的 PPTP 和思科的 L2F(Layer 2 Forwarding)技术. 因此, L2TP 具有 L2TP 的特性, 它结合了 PPTP 的控制和数据
 通道, 并且运行在更快的UDP上.
 
 当处于安全性考虑时, L2TP是更好的选择, 因为L2TP需要证书, 但是 PPTP 使用的是用户名+密码.
 
+- IPsec
+
+IPsec 是一套相关协议, 用于在IP数据包层进行加密安全通信. 
+
+IPsec 在IP层使用两种协议来保护通信:
+
+1) 认证头(AH), 用于验证IP数据包来源和验证其内容完整性的安全协议.
+
+2) 封装安全负载(ESP), 用于加密整个IP数据包(并认证其内容)的安全协议.
+
+IPsec 通道协商. 有两种不同模式用于确定如何在VPN中交换数据流:
+
+1) 传输模式 - 在已建立 IPsec 隧道的两台主机之间直接发送数据包, 保护数据流. 也就是说, 当通信端点和加密端点相同时, IP数
+据包的数据部分已加密, 但不加密IP报头. 为受保护的主机提供加密和解密服务的VPN网关无法对受保护的VPN通信使用传输模式. 当数据
+包被拦截时, 源或目的地的IP地址可以进行修改. 基于这种结构, 传送模式只能在通信端点和加密端点相同时才能使用. End-to-End
+
+2) 隧道模式 - 通过将原始IP数据包封装在VPN隧道中的另一个数据包中, 保护数据流. 此模式使用预先共享密钥(PSK)与IKE一起认证
+对等方. 这是独立专用网络内的主机通过公共网络进行通信最常用的方式. 此模式可供VPN客户端和VPN网关使用, 并保护在非IPsec系统
+之间来回通信. Site-to-Site
+
+- IKE
+
+IKE(Internet密钥交换)协议是通信双方建立安全连接的协议. 它是基于UDP 500端口号的应用层协议. IKE提供了多种身份验证方式,
+最常见的是预共享密钥(PSK)验证, 基于证书的身份验证.
+
 
 ### 安装依赖服务 ppp, xl2tpd, libreswan
 
 xl2tpd 实现了 L2TP 协议. libreswan 实现了 IPsec.
 
-IPsec 用于 VPN 协议本身配置的 IKE(因特网秘钥交换)协议. 术语 IPsec 和 IKE 可以互换使用. IPsec VPN 也称为 IKE VPN,
+IPsec 用于 VPN 协议本身配置的 IKE(因特网密钥交换)协议. 术语 IPsec 和 IKE 可以互换使用. IPsec VPN 也称为 IKE VPN,
 IKEv2 VPN, XAUTH VPN, Cisco VPN 或 IKE/IPsec VPN. 使用 L2TP 的 IPsec VPN的变体称为 L2TP/IPsec VPN. 它需要
 可选通道 xl2tpd 应用程序. 
 
@@ -279,7 +306,7 @@ sudo apt-get install xl2tpd ppp libreswan -y --no-install-recommends --no-upgrad
 
 ### 服务配置
 
-xl2tpd 配置文件: /etc/xl2tpd/xl2tpd.conf
+- xl2tpd 配置文件: /etc/xl2tpd/xl2tpd.conf
 
 ```
 [global]								
@@ -323,19 +350,43 @@ lcp-echo-interval 30
 > 注: ipcp-accept-local, ipcp-accept-remote 使用此选项, 即使 local/remote IP 地址已在选项中指定, pppd 也会
 接受对等方对 local/remote IP 地址的连接.
 
-ipsec 配置文件: /etc/ipesc.conf
+- ipsec 配置文件: /etc/ipesc.conf
 
-ipsec.conf 文件由三种不同的节类型组成: `config setup` 定义一般参数, `conn <name>` 定义一个连接. `ca <name>` 定
+ipesc.conf 文件由三种不同的节类型组成: `config setup` 定义一般参数, `conn <name>` 定义一个连接. `ca <name>` 定
 义证书. 其中 `config setup` 只能有一个. 但是 `conn <name>` 和 `ca <name>` 可以有多个.
 
 属于一个section的所有参数必须至少缩进一个空格或制表符. 
 
 > 为了简化配置, 使用 left 和 right 表示一个连接的参与者. 一般情况下, 本地端使用 left, 远程端使用 right  
 
-常用的 `conn` 参数:
+通用 section 参数:
+
+```
+# 表示当前的 section 可以继承 <section name> 当中提供的属性. <section name> 必须出现在当前 section 的前面.
+also = <section name>
+```
+
+conn 常用参数:
 
 ```
 conn shared
+  # 连接类型. 可选的值包括:
+  # tunnel(默认值), 隧道, 表示 host-to-host, host-to-subnet, subnet-to-subnet 隧道模式
+  # transport, 传输, 表示 host-to-host 的传输模式
+  # passthrough, 直达, 表示不适应IPsec处理
+  # drop, 丢弃, 表示丢弃该数据包
+  # reject, 拒绝, 表示丢弃数据包并返回ICMP包
+  type = tunnel | transport | passthrough | drop | reject
+  
+  # IPsec 启动时应该执行哪些操作. 可选的值包括:
+  # add, 表示 ipsec auto --add
+  # route, 表示 ipsec auto --route
+  # start, 表示 ipsec auto --up
+  # manual, 表示 ipsec manual --up
+  # ignore(默认值), 忽略, 表示没有自动启动操作
+  # 对于打算长久建立连接, 两端都应使用 auto=start 以确保任何重启都会重新协商.
+  auto = add | route | start | manual | ignore
+  
   # 左侧参与者的公共网络接口的IP地址或几个特殊值.
   # %any(默认值), 表示在协商期间填充地址. 如果本地发起连接, 则查询路由表确定正确的本地IP地址, 如果本地响应连接, 则接受
   # 分配给本地连接网卡的任何IP地址.
@@ -349,8 +400,32 @@ conn shared
   
   leftid = 10.1.1.1 # 左侧参与者身份标识. 默认是left. 可以是IP地址或以@开头的完全限定性域名. 如果值是 %fromcert,
                     # ID值是从加载的证书中获取DN. 如果值是 %none, 表示不设置ID.
+  
+  
+  # 两个安全网关应该如何相互认证, 可接受的值:
+  # 共享机密密钥 secret,
+  # RSA 数字签名的 rsasig(默认值), 
+  # secret|rsasig 同时使用, 
+  # 永远不会尝试或接受协商(仅用于分流连接) never.
+  authby = secret | rsasig | never
+  
+  # ike 第一阶段中的加密/认证算法. 格式: "cipher-hash;modpgroup,cipher-hash;modpgroup,...". 任何缺失的选项都
+  # 将填充允许的默认选项. 使用逗号进行分隔.
+  ike = 3des-sha1,3des-sha2,aes-sha1,aes-sha1;modp1024
+  
+  # 指定第二阶段中支持的算法. 算法之间用逗号分隔. 默认值与 ike 指定的值相同.
+  phase2alg = 3des-sha1,3des-sha2
+  
+  # 在连接的密钥通道上是否需要密钥的PFS(Perfect Forward Secrecy,完全向前保密), (使用 PFS, 密钥交换协议的泄密不会
+  # 危及之前协商的密钥);
+  # 可接受的值: yes(默认值)和no.
+  pfs = yes | no
+  
+  # 连接即将到期时是否应重新协商. 可接受的值为yes(默认值)和no. 
+  rekey = yes | no
 ```
 
+案例配置:
 
 ```
 version 2.0
@@ -369,27 +444,28 @@ conn shared
   right=%any
   forceencaps=yes
   authby=secret
+  ike=3des-sha1,3des-sha2,aes-sha1,aes-sha1;modp1024,aes-sha2,aes-sha2;modp1024,aes256-sha2_512
+  phase2alg=3des-sha1,3des-sha2,aes-sha1,aes-sha2,aes256-sha2_512
   pfs=no
   rekey=no
   keyingtries=3
   dpddelay=15
   dpdtimeout=30
   dpdaction=clear
-  ike=3des-sha1,3des-sha2,aes-sha1,aes-sha1;modp1024,aes-sha2,aes-sha2;modp1024,aes256-sha2_512
-  phase2alg=3des-sha1,3des-sha2,aes-sha1,aes-sha2,aes256-sha2_512
   sha2-truncbug=yes
 
 conn l2tp-psk
+  type=transport
   auto=add
   leftsubnet=172.17.0.2/32
   leftnexthop=%defaultroute
   leftprotoport=17/1701
   rightprotoport=17/%any
-  type=transport
   auth=esp
   also=shared
 
 conn xauth-psk
+  type=tunnel
   auto=add
   leftsubnet=0.0.0.0/0
   rightaddresspool=192.168.43.10-192.168.43.250
@@ -407,21 +483,27 @@ conn xauth-psk
   also=shared
 ```
 
-ipesc秘钥配置: /etc/ipsec.secrets
+- ipesc密钥配置: /etc/ipsec.secrets
 
-该文件也就是"预共享秘钥", "X509数字证书".
+该文件里包含多个key. 其中的key类型可以是:
 
-针对预共享秘钥(PSK), X509数字证书(RSA,ECDSA,P12), 每个秘钥前面有一个可选的ID选择器列表. 这两部分使用冒号(:)分隔. 
-如果未指定ID选择器, 则该行必须以冒号开头.
+```
+RSA, 定义一个RSA私钥
+ECDSA, 定义一个ECDSA私钥
+PSK, 定义一个预共享密钥
+XAUTH, 定义一个XAUTH凭证
+```
 
-ID选择器包含: IP地址, 完全限定域名, 域名, user@FQDN, %any
+每个密钥前面有一个可选的ID选择器列表. 这两部分使用冒号(:)分隔. 如果未指定ID选择器, 则该行必须以冒号开头.
+
+选择器包含: IP地址, 完全限定域名, 域名, user@FQDN, %any.
 
 ```
 # 使用 ip 地址 
 10.1.0.1 10.2.0.1: PSK "secret shared"
 
 # 使用 ip 地址, %any
-115.238.53.210  %any: PSK "secret shared"
+112.113.114.115  %any: PSK "secret shared"
 
 # 使用 %any, 域名
 %any  gateway.domain.com: PSK "secret shared"
@@ -430,38 +512,43 @@ ID选择器包含: IP地址, 完全限定域名, 域名, user@FQDN, %any
 www.xs.nl @www.vax.ru
     10.1.0.1 10.2.0.1 10.3.0.1: PSK "secret shared"
 
-# RSA 私有秘钥
+# RSA 私有密钥
 @my.com : RSA "rsa private key"
 
-# X.509 证书
-
+# XAUTH 凭证
 @username: XAUTH "password"
 
 include ipsec.*.secrets
 ```
 
-xauth 密码文件: /ect/ipsec.d/passwd
+案例:
+```
+112.113.114.115  %any: PSK "1234567890"
+```
+
+- VPN账号文件: /ect/ipsec.d/passwd
 
 ```
 admin:$1$P3Q2MST/$MjcjDrMUokEltHzYqSxTt0:xauth-psk
 ```
 
-在 passwd 每一行是一个账号, 其包含三部分, 分别是 username, password, type. 使用冒号(:)进行分隔.
+在 passwd 每一行是一个 VPN 账号, 其包含三部分, 分别是 username, password, conn_name. 使用冒号(:)进行分隔.
 
-这里的密码是签名后的密码. 加密命令 `openssl passwd -1|-5|-6 PASSWORD`, 使用 `-1` 表示使用 MD5 签名, `-5` 是使用
-SHA-256签名, `-6`是使用 SHA-512 签名.
+password 是加盐哈希值. 加盐哈希命令 `openssl passwd -1|-5|-6 PASSWORD`, 其中使用 `-1` 表示使用 MD5 哈希, `-5` 
+是使用 SHA-256 哈希, `-6` 是使用 SHA-512 哈希.
 
-这里的 type, 常见的值有: xauth-psk, xauth-rsa
+conn_name 是在 /etc/ipsec.conf 当中　`conn <name>`　当中的 <name>.
 
 
-auth认证文件: /etc/ppp/chap-secrets
+- VPN账号文件: /etc/ppp/chap-secrets
 
 ```
 admin l2tpd 12345678 *
 ```
 
-格式: `client server secret ip`, client是VPN client的用户名, server是在 xl2tpd 当中 `name` 配置的标识符号.
-secret 是 VPN client的用户名对于的密码. ip 是 VPN client 对应的密码.
+在 chap-secrets 的每一行是一个 VPN 账号, 其格式为: `client server secret ip`, client是VPN client的用户名, 
+server 是在 xl2tpd 当中 `name` 配置的标识符号. secret 是 VPN client的用户名对于的密码. ip 是 VPN client 对应
+分配的IP地址.
 
 ### 设置内核参数和防火墙
 
