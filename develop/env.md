@@ -254,6 +254,12 @@ TABLE
 
 ![image](/images/develop_env_pptpd_test.jpeg)
 
+Linux 下测试:
+
+```
+sudo apt-get install pptp-linux
+```
+
 ## L2TP
 
 - L2TP
