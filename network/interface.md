@@ -188,7 +188,6 @@ match:
 
 - wakeonlan, 是否启用LAN唤醒. 默认值是 no
 
-
 ### 通用属性
 
 - renderer, 定义使用给定的网络后端. 目前支持 networkd 和 NetworkManager. 此属性可以在网络中全局指定. 默认值是
@@ -234,7 +233,7 @@ ethernets:
 
 - routes (mapping), 设备的静态路由配置. 参考下面的 `路由属性`.
 
-## 路由属性
+### 路由属性
 
 使用 netplan 可以实现复杂的路由. 通过网络后端支持标准静态路由以及使用路由表的策略路由.
 
@@ -256,4 +255,72 @@ ethernets:
 
 8) table, 用于路由的表号. 在某些情况下, 在单独的路由表中设置路由可能很有用. 它还用于指代也接受表参数的路由策略规则. 允
 许的值是从1开始的正整数. 一些值已用于引用特定的路由表: 参考 `/etc/iproute2/rt_tables`
+
+### Auth属性
+
+netplan 支持通过 auth 认证以太网和wifi, 以及单个 wifi 网络的高级身份认证设置.
+
+- auth (mapping) 指定类型为 ethernet 的设备身份验证设置, 或 wifi 设备上的
+
+1) key-management, 支持的密钥管理模式. none(无密钥管理), psk(带有预共享密钥的WPA-PSK, 常见于家庭wifi), eap(WPA
+with EAP, 常见于企业wifi), 802.1x(主要用于有线以太网连接).
+
+2) password, EAP 的密码字符串, 或 WPA-PSK 的预共享密钥.
+
+如果 key-manageent 是 eap 或 802.1x, 可以使用以下属性:
+
+3) method, EAP 认证使用的方法. 支持的方法有: tls(TLS), peap(Protected EAQ), ttls(Tunneled TLS)
+
+4) identity, EAP 身份
+
+5) ca-certificate, 具有一个或多个受信任的证书颁发机构 (CA) 证书的文件的路径
+
+6) client-certificate, 客户端在身份验证期间使用的证书的文件的路径.
+
+7) client-key, 客户端证书对应的私钥的文件的路径
+
+8) client-key-password, 用于解密 client-key 中指定的私钥(如果已加密)的密码.
+
+### Wifi网口属性
+
+注意: systemd-networkd 本身并不支持 wifi, 因此如果让 networkd 渲染器处理 wifi, 则需要安装 wpasupplicant.
+
+- access-points (mapping), 提供到NetworkManager 的预配置连接. 注意, 用户当然可以选择其他接入点/SSID. 
+
+1) password, 启用 WPA2 身份认证并为其设置密码. 如果既没有当前设置, 也没有auth块, 则认为wifi网络是开放的.
+
+```yaml
+password: "S3Amazon"
+```
+
+等价于:
+
+```yaml
+auth:
+    key-management: psk
+    password: "S3Amazon"
+```
+
+### VLAN网口属性
+
+- id, VLAN ID, 整数(在0-4094之间)
+
+- link, 在其上创建此 VLAN 的底层设备定义的 netplan ID.
+
+例子:
+
+```yaml
+ethernets:
+  eth0: {....}
+
+vlans:
+  en-intra:
+    id: 1
+    link: eth0
+    dhcp4: yes
+  en-vpn:
+    id: 2
+    link: eth0
+    addresses: [192.168.1.10]
+```
 
