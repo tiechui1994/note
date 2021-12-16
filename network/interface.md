@@ -1,6 +1,6 @@
 # interface 配置
 
-在 Ubuntu 系统当中, 网卡的配置的文件主要有以下:
+在 Ubuntu 系统当中, 网口的配置的文件主要有以下:
 
 - /etc/network/interfaces, /etc/network/interfaces.d
 
@@ -9,7 +9,7 @@
 > 注:
 > 1. 如果使用 `netplan` 配置网络, 在 `/etc/netplan/` 目录下的每个 yaml 文件有一个对应的网络配置文件, 该文件在
 `/run/systemd/network/` 当中. 
-> 2. 如果使用 `networks` 配置网络, 网卡对应的配置文件在 `/run/NetworkManager/system-connections` 目录或 
+> 2. 如果使用 `networks` 配置网络, 网口对应的配置文件在 `/run/NetworkManager/system-connections` 目录或 
 `/etc/NetworkManager/system-connections` 目录.
 
 ## 使用 interfaces 
@@ -57,7 +57,7 @@ iface eth0 inet static inhertits ethernet
 ```
 
 
-INET ADDRESS FAMILY 支持的配置网卡的方法:
+INET ADDRESS FAMILY 支持的配置网口的方法:
 
 1. loopback 
 该方法用于定义 IPv4 环路网口.
@@ -166,7 +166,7 @@ netplan "network renderer" 读取 `/{lib,etc,run}/netplan/*.yaml` 并将配置�
 以使用NetworkManager来处理所有事情.
 
 
-### 常用的物理设备类型属性
+### 物理设备属性
 
 - match (mapping)
 
@@ -179,7 +179,7 @@ netplan "network renderer" 读取 `/{lib,etc,run}/netplan/*.yaml` 并将配置�
 
 3) driver, 内核驱动程序名称, 对应于 DRIVER udev 属性. 支持 Glob. 只有networkd支持匹配驱动程序.
 
-例子: 驱动是 ixgbe 的网卡
+例子: 驱动是 ixgbe 的网口
 ```yaml
 match:
     driver: ixgbe
@@ -200,13 +200,17 @@ renderer 属性对于 vlan 类型还有一个额外的值: sriov. 如果使用 S
 
 - dhcp6, 是否为 IPv6 启用 DHCP. 默认值是 no
 
-- addresses, 除了通过DHCP或RA接收的静态地址外, 还向interface添加静态地址. 每个条目采用CIDR表示法, 即 addr/prefixlen.
-对于虚拟设备(bridge, bond, valn), 如果没有配置地址并且禁用了 DHCP, 网卡依然会联机, 但无法从网络寻址.
+- addresses, 除了通过DHCP或RA接收的地址外, 可以为网口设置静态地址. 每个条目采用CIDR表示法, 即 addr/prefixlen.
+
+对于虚拟设备(bridge, bond, valn), 如果没有配置地址并且禁用了 DHCP, 网口依然会联机, 但无法从网络寻址.
 
 案例:
 ```yaml
 addresses: [192.168.14.2/24, "2001:1::1/64"]
 ```
+
+> 注: `addresses`, `dhcp4`, `dhcp6` 可以同时使用, 这样可以为一个网卡配置多个IP地址. 一个网卡是支持配置多个IP地址
+的, 但是一般情况下只是配置了一个IP.
 
 - gateway4, 为 IPv4 设置默认网关, 用于手动地址配置. 
 
@@ -245,7 +249,7 @@ ethernets:
 
 3) via, 路由的网关地址.
 
-4) on-link, 当设置为 "yes" 时, 指定路由直接连接到网卡.
+4) on-link, 当设置为 "yes" 时, 指定路由直接连接到网口.
 
 5) metric, 路由的相对优先级. 必须是正整数值.
 
@@ -324,3 +328,4 @@ vlans:
     addresses: [192.168.1.10]
 ```
 
+> 针对虚拟网口 VLAN, 最好使用 `addresses` 配置静态地址. 

@@ -1,6 +1,6 @@
 # 常用的环境搭建
 
-## PPTP VPN(虚拟私有网络)搭建
+## PPTP VPN
 
 PPTP(点对点隧道协议) 是一种用于通过 Internet 创建虚拟专用网络的方法. 它是由微软开发的. 通过使用它, 用户可以从支持该协
 议的任何 Internet 服务商访问公司网络. PPTP 工作在 OSI 模型的数据链路层(二层).
@@ -256,11 +256,70 @@ TABLE
 
 Linux 下测试:
 
+1. 安装客户端软件
 ```
 sudo apt-get install pptp-linux
 ```
 
-## L2TP
+2. 增加 ppp 连接配置文件 `/etc/ppp/peers/ppptest`
+```
+name <user>
+password <password>
+remotename pptpd
+noauth
+lock
+proxyarp
+debug
+defaultroute
+persist
+pty "pptp <serverip> --nolaunchpppd --debug"
+```
+
+> proxyarp, noproxyarp
+> proxyarp 是在本系统的 ARP `[地址解析协议]` 表中添加一个条目, 其中包含对等方的IP地址和本系统的以太网地址. 这将使对
+> 等点在其他系统看来位于本地以太网上.
+>
+> defaultroute, nodefaultroute
+> defaultroute, 当IPCP协商成功之后, 将默认路由添加到系统路由表中, 以对等端作为 gateway. 当 PPP 连接中断时, 此条目
+被删除.
+>
+> replacedefaultroute
+> replacedefaultroute, 此选项是 defaultroute 选项的标志. 如果设置了 defaultroute 并且也设置了该标志, pppd 会
+用新的默认路由替换现有的默认路由.
+
+[pppd选项](http://man.he.net/man8/pppd)
+
+
+3. 启动/关闭连接
+```
+sudo pon ppptest
+sudo poff ppptest
+```
+
+4. NAT和ROUTE配置
+
+假设: 服务器的局域网是 192.168.1.0/24 网段. ip地址 192.168.1.100.
+
+为了使得使得**客户端可以访问服务器局域网内的其他设备**, 需要做以下配置:
+
+ROUTE:
+```
+# 客户端
+sudo route add -net 192.168.1.0/24 gw 172.31.1.1 metric 1
+```
+
+NAT:
+```
+# 服务端
+sudo iptables -t nat -A POSTROUTING -s 172.31.1.0/24 -j SNAT --to-source 192.168.1.100
+```
+
+> 这里不需要设置DNAT, 原因在于当设置了SNAT之后, iptables会自动维护NAT表, 并将响应报文的目的地址自动转换回来.
+
+> 注: 如果要想服务器也能访问客户端的局域网, 也需要进行上述操作, 只不过是相反的操作而已.
+
+
+## L2TP VPN
 
 - L2TP
 
