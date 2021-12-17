@@ -375,9 +375,9 @@ sudo apt-get install xl2tpd ppp libreswan -y --no-install-recommends --no-upgrad
 
 ```
 [global]								
-  port = 1701						 	; bind port to  1701
-  auth file = /etc/ppp/chap-secrets 	; auth secret file
-  access control = yes					; refuse connections without IP match
+  port = 1701                           ; bind port to  1701
+  auth file = /etc/ppp/chap-secrets     ; auth secret file
+  access control = yes				    ; refuse connections without IP match
   rand source = dev                     ; 随机值的来源:
                                         ; dev - reads of /dev/urandom
                                         ; sys - uses rand()
@@ -488,6 +488,11 @@ conn shared
   
   # 连接即将到期时是否应重新协商. 可接受的值为yes(默认值)和no. 
   rekey = yes | no
+  
+  # 某些情况下, 例如当 ESP 数据包被过滤或当一个损坏的 IPsec 对等体不能正确识别 NAT 时, 强制 RFC-3948 封装可能很有用.
+  # forceencaps=yes 强制 NAT 检测代码撒谎并告诉远程对等方需要 RFC-3948 封装(UDP 端口 4500 数据包中的 ESP).
+  # 要使此选项生效, 需要设置设置选项 nat_traversal=yes. 可接受的值为 yes 或 no(默认值).
+  forceencaps = yes | no
 ```
 
 案例配置:
@@ -496,12 +501,11 @@ conn shared
 version 2.0
 
 config setup
-  nat_traversal=yes
   virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12,%v4:!192.168.42.0/23
-  protostack=netkey
-  nhelpers=0
   interfaces=%defaultroute
   uniqueids=no
+  nat_traversal=yes
+  protostack=auto
 
 conn shared
   left=172.17.0.2
@@ -509,11 +513,12 @@ conn shared
   right=%any
   forceencaps=yes
   authby=secret
+  ikev2=never
   ike=3des-sha1,3des-sha2,aes-sha1,aes-sha1;modp1024,aes-sha2,aes-sha2;modp1024,aes256-sha2_512
   phase2alg=3des-sha1,3des-sha2,aes-sha1,aes-sha2,aes256-sha2_512
   pfs=no
   rekey=no
-  keyingtries=3
+  keyingtries=5
   dpddelay=15
   dpdtimeout=30
   dpdaction=clear
@@ -522,8 +527,6 @@ conn shared
 conn l2tp-psk
   type=transport
   auto=add
-  leftsubnet=172.17.0.2/32
-  leftnexthop=%defaultroute
   leftprotoport=17/1701
   rightprotoport=17/%any
   auth=esp
@@ -534,18 +537,43 @@ conn xauth-psk
   auto=add
   leftsubnet=0.0.0.0/0
   rightaddresspool=192.168.43.10-192.168.43.250
-  modecfgdns1=8.8.8.8
-  modecfgdns2=8.8.4.4
+  modecfgdns="8.8.8.8 8.8.4.4"
   leftxauthserver=yes
   rightxauthclient=yes
   leftmodecfgserver=yes
   rightmodecfgclient=yes
   modecfgpull=yes
-  xauthby=file
-  ike-frag=yes
   ikev2=never
   cisco-unity=yes
   also=shared
+
+conn ike2-rsa
+  auto=add
+  left=%defaultroute
+  leftid=115.238.53.210
+  leftcert=115.238.53.210
+  leftsendcert=always
+  leftsubnet=0.0.0.0/0
+  leftrsasigkey=%cert
+  right=%any
+  rightid=%fromcert
+  rightaddresspool=192.168.43.10-192.168.43.250
+  rightca=%same
+  rightrsasigkey=%cert
+  narrowing=yes
+  dpddelay=30
+  dpdtimeout=120
+  dpdaction=clear
+  ikev2=insist
+  rekey=no
+  pfs=no
+  ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
+  phase2alg=aes_gcm-null,aes128-sha1,aes256-sha1,aes128-sha2,aes256-sha2
+  ikelifetime=24h
+  salifetime=24h
+  encapsulation=yes
+  modecfgdns="8.8.8.8 8.8.4.4"
+  mobike=no
 ```
 
 - ipesc密钥配置: /etc/ipsec.secrets

@@ -14,6 +14,12 @@
 
 ## 使用 interfaces 
 
+**interfaces 配置生效:**
+
+```
+sudo systemctl restart NetworkManager.service
+```
+
 /etc/network/interfaces 文件是 由零个或多个 "iface", "mapping", "auto", "allow-", "rename", "source", 和
 "source-directory" section 组成.
 
@@ -164,6 +170,18 @@ netplan "network renderer" 读取 `/{lib,etc,run}/netplan/*.yaml` 并将配置�
 
 - 解析器支持配置多个配置文件, 以允许 libvrit, lxd 等应用程序打包预期的网络配置(virbr0, lxdbr0), 或更改全局默认策略
 以使用NetworkManager来处理所有事情.
+
+**netplan 配置生效:**
+
+```
+# apply
+sudo netplan --debug generate
+sudo netplan --debug apply
+
+# 重启 netplan 使用的 renderer
+sudo systemctl restart NetworkManager.service
+sudo systemctl restart systemd-networkd.service
+```
 
 
 ### 物理设备属性
