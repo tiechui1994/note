@@ -1,4 +1,4 @@
-# Linux 程序调试
+# linux 程序追踪
 
 ## strace
 

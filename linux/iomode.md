@@ -1,4 +1,4 @@
-# Linux IO模式及 select、poll、epoll详解
+# linux io 模式及 select, poll, epoll详解
 
 ## 用户空间与内核空间、内核态与用户态
 
