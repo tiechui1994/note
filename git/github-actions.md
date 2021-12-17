@@ -163,7 +163,6 @@ jobs:
 | Windows Server 2019 | windows-latest |
 | Ubuntu 20.04 | ubuntu-20.04 或 ubuntu-latest |
 | Ubuntu 18.04 | ubuntu-18.04 |
-| Ubuntu 16.04 | ubuntu-16.04 |
 | macOS X 10.15 | macos-latest |
 
 > 注: 每个 job 的虚拟环境都是独立的.
@@ -234,16 +233,42 @@ steps:
       persist-credentials: false
 ```
 
-- 文件上传
+- 文件上传与下载
 
 ```yaml
 - uses: actions/upload-artifact@v2
   with:
     name: my-artifact
-    path: path/to/artifact/world.txt
+    path: |
+      path/to/artifact/world.txt
+      path/to/artifact/hello.txt
+    if-no-files-found: error # ignore, warn, error
+
+- uses: actions/download-artifact@v2
+  with:
+    name: my-artifact
+    path: path/to/artifacts
 ```
 
-- 不同版本的运行环境(使用矩阵)
+- 缓存(缓存文件可以跨越job使用), 先缓存, 再恢复
+
+```yaml
+- name: store
+  uses: actions/cache@v2
+  with:
+    path: ./nginx_ubuntu_16.04_amd64.deb
+    key: ${{github.sha}}-16.04
+
+- name: restore
+  uses: actions/cache@v2
+  with:
+    path: ./nginx_ubuntu_16.04_amd64.deb
+    key: ${{github.sha}}-16.04
+```
+
+缓存存储的 key 和 恢复使用的 key 一致时, 才能恢复相应的文件(实质上也是文件上传与下载, key作为主键).
+
+- 运行环境(使用矩阵), go, node, java, python
 
 ```yaml
 strategy:
@@ -253,7 +278,7 @@ strategy:
 steps:
   - uses: actions/setup-node@v2
     with:
-      node-version: ${{ matrix.node-version }}
+      node-version: ${{ matrix.node }}
 ```
 
 使用到的 action 有 `actions/setup-node@v2`, `actions/setup-go@v2`, `actions/setup-python@v2`, `actions/setup-java@v2`
@@ -289,9 +314,12 @@ steps:
       echo "${{env.TAG}}"
 ```
 
-- 设置输出, 同一个 job 引用
+- 设置输出, 同一个 job 引用(声明, 设置输出, 引用)
 
 ```yaml
+outputs:
+  version: ${{ steps.xxx.outputs.version }}
+
 steps:
   - id: xxx
     run: |
@@ -304,7 +332,7 @@ steps:
       echo "version: ${{ steps.xxx.outputs.version }}"
 ```
 
-- 设置输出, 跨越 job 引用
+- 设置输出, 跨越 job 引用(声明, 设置输出, 依赖, 引用)
 
 ```yaml
 job1:
@@ -334,12 +362,12 @@ job2:
 
 引用输出/上下文:
 
-- 在同job下引用:
+1) 在同job下引用:
 
 可以采用 `${{ steps.<stepid>.outputs.<key> }}` 的方式引用输出的值, 其中 `<stepid>` 是step的id, `<key>` 是输
 出名称.
 
-- 跨越job引用: 
+2) 跨越job引用: 
 
 首先, 要想跨越job使用, 则在输出结果的 job 当中需要添加 `outputs`, 设置对应的结果.  
 
@@ -347,7 +375,7 @@ job2:
 
 最后, 引用的方式是 `${{ needs.<jobid>.outputs.<key> }}`
 
-- 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xxx }}`(用户设置的secret变量)
+3) 引用其他变量: `${{ github.xxx }}`(github内置变量), `${{ secrets.xxx }}`(用户设置的secret变量)
 
 
 一个完整案例:

@@ -329,3 +329,40 @@ vlans:
 ```
 
 > 针对虚拟网口 VLAN, 最好使用 `addresses` 配置静态地址. 
+
+
+## 使用命令(临时设置)
+
+主要介绍 `ifconfig`, `route`, `ip` 命令. 这些命令大部分都是在root权限下使用的.
+
+- 添加/删除IP
+
+```
+# ip address
+ip address add <address> broadcast <broadcast> scope global dev <interface>
+ip address del <address> dev <interface>
+
+# ifconfig
+ifconfig <interface> add <address> netmask <netmask> broadcast <broadcast> 
+ifconfig <interface> del <address>
+```
+
+- 添加/删除路由
+
+```
+# route
+route add|del -net 192.168.1.0/24 gw 192.168.1.10 metric 1
+route add|del -host 192.168.11.22 gw 192.168.1.10 metric 1
+
+# ip route
+```
+
+- 启用/停用网卡
+
+```
+# ifconfig
+ifconfig <interface> up|down
+
+# ip link
+ip link set dev <interface> up|down
+```
