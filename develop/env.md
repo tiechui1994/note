@@ -426,10 +426,18 @@ conn shared
   # 
   left = <ip address> | <fqdn> | %any | <range> | <subnet>
   
+  # 左侧参与者身份标识. 默认是left. 可以是IP地址或以@开头的完全限定性域名. 如果值是 %fromcert, ID值是从加载的证书中
+  # 获取DN. 如果值是 %none, 表示不设置ID.
+  leftid = 10.1.1.1 
   
-  leftid = 10.1.1.1 # 左侧参与者身份标识. 默认是left. 可以是IP地址或以@开头的完全限定性域名. 如果值是 %fromcert,
-                    # ID值是从加载的证书中获取DN. 如果值是 %none, 表示不设置ID.
+  # 左侧参与者后面的私有子网, 表示为network/netmask形式. 目前, 支持 IPv4 和 IPv6 范围.
+  # 如果省略, 假设为 left/32, 表示连接的左端仅到达左参与者.
+  leftsubnet = network/netmask
   
+  # 左参与者后面指定多个私有子网, 表示为 { networkA/netmaskA networkB/netmaskB [...] } 
+  # 如果同时定义了 leftsubnets= 和 rightsubnets=, 则子网隧道的所有组合都将被实例化.
+  # 不能同时使用 leftsubnet 和 leftsubnets.
+  leftsubnets = { network/netmask network/netmask }
   
   # 两个安全网关应该如何相互认证, 可接受的值:
   # 共享机密密钥 secret,
@@ -605,6 +613,17 @@ conn_name 是在 /etc/ipsec.conf 当中　`conn <name>`　当中的 <name>.
 
 - strongswan配置: /opt/local/strongswan/etc/strongswan.conf
 
+
+```
+# 本地使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
+charon.port = 500         
+
+# 在 NAT-T 的情况下本地使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
+# 必须与 charon.port 不同, 否则将分配一个随机端口.
+charon.port_nat_t = 4500  
+```
+
+案例:
 ```
 charon {
     load_modular = yes
