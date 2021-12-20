@@ -304,8 +304,11 @@ sudo poff ppptest
 
 ROUTE:
 ```
-# 客户端
+# 客户端, 访问服务器内的其他设备
 sudo route add -net 192.168.1.0/24 gw 172.31.1.1 metric 1
+
+# 客户端, 访问其他VPN设备(可选, 一般可以不设置)
+sudo route add -net 172.31.1.0/24  gw 172.31.1.1 metric 1
 ```
 
 NAT:
@@ -319,103 +322,64 @@ sudo iptables -t nat -A POSTROUTING -s 172.31.1.0/24 -j SNAT --to-source 192.168
 > 注: 如果要想服务器也能访问客户端的局域网, 也需要进行上述操作, 只不过是相反的操作而已.
 
 
-## L2TP VPN
+## IKEv2 VPN
 
-- L2TP
-
-L2TP(第2层隧道协议)是一种允许远程用户访问公共网络的隧道协议. L2TP允许点对点协议(PPP)会话在多个网络和链路上传输. L2TP
-来源于微软的 PPTP 和思科的 L2F(Layer 2 Forwarding)技术. 因此, L2TP 具有 L2TP 的特性, 它结合了 PPTP 的控制和数据
-通道, 并且运行在更快的UDP上.
-
-当处于安全性考虑时, L2TP是更好的选择, 因为L2TP需要证书, 但是 PPTP 使用的是用户名+密码.
-
-- IPsec
-
-IPsec 是一套相关协议, 用于在IP数据包层进行加密安全通信. 
-
-IPsec 在IP层使用两种协议来保护通信:
-
-1) 认证头(AH), 用于验证IP数据包来源和验证其内容完整性的安全协议.
-
-2) 封装安全负载(ESP), 用于加密整个IP数据包(并认证其内容)的安全协议.
-
-IPsec 通道协商. 有两种不同模式用于确定如何在VPN中交换数据流:
-
-1) 传输模式 - 在已建立 IPsec 隧道的两台主机之间直接发送数据包, 保护数据流. 也就是说, 当通信端点和加密端点相同时, IP数
-据包的数据部分已加密, 但不加密IP报头. 为受保护的主机提供加密和解密服务的VPN网关无法对受保护的VPN通信使用传输模式. 当数据
-包被拦截时, 源或目的地的IP地址可以进行修改. 基于这种结构, 传送模式只能在通信端点和加密端点相同时才能使用. End-to-End
-
-2) 隧道模式 - 通过将原始IP数据包封装在VPN隧道中的另一个数据包中, 保护数据流. 此模式使用预先共享密钥(PSK)与IKE一起认证
-对等方. 这是独立专用网络内的主机通过公共网络进行通信最常用的方式. 此模式可供VPN客户端和VPN网关使用, 并保护在非IPsec系统
-之间来回通信. Site-to-Site
-
-- IKE
-
-IKE(Internet密钥交换)协议是通信双方建立安全连接的协议. 它是基于UDP 500端口号的应用层协议. IKE提供了多种身份验证方式,
-最常见的是预共享密钥(PSK)验证, 基于证书的身份验证.
-
-
-### 安装依赖服务 ppp, xl2tpd, libreswan
-
-xl2tpd 实现了 L2TP 协议. libreswan 实现了 IPsec.
-
-IPsec 用于 VPN 协议本身配置的 IKE(因特网密钥交换)协议. 术语 IPsec 和 IKE 可以互换使用. IPsec VPN 也称为 IKE VPN,
-IKEv2 VPN, XAUTH VPN, Cisco VPN 或 IKE/IPsec VPN. 使用 L2TP 的 IPsec VPN的变体称为 L2TP/IPsec VPN. 它需要
-可选通道 xl2tpd 应用程序. 
-
+### 安装依赖服务 ppp, strongswan
 
 ```bash
-sudo apt-get update && \
-sudo apt-get install xl2tpd ppp libreswan -y --no-install-recommends --no-upgrade
+wget https://github.com/tiechui1994/jobs/releases/download/strongswan_5.9.0/strongswan_5.9.0_ubuntu_18.04_amd64.deb
+sudo dpkg -i strongswan_5.9.0_ubuntu_18.04_amd64.deb
 ```
 
 ### 服务配置
 
-- xl2tpd 配置文件: /etc/xl2tpd/xl2tpd.conf
+- 生成秘钥
 
+```bash
+# ca.cert.pem =>  cacerts
+# ca.pem => private
+# server.cert.pem => certs
+# server.pem => private
+# client.cert.pem => certs
+# client.pem => private
+
+# CA
+ipsec pki --gen --outform pem > ca.pem
+# C country 
+# O organization
+# CN common name
+ipsec pki --self --in ca.pem --dn "C=com, O=myvpn, CN=VPN CA"  --ca --outform pem > ca.cert.pem
+
+# Server
+ipsec pki --gen --outform pem > server.pem
+ipsec pki --pub --in server.pem | ipsec pki --issue \
+--cacert ca.cert.pem \
+--cakey ca.pem \
+--dn "C=com, O=myvpn, CN=10.10.1.100" \
+--san="10.10.1.100" \
+--flag serverAuth \
+--flag ikeIntermediate \
+--outform pem > server.cert.pem
+
+# Client
+ipsec pki --gen --outform pem > client.pem
+ipsec pki --pub --in client.pem | ipsec pki --issue \
+--cacert ca.cert.pem \
+--cakey ca.pem \
+--dn "C=com, O=myvpn, CN=VPN Client " \
+--outform pem > client.cert.pem
+
+
+cp ca.cert.pem /opt/local/strongswan/etc/ipsec.d/cacerts
+cp ca.pem /opt/local/strongswan/etc/ipsec.d/private
+cp server.cert.pem /opt/local/strongswan/etc/ipsec.d/certs
+cp server.pem /opt/local/strongswan/etc/ipsec.d/private
+cp client.cert.pem /opt/local/strongswan/etc/ipsec.d/certs
+cp client.cert.p12 /opt/local/strongswan/etc/ipsec.d/certs
+cp client.pem /opt/local/strongswan/etc/ipsec.d/private
 ```
-[global]								
-  port = 1701                           ; bind port to  1701
-  auth file = /etc/ppp/chap-secrets     ; auth secret file
-  access control = yes				    ; refuse connections without IP match
-  rand source = dev                     ; 随机值的来源:
-                                        ; dev - reads of /dev/urandom
-                                        ; sys - uses rand()
 
-[lns default]							; default LNS config
-ip range = 192.168.42.10-192.168.42.50  ; 定义VPN客户端的地址段. remoteip
-local ip = 192.168.42.1                 ; 定义VPN服务器的地址段. localip
-require chap = yes                      ; Require CHAP auth
-refuse pap = yes                        ; Refuse PAP auth
-refuse chap = no                        ; Refuse CHAP auth
-refuse authentication = no              ; 
-require authentication = yes            ; 要求对等方进行身份验证
-name = l2tpd                            ; 服务名称唯一标识
-pppoptfile = /etc/ppp/xl2tpd-options    ; ppp 的 option 选项文件
-length bit = yes                        ;
-```
-
-xl2tpd 的 option 配置文件: /etc/ppp/xl2tpd-options
-
-```
-ms-dns 8.8.8.8
-ms-dns 8.8.4.4
-
-noccp
-auth
-crtscts
-lock
-
-ipcp-accept-local
-ipcp-accept-remote
-lcp-echo-failure 4
-lcp-echo-interval 30
-```
-
-> 注: ipcp-accept-local, ipcp-accept-remote 使用此选项, 即使 local/remote IP 地址已在选项中指定, pppd 也会
-接受对等方对 local/remote IP 地址的连接.
-
-- ipsec 配置文件: /etc/ipesc.conf
+- ipsec 配置文件: /opt/local/strongswan/etc/ipesc.conf
 
 ipesc.conf 文件由三种不同的节类型组成: `config setup` 定义一般参数, `conn <name>` 定义一个连接. `ca <name>` 定
 义证书. 其中 `config setup` 只能有一个. 但是 `conn <name>` 和 `ca <name>` 可以有多个.
@@ -507,76 +471,79 @@ config setup
   nat_traversal=yes
   protostack=auto
 
-conn shared
-  left=172.17.0.2
-  leftid=115.238.53.210
-  right=%any
-  forceencaps=yes
-  authby=secret
-  ikev2=never
-  ike=3des-sha1,3des-sha2,aes-sha1,aes-sha1;modp1024,aes-sha2,aes-sha2;modp1024,aes256-sha2_512
-  phase2alg=3des-sha1,3des-sha2,aes-sha1,aes-sha2,aes256-sha2_512
-  pfs=no
-  rekey=no
-  keyingtries=5
-  dpddelay=15
-  dpdtimeout=30
-  dpdaction=clear
-  sha2-truncbug=yes
+conn iOS_cert
+    keyexchange=ikev1
+    fragmentation=yes
+    left=%defaultroute
+    leftauth=pubkey
+    leftsubnet=0.0.0.0/0
+    leftcert=server.cert.pem
+    right=%any
+    rightauth=pubkey
+    rightauth2=xauth
+    rightsourceip=10.31.2.0/24
+    rightcert=client.cert.pem
+    auto=add
 
-conn l2tp-psk
-  type=transport
-  auto=add
-  leftprotoport=17/1701
-  rightprotoport=17/%any
-  auth=esp
-  also=shared
+conn android_xauth_psk
+    keyexchange=ikev1
+    left=%defaultroute
+    leftauth=psk
+    leftsubnet=0.0.0.0/0
+    right=%any
+    rightauth=psk
+    rightauth2=xauth
+    rightsourceip=10.31.2.0/24
+    auto=add
 
-conn xauth-psk
-  type=tunnel
-  auto=add
-  leftsubnet=0.0.0.0/0
-  rightaddresspool=192.168.43.10-192.168.43.250
-  modecfgdns="8.8.8.8 8.8.4.4"
-  leftxauthserver=yes
-  rightxauthclient=yes
-  leftmodecfgserver=yes
-  rightmodecfgclient=yes
-  modecfgpull=yes
-  ikev2=never
-  cisco-unity=yes
-  also=shared
+conn networkmanager-strongswan
+    keyexchange=ikev2
+    left=%defaultroute
+    leftauth=pubkey
+    leftsubnet=0.0.0.0/0
+    leftcert=server.cert.pem
+    right=%any
+    rightauth=pubkey
+    rightsourceip=10.31.2.0/24
+    rightcert=client.cert.pem
+    auto=add
 
-conn ike2-rsa
-  auto=add
-  left=%defaultroute
-  leftid=115.238.53.210
-  leftcert=115.238.53.210
-  leftsendcert=always
-  leftsubnet=0.0.0.0/0
-  leftrsasigkey=%cert
-  right=%any
-  rightid=%fromcert
-  rightaddresspool=192.168.43.10-192.168.43.250
-  rightca=%same
-  rightrsasigkey=%cert
-  narrowing=yes
-  dpddelay=30
-  dpdtimeout=120
-  dpdaction=clear
-  ikev2=insist
-  rekey=no
-  pfs=no
-  ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1
-  phase2alg=aes_gcm-null,aes128-sha1,aes256-sha1,aes128-sha2,aes256-sha2
-  ikelifetime=24h
-  salifetime=24h
-  encapsulation=yes
-  modecfgdns="8.8.8.8 8.8.4.4"
-  mobike=no
+conn ios_ikev2
+    keyexchange=ikev2
+    ike=aes256-sha256-modp2048,3des-sha1-modp2048,aes256-sha1-modp2048!
+    esp=aes256-sha256,3des-sha1,aes256-sha1!
+    rekey=no
+    left=%defaultroute
+    leftid=${vps_ip}
+    leftsendcert=always
+    leftsubnet=0.0.0.0/0
+    leftcert=server.cert.pem
+    right=%any
+    rightauth=eap-mschapv2
+    rightsourceip=10.31.2.0/24
+    rightsendcert=never
+    eap_identity=%any
+    dpdaction=clear
+    fragmentation=yes
+    auto=add
+
+conn windows7
+    keyexchange=ikev2
+    ike=aes256-sha1-modp1024!
+    rekey=no
+    left=%defaultroute
+    leftauth=pubkey
+    leftsubnet=0.0.0.0/0
+    leftcert=server.cert.pem
+    right=%any
+    rightauth=eap-mschapv2
+    rightsourceip=10.31.2.0/24
+    rightsendcert=never
+    eap_identity=%any
+    auto=add
 ```
 
-- ipesc密钥配置: /etc/ipsec.secrets
+- ipesc密钥配置: /opt/local/strongswan/etc/ipsec.secrets
 
 该文件里包含多个key. 其中的key类型可以是:
 
@@ -616,10 +583,13 @@ include ipsec.*.secrets
 
 案例:
 ```
-112.113.114.115  %any: PSK "1234567890"
+: RSA server.pem
+: PSK "myPSKkey"
+: XAUTH "myXAUTHPass"
+myUserName %any : EAP "myUserPass"
 ```
 
-- VPN账号文件: /ect/ipsec.d/passwd
+- VPN账号文件: /opt/local/strongswan/ect/ipsec.d/passwd
 
 ```
 admin:$1$P3Q2MST/$MjcjDrMUokEltHzYqSxTt0:xauth-psk
@@ -633,15 +603,25 @@ password 是加盐哈希值. 加盐哈希命令 `openssl passwd -1|-5|-6 PASSWOR
 conn_name 是在 /etc/ipsec.conf 当中　`conn <name>`　当中的 <name>.
 
 
-- VPN账号文件: /etc/ppp/chap-secrets
+- strongswan配置: /opt/local/strongswan/etc/strongswan.conf
 
 ```
-admin l2tpd 12345678 *
+charon {
+    load_modular = yes
+    duplicheck {
+            enable = no
+    }
+    compress = yes
+    plugins {
+            include strongswan.d/charon/*.conf
+    }
+    dns1 = 8.8.8.8
+    dns2 = 8.8.4.4
+    nbns1 = 8.8.8.8
+    nbns2 = 8.8.4.4
+}
+include strongswan.d/*.conf
 ```
-
-在 chap-secrets 的每一行是一个 VPN 账号, 其格式为: `client server secret ip`, client是VPN client的用户名, 
-server 是在 xl2tpd 当中 `name` 配置的标识符号. secret 是 VPN client的用户名对于的密码. ip 是 VPN client 对应
-分配的IP地址.
 
 ### 设置内核参数和防火墙
 
@@ -665,3 +645,6 @@ TABLE
 ```
 
 然后执行 `sudo iptables-restore < /etc/iptables.firewall.rules`
+
+
+## OpenVPN
