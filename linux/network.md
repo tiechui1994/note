@@ -420,3 +420,79 @@ stdout.
 not LISTEN state: Recv-Q 表示 receive queue 中存在的字节数目;
                   Send-Q 表示 send queue 中存在的字节数;
 ```
+
+## 端口号检测
+
+### telnet
+
+telnet 命令用于使用 TELNET 协议与另一台主机进行交互通信.
+
+它从命令模式开始, 在那里它打印一个 telnet 提示符("telnet>"). 如果使用主机参数调用 telnet, 它将隐式执行 open 命令;
+
+```
+telnet [OPTIONS] [host [port]]
+```
+
+常用的选项:
+
+- `-4`, 强制使用 IPv4 地址解析
+
+### nc
+
+nc(netcat) 程序几乎涉及 TCP, UDP 或 UNIX 套接字的任何事情. 它可以打开 TCP 连接, 发送 UDP 数据包, 侦听任意 TCP 和 
+UDP 端口, 进行端口扫描以及处理 IPv4 和 IPv6.
+
+与 telnet 不同, nc 脚本很好, 并将错误消息分离到标准错误上, 而不是将它们发送到标准输出.
+
+```
+nc [OPTIONS] [destination] [port]
+```
+
+常用的选项:
+
+- `-4`, 仅使用 IPv4 地址.
+
+- `-b`, 允许 broadcast
+
+- `-D`, 启用socket的DEBUG调试.
+
+- `-U`, 使用 UNIX-domain socket
+
+- `-u`, 使用 UDP socket
+
+- `-t`, 使用 TCP socket
+
+- `-I length`, 设置 TCP 的 recv buffer 大小
+
+- `-O length`, 设置 TCP 的 send buffer 大小
+
+- `-w timeout`, 超时时间(连接超时, 空闲超时), 单位是秒, `-w` 标志对 `-l` 选项没有影响. 即 nc 将永远侦听连接, 无论
+有或没有 `-w` 标志. 默认是没有超时.
+
+- `-l`, 监听 incoming 连接, 而不是启动与远程主机的连接. 要监听的 destination 和 port 非必选参数, 也可以分别与`-s` 
+和 `-p` 选项指定. 但是不能与 `-x` 或 `-z` 一起使用. 此外, 使用 `-w` 选项指定的参数被忽略.
+
+- `-s source`, 从具有 source IP 地址的网口发送数据包. 对于 UNIX 域数据报套接字, 指定要创建和使用的本地临时套接字文件,
+以便可以接收数据报. 不能与 `-x` 一起使用.
+
+- `-p source_port`, 指定 nc 应使用的源端口, 受权限限制和可用性限制.
+
+- `-z`, 只是扫描监听守护进程, 不向它们发送任何数据. 不能与 `-l` 一起使用.
+
+- `-x proxy_address[:port]`, 使用proxy_address和port的代理连接到目的地. 如果未指定端口, 则使用代理协议的已知端口
+(SOCKS是1080, HTTPS为3128). 
+
+- `-X proxy_protocal`, 设置代理使用代理协议. 目前支持的协议有 4 (SOCKS v.4), 5 (SOCKS v.5) 和 connect (HTTPS 代理).
+如果未指定协议, 则使用 SOCKS 版本 5.
+
+
+案例: tcp 端口扫描
+```
+nc -v -z -t 192.168.50.10 22
+``` 
+
+案例: udp 端口扫描
+```
+nc -v -z -u 192.168.50.10 500
+```
+

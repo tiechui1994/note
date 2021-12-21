@@ -395,6 +395,8 @@ ipesc.conf 文件由三种不同的节类型组成: `config setup` 定义一般�
 also = <section name>
 ```
 
+[ipsec.conf文件配置选项](https://linux.die.net/man/5/ipsec.conf)
+
 conn 常用参数:
 
 ```
