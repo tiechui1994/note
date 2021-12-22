@@ -357,8 +357,8 @@ vlans:
 
 ```
 # ip address
-ip address add <address> broadcast <broadcast> scope global dev <interface>
-ip address del <address> dev <interface>
+ip address add <address>/<mask> broadcast <broadcast> scope global dev <interface>
+ip address del <address>/<mask> dev <interface>
 
 # ifconfig
 ifconfig <interface> add <address> netmask <netmask> broadcast <broadcast> 
@@ -373,6 +373,7 @@ route add|del -net 192.168.1.0/24 gw 192.168.1.10 metric 1
 route add|del -host 192.168.11.22 gw 192.168.1.10 metric 1
 
 # ip route
+ip route add|del 192.168.1.0/24 via 192.168.1.10 metric 1 dev eth0
 ```
 
 - 启用/停用网卡
