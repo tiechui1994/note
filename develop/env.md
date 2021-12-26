@@ -430,9 +430,14 @@ conn shared
   left = <ip address> | <fqdn> | %any | <range> | <subnet>
   
   # 左侧参与者身份标识. 默认是 left 或 leftcert 证书的 subjectAltName. 如果配置了 leftcert, 则身份必须由证书确认.
-  # 也就是说, 它必须匹配证书当中 subject DN 或 扩展 subjectAltName.
+  # 也就是说, 它必须匹配证书当中 subject DN 或 扩展 subjectAltName..
   # 值也可以是IP地址, 完全限定性域名, 电子邮件地址(以@开头)或可识别名称. 
-  leftid = id
+  #
+  # 对于 IKEv2 和 rightid, 身份前面的前缀 % 会阻止守护进程在其 IKE_AUTH 请求中发送 IDr, 并允许它根据响应者证书中包
+  # 含的 subject 和 subjectAltNames 验证配置的身份（否则它只会与 IDr 进行比较响应者返回）.
+  # 如果响应者为 leftid 配置了不同的值, 则发起者发送的 IDr 可能会阻止响应者找到配置.
+  #
+  leftid = <id>
   
   # 在隧道中使用的内部源IP, 也称为虚拟IP. 
   # 只在本地相关, 另一端不必同意. 此选项用于使网关本身使用其内部 IP (它是 leftsubnet 的一部分) 与  rightsubnet 通
@@ -450,12 +455,23 @@ conn shared
   # 不能同时使用 leftsubnet 和 leftsubnets.
   leftsubnets = { network/netmask network/netmask }
   
-  # 两个安全网关应该如何相互认证, 可接受的值:
-  # 共享机密密钥 secret,
-  # RSA 数字签名的 rsasig(默认值), 
-  # secret|rsasig 同时使用, 
-  # 永远不会尝试或接受协商(仅用于分流连接) never.
-  authby = secret | rsasig | never
+  # 本地(left)或远程(right)要求的身份认证方法. 可接受的值:
+  # pubkey, 用于公钥认证(RSA/ECDSA)
+  # psk, 用于预共享密钥认证
+  # eap, 用于 IKEv2 的可扩展协议
+  # xauth, 用于 IKEv1 的可扩展协议.
+  #
+  # 对于 eap, 可以附加一个可选的 EAP 方法. 当前定义的方法有 eap-tls, eap-tnc, eap-tnc, eap-md5, eap-ttls,
+  # eap-dynamic, eap-radius, eap-identity, eap-peap.
+  leftauth = <auth method>
+  
+  # 左侧参与者的 X509 证书路径. 该文件可以采用 PEM 或 DER 格式进行编码. 也支持 OpenPGP 证书. 绝对路径或相对于 etc/
+  # ipsec.d/certs 的路径被接受. 默认情况下, leftcert 将 leftid 设置为证书subject的名称. 但是, 可以通过指定由证书
+  # 认证的 leftid 值来覆盖.
+  leftcert = path
+  
+  # 证书颁发机构的专有名称, 它位于左侧参与者的证书根证书(cacerts)颁发机构的信任路径中. %same 意味着重用右侧配置的值.
+  leftca = <issuer dn> | %same
   
   # ike 第一阶段中的加密/认证算法. 格式: "cipher-hash;modpgroup,cipher-hash;modpgroup,...". 任何缺失的选项都
   # 将填充允许的默认选项. 使用逗号进行分隔.
@@ -472,10 +488,23 @@ conn shared
   # 连接即将到期时是否应重新协商. 可接受的值为yes(默认值)和no. 
   rekey = yes | no
   
-  # 某些情况下, 例如当 ESP 数据包被过滤或当一个损坏的 IPsec 对等体不能正确识别 NAT 时, 强制 RFC-3948 封装可能很有用.
-  # forceencaps=yes 强制 NAT 检测代码撒谎并告诉远程对等方需要 RFC-3948 封装(UDP 端口 4500 数据包中的 ESP).
-  # 要使此选项生效, 需要设置设置选项 nat_traversal=yes. 可接受的值为 yes 或 no(默认值).
+  # 即使未检测到 NAT 情况, 也强制对 ESP 数据包进行 UDP 封装. 这有助于克服防火墙的限制. 
   forceencaps = yes | no
+  
+  # 是否使用 IKE 分段. 可选值: 
+  # yes(默认), 如果对端也支持IKE分段, 则将分段发送过大的IKE消息.
+  # accept, 会告知对端支持分段, 但是守护进程不会使用分段发送自己的消息.
+  # no, 禁止使用IKE分段发送消息.
+  # 
+  # 注:无论此选项值如何, 始终接受对对方发送的分段IKE消息.
+  fragmentation = yes  | accept | force | no
+  
+  # 应该使用哪种密钥交换协议来启动连接. ike 表示连接在启动时使用 IKEv2, 但在响应时接受任何协议版本.
+  keyexchange = ike | ikev1 | ikev2
+  
+  # 定义客户端用于回复EAP身份请求的身份. 如果在EAP服务器上定义, 则定义的身份在EAP身份验证期间使用对端的身份.
+  # 特殊值 %identity 使用EAP身份方法向客户端询问EAP身份. 如果未定义, 使用 IKEv2 身份作为 EAP 身份.
+  eap_identity = <id>
 ```
 
 案例配置:
