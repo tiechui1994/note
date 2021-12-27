@@ -397,6 +397,8 @@ also = <section name>
 
 [ipsec.conf文件配置选项](https://linux.die.net/man/5/ipsec.conf)
 
+[strongswan conn配置选项](https://wiki.strongswan.org/projects/strongswan/wiki/connsection)
+
 conn 常用参数:
 
 ```
@@ -436,7 +438,6 @@ conn shared
   # 对于 IKEv2 和 rightid, 身份前面的前缀 % 会阻止守护进程在其 IKE_AUTH 请求中发送 IDr, 并允许它根据响应者证书中包
   # 含的 subject 和 subjectAltNames 验证配置的身份（否则它只会与 IDr 进行比较响应者返回）.
   # 如果响应者为 leftid 配置了不同的值, 则发起者发送的 IDr 可能会阻止响应者找到配置.
-  #
   leftid = <id>
   
   # 在隧道中使用的内部源IP, 也称为虚拟IP. 
@@ -470,8 +471,15 @@ conn shared
   # 认证的 leftid 值来覆盖.
   leftcert = path
   
+  # 接受的值是 never 或 no, always 或 yes 以及 ifasked(默认值), 后者意味着对方必须发送证书请求才能获得证书.
+  leftsendcert = never | no | ifasked | always | yes
+  
   # 证书颁发机构的专有名称, 它位于左侧参与者的证书根证书(cacerts)颁发机构的信任路径中. %same 意味着重用右侧配置的值.
   leftca = <issuer dn> | %same
+  
+  # 使用默认的 ipsec _updown 脚本插入一对 INPUT 和 OUTPUT iptables 规则, 从而在主机的内部接口是协商客户端子网的
+  # 一部分的情况下允许访问主机本身. 可接受的值为 yes 和 no(默认值).
+  lefthostaccess = yes | no
   
   # ike 第一阶段中的加密/认证算法. 格式: "cipher-hash;modpgroup,cipher-hash;modpgroup,...". 任何缺失的选项都
   # 将填充允许的默认选项. 使用逗号进行分隔.
@@ -513,13 +521,11 @@ conn shared
 version 2.0
 
 config setup
-  virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12,%v4:!192.168.42.0/23
-  interfaces=%defaultroute
   uniqueids=no
-  nat_traversal=yes
-  protostack=auto
+  charondebug="cfg 2, net 2, enc 2, ike 2, tls 2"
 
 conn iOS_cert
+    auto=add
     keyexchange=ikev1
     fragmentation=yes
     left=%defaultroute
@@ -531,10 +537,11 @@ conn iOS_cert
     rightauth2=xauth
     rightsourceip=10.31.2.0/24
     rightcert=client.cert.pem
-    auto=add
 
 conn android_xauth_psk
+    auto=add
     keyexchange=ikev1
+    type=tunnel
     left=%defaultroute
     leftauth=psk
     leftsubnet=0.0.0.0/0
@@ -542,10 +549,30 @@ conn android_xauth_psk
     rightauth=psk
     rightauth2=xauth
     rightsourceip=10.31.2.0/24
+
+conn ikev2
     auto=add
+    type=tunnel
+    keyexchange=ikev2
+    eap_identity=%identity
+    fragmentation=yes
+    forceencaps=yes
+    rekey=no
+    left=%any
+    leftid=vpn-server.com
+    leftcert=server.crt
+    leftsendcert=always
+    leftsubnet=0.0.0.0/0
+    right=%any
+    rightid=%any
+    rightauth=eap-tls
+    rightsourceip=%dhcp
+    rightsendcert=never
 
 conn networkmanager-strongswan
+    auto=add
     keyexchange=ikev2
+    rekey=no
     left=%defaultroute
     leftauth=pubkey
     leftsubnet=0.0.0.0/0
@@ -554,9 +581,11 @@ conn networkmanager-strongswan
     rightauth=pubkey
     rightsourceip=10.31.2.0/24
     rightcert=client.cert.pem
-    auto=add
 
 conn ios_ikev2
+    auto=add
+    eap_identity=%any
+    fragmentation=yes
     keyexchange=ikev2
     ike=aes256-sha256-modp2048,3des-sha1-modp2048,aes256-sha1-modp2048!
     esp=aes256-sha256,3des-sha1,aes256-sha1!
@@ -570,13 +599,12 @@ conn ios_ikev2
     rightauth=eap-mschapv2
     rightsourceip=10.31.2.0/24
     rightsendcert=never
-    eap_identity=%any
-    dpdaction=clear
-    fragmentation=yes
-    auto=add
+    
 
 conn windows7
+    auto=add
     keyexchange=ikev2
+    eap_identity=%any
     ike=aes256-sha1-modp1024!
     rekey=no
     left=%defaultroute
@@ -587,8 +615,6 @@ conn windows7
     rightauth=eap-mschapv2
     rightsourceip=10.31.2.0/24
     rightsendcert=never
-    eap_identity=%any
-    auto=add
 ```
 
 - ipesc密钥配置: /opt/local/strongswan/etc/ipsec.secrets

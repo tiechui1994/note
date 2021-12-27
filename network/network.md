@@ -1,6 +1,8 @@
-# 网络配置
+# NetworkManager
 
 ## 网口配置 
+
+详细参考 [interface 配置](interface.md)
 
 ### 永久配置网口
 
