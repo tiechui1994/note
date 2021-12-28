@@ -18,10 +18,10 @@
 
 - rewrite 功能就是: 使用nginx提供的全局变量或自己设置的变量, 结合正则表达式和标志位实现**url重写**以及**重定向**.
 
-- rewrite只能放在 `server`,`location`,`if` 中, 并且只能对**`域名后边的除去传递的参数外的字符串`**起作用, 
-例如`http://seanlook.com/a/we/index.php?id=1&u=str` 只对`/a/we/index.php`重写.
+- rewrite只能放在 `server`,`location`,`if` 中, 并且只能对 **域名后边的除去传递的参数外的字符串** 起作用, 
+例如`http://seanlook.com/a/we/index.php?id=1&u=str` 只对 `/a/we/index.php` 重写.
 
-- 如果想对**`域名`**或**`参数字符串`**起作用, 可以使用`全局变量匹配`, 也可以使用`proxy_pass反向代理`.
+- 如果想对 `域名` 或 `参数字符串` 起作用, 可以使用 `全局变量匹配`, 也可以使用 `proxy_pass反向代理`.
 
 - 表面上看rewrite和location功能有点类似, 都能实现跳转. 主要区别在于**rewrite是在同一域名内更改获取资源的路径**
 而**location是对一类路径做控制访问或反向代理**, 很多情况下`rewrite也会写在location里`, 它们的执行顺序是:

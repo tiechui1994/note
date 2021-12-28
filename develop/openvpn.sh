@@ -320,13 +320,15 @@ client
 dev tun
 proto ${protocol}
 remote ${ip} ${port}
-resolv-retry infinite
-nobind
 persist-key
 persist-tun
 remote-cert-tls server
-auth SHA512
 cipher AES-256-CBC
+auth SHA512
+nobind
+connect-retry 5 5
+resolv-retry infinite
+route-nopull
 ignore-unknown-option block-outside-dns
 block-outside-dns
 verb 3
