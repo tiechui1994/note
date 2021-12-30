@@ -1,4 +1,4 @@
-# 常用的环境搭建
+# VPN 环境
 
 ## PPTP VPN
 
@@ -720,16 +720,16 @@ net.ipv4.ip_forward = 1
 
 然后执行 `sudo sysctl -p`
 
-- 防火墙(NAT转发, 网络设置)
+### 客户端(Android)
 
-```
-cat > /etc/iptables.firewall.rules <<- 'TABLE'
-iptables -t nat -A POSTROUTING -s 172.31.1.1/24 -o eth0 -j MASQUERADE
-iptables -t filter -A FORWARD -s 172.31.1.1/24 -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200
-TABLE
-```
-
-然后执行 `sudo iptables-restore < /etc/iptables.firewall.rules`
+[strongSwan](https://download.strongswan.org/Android/)
 
 
 ## OpenVPN
+
+### 客户端(Android)
+
+[OpenVPN Client Free](https://apkpure.com/openvpn-client-free/it.colucciweb.free.openvpn)
+
+[OpenVPN for Android](https://apkpure.com/openvpn-for-android/de.blinkt.openvpn)
+
