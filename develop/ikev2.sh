@@ -28,7 +28,7 @@ EOF
 
 function genca() {
 	cat > openssl.cnf <<-EOF
-$OPENSSL_COMMON
+${OPENSSL_COMMON}
 [ ca ]
     subjectKeyIdentifier = hash
     basicConstraints = critical, CA:true
@@ -57,14 +57,14 @@ function genserver() {
 	CN="vpn-server.com"
 	SAN="DNS: vpn-server.com" # IP:192.168.1.100, DNS: vpn-server.com, DNS: *.google.com
 	cat > openssl.cnf <<-EOF
-$OPENSSL_COMMON
+${OPENSSL_COMMON}
 [ ca ]
     subjectKeyIdentifier = hash
     basicConstraints = critical, CA:true
     keyUsage = critical, cRLSign, keyCertSign
 [ server ]
     authorityKeyIdentifier = keyid
-    subjectAltName = $SAN
+    subjectAltName = ${SAN}
     extendedKeyUsage = serverAuth, 1.3.6.1.5.5.8.2.2
 EOF
 	
@@ -100,14 +100,14 @@ function genclient() {
 	CN= "${STRONGSWAN_CLIENT_NAME}@${STRONGSWAN_DOMAIN}"
 	SAN="email:${STRONGSWAN_CLIENT_NAME}@${STRONGSWAN_DOMAIN}" # email: myvpn@google.com URI:https://www.baidu.com
 	cat > openssl.cnf <<-EOF
-$OPENSSL_COMMON
+${OPENSSL_COMMON}
 [ ca ]
     subjectKeyIdentifier = hash
     basicConstraints = critical, CA:true
     keyUsage = critical, cRLSign, keyCertSign
 [ client ]
     authorityKeyIdentifier = keyid
-    subjectAltName = $SAN
+    subjectAltName = ${SAN}
     extendedKeyUsage = serverAuth, 1.3.6.1.5.5.8.2.2
 EOF
 
@@ -156,7 +156,7 @@ EOF
 TEMP=`getopt --options hsc: --longoptions help,server,client: \
      -n 'cert.sh' -- "$@"`
 if [[ $? != 0 ]]; then
-    echo "Terminating..." >&2
+    log "terminating ..."
     exit 1
 fi
 

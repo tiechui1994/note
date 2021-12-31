@@ -343,41 +343,13 @@ sudo dpkg -i strongswan_5.9.0_ubuntu_18.04_amd64.deb
 # client.cert.pem => certs
 # client.pem => private
 
-# CA
-ipsec pki --gen --outform pem > ca.pem
+# CA 证书 Subject
 # C country 
 # O organization
 # CN common name
-ipsec pki --self --in ca.pem --dn "C=com, O=myvpn, CN=VPN CA"  --ca --outform pem > ca.cert.pem
-
-# Server
-ipsec pki --gen --outform pem > server.pem
-ipsec pki --pub --in server.pem | ipsec pki --issue \
---cacert ca.cert.pem \
---cakey ca.pem \
---dn "C=com, O=myvpn, CN=10.10.1.100" \
---san="10.10.1.100" \
---flag serverAuth \
---flag ikeIntermediate \
---outform pem > server.cert.pem
-
-# Client
-ipsec pki --gen --outform pem > client.pem
-ipsec pki --pub --in client.pem | ipsec pki --issue \
---cacert ca.cert.pem \
---cakey ca.pem \
---dn "C=com, O=myvpn, CN=VPN Client " \
---outform pem > client.cert.pem
-
-
-cp ca.cert.pem /opt/local/strongswan/etc/ipsec.d/cacerts
-cp ca.pem /opt/local/strongswan/etc/ipsec.d/private
-cp server.cert.pem /opt/local/strongswan/etc/ipsec.d/certs
-cp server.pem /opt/local/strongswan/etc/ipsec.d/private
-cp client.cert.pem /opt/local/strongswan/etc/ipsec.d/certs
-cp client.cert.p12 /opt/local/strongswan/etc/ipsec.d/certs
-cp client.pem /opt/local/strongswan/etc/ipsec.d/private
 ```
+
+生成证书脚本: https://github.com/tiechui1994/note/blob/master/develop/ikev2.sh
 
 - ipsec 配置文件: /opt/local/strongswan/etc/ipesc.conf
 
@@ -726,6 +698,8 @@ net.ipv4.ip_forward = 1
 
 
 ## OpenVPN
+
+安装配置脚本: https://github.com/tiechui1994/note/blob/master/develop/openvpn.sh
 
 ### 客户端(Android)
 
