@@ -371,7 +371,7 @@ also = <section name>
 
 [strongswan conn配置选项](https://wiki.strongswan.org/projects/strongswan/wiki/connsection)
 
-conn 常用参数:
+conn 特别关键的选项参数:
 
 ```
 conn shared
@@ -403,8 +403,8 @@ conn shared
   # fqdn 或 ip address, 则隐式设置 leftallowany=yes
   left = <ip address> | <fqdn> | %any | <range> | <subnet>
   
-  # 左侧参与者身份标识. 默认是 left 或 leftcert 证书的 subjectAltName. 如果配置了 leftcert, 则身份必须由证书确认.
-  # 也就是说, 它必须匹配证书当中 subject DN 或 扩展 subjectAltName..
+  # 左侧参与者身份标识. 默认是 left 或 leftcert 证书的 subjectAltName. 
+  # 如果配置了 leftcert, 则身份必须由证书确认. 也就是说, 它必须匹配证书当中 subject DN 或 扩展 subjectAltName.
   # 值也可以是IP地址, 完全限定性域名, 电子邮件地址(以@开头)或可识别名称. 
   #
   # 对于 IKEv2 和 rightid, 身份前面的前缀 % 会阻止守护进程在其 IKE_AUTH 请求中发送 IDr, 并允许它根据响应者证书中包
@@ -441,8 +441,10 @@ conn shared
   # CERT [pubkey]
   # CERT + EAP(用户名/密码). [pubkey + eap-md5]
   # EAP-TLS. [eap-tls]
+  # EAP-ENC(用户名/密码). [eap-enc]
   #
   # 对于 EAP(用户名/密码), 需要在 ipsec.secrets 当中的 EAP 类型定义.
+  # 注: 上述的认证方法, 需要在编译 strongSwan 的时候要启用的 plugin, 否则, 在实际当中旧无法使用.
   #
   leftauth = <auth method>
   
@@ -496,7 +498,6 @@ conn shared
 ```
 
 案例配置:
-
 ```
 version 2.0
 
@@ -511,7 +512,7 @@ conn iOS_cert
     left=%defaultroute
     leftauth=pubkey
     leftsubnet=0.0.0.0/0
-    leftcert=server.cert.pem
+    leftcert=server.crt
     right=%any
     rightauth=pubkey
     rightauth2=xauth
@@ -558,10 +559,10 @@ conn ios_ikev2
     esp=aes256-sha256,3des-sha1,aes256-sha1!
     rekey=no
     left=%defaultroute
-    leftid=${vps_ip}
+    leftid=vpn-server.com
+    leftcert=server.crt
     leftsendcert=always
     leftsubnet=0.0.0.0/0
-    leftcert=server.cert.pem
     right=%any
     rightauth=eap-mschapv2
     rightsourceip=10.31.2.0/24
@@ -574,9 +575,10 @@ conn windows
     ike=aes256-sha1-modp1024!
     rekey=no
     left=%defaultroute
+    leftid=vps.server.com
+    leftcert=server.crt
     leftauth=pubkey
     leftsubnet=0.0.0.0/0
-    leftcert=server.cert.pem
     right=%any
     rightauth=eap-mschapv2
     rightsourceip=10.31.2.0/24
@@ -677,13 +679,126 @@ net.ipv4.ip_forward = 1
 
 然后执行 `sudo sysctl -p`
 
-### 客户端(Android)
+### 测试
+
+Android客户端:
 
 [strongSwan](https://download.strongswan.org/Android/)
+
+连接的基本过程:
+
+1. IKE_SA_INIT, 进行协商密码算法, 交换 nonces 和 DH 算法. 生成 SKEYSEED, 后续的消息使用密钥进行加密和验证. 
+
+2. IKE_AUTH. 交换身份和证书, 并建立第一个 CHILD_SA. 这些消息是加密和完整的. 对于 server 端, 先需要需要选择一个 conn
+配置, 然后根据配置进行身份认证和证书认证.(这一步最关键, 也是最容易出问题的步骤, 出问题了可以通过设置 `charondebug` 开
+启debug消息.)
 
 ## OpenVPN
 
 安装配置脚本: https://github.com/tiechui1994/note/blob/master/develop/openvpn.sh
+
+- 服务端配置文件: server/server.conf
+
+重要的参数:
+
+```
+# 本地IP地址
+local IP
+
+# 监听的端口号. 默认是 1194
+port PORT
+
+# 使用的协议. 默认的udp
+proto udp|tcp
+
+# CA证书, Server证书/密钥, DH参数, CRL证书校验(这些文件都在 server 目录下)
+#  
+# dh, PEM 格式的 DH 参数文件(仅在设置 tls-server 时有效). 如果设置为 none 表示禁止 DH 密钥交换(仅使用ECDH), 这时
+# 需要对等方支持 ECDH TLS 密码套件的SSL库. 可以使用 openssl dhparam -out dh.pem 2048 生成 2048 位的 DH 参数.
+# 
+# crl-verify, 根据 PEM 格式的文件检查对等方的证书. 当特定密钥被泄露但整个PKI仍然完整时, 可以使用CRL(证书撤销列表)
+#
+ca cacert
+cert servercert
+key keykey
+dh file
+crl-verify crl.pem
+
+
+# tls-server, 在 TLS 握手期间启用 TLS 并承担 server 角色.
+# tls-client, 在 TLS 握手期间启用 TLS 并承担 client 角色.
+#
+tls-server
+tls-client 
+
+# 使用来着 keyfile 的密钥加密和验证所有控制通道的数据包.
+tls-crypt keyfile
+
+
+# TUN/TAP 虚拟网络设备
+# dev-type, 虚拟设备类型. tun 工作在三层, tap 工作在二层.
+# dev, 虚拟设备名称. 如果 dev 的值是以 tun 或 tap 开头, 则相应的虚拟设备类型就是 tun 或 tap.
+# 
+dev-type tun|tap
+dev tunX | tapX | null
+
+# 简化服务器模式的配置. 该指令设置一个 OpenVPN 服务器, 该服务器将从给定的network/netmask为客户端分配ip. 服务器本身
+# 使用网络的 ".1" 作为本地 TUN/TAP 网卡的服务器IP地址. 
+#
+server network netmask ['nopool']
+
+# 在虚拟设备类型是 tun 时虚拟网络拓扑结构. 如果虚拟设备类型是 tap, 则它只能使用 subnet 拓扑.
+# 
+# net30, 点对点拓扑, 为每个客户端分配一个 /30 子网. 客户端是 windows 系统点对点语义.
+#
+# p2p,点对点拓扑, 其中客户端 tun 网卡的远程端点始终指向服务器的本地端点. 此模式为每个客户端分配一个IP地址. 仅在连接客户
+# 端不是 windows 系统时使用.
+#
+# subnet, 通过使用本地 IP 地址和子网掩码配置 tun 网卡, 使用子网而不是点对点拓扑, 类似于 tap 当中的桥接模式的拓扑.
+#  
+topology net30|p2p|subnet
+
+
+# 路由
+route network/IP [netmask] [gateway] [metric]
+```
+
+
+案例:
+```
+local 192.168.1.100
+port 1194
+proto udp
+
+dev tun
+topology subnet
+server 10.8.0.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+push "redirect-gateway def1 bypass-dhcp"
+push "dhcp-option DNS 8.8.8.8"
+push "dhcp-option DNS 114.114.114.114"
+keepalive 10 120
+
+ca ca.crt
+cert server.crt
+key server.key
+crl-verify crl.pem
+
+dh dh.pem
+tls-crypt tc.key
+auth SHA512
+cipher AES-256-CBC
+
+user nobody
+group nogroup
+persist-key
+persist-tun
+explicit-exit-notify
+verb 3
+```
+
+- 客户端配置文件: client/client.conf
+
 
 ### 客户端(Android)
 
