@@ -324,7 +324,7 @@ sudo iptables -t nat -A POSTROUTING -s 172.31.1.0/24 -j SNAT --to-source 192.168
 
 ## IKEv2 VPN
 
-### 安装依赖服务 ppp, strongswan
+### 安装依赖服务 strongswan
 
 ```bash
 wget https://github.com/tiechui1994/jobs/releases/download/strongswan_5.9.0/strongswan_5.9.0_ubuntu_18.04_amd64.deb
@@ -335,13 +335,13 @@ sudo dpkg -i strongswan_5.9.0_ubuntu_18.04_amd64.deb
 
 - 生成秘钥
 
-```bash
-# ca.cert.pem =>  cacerts
-# ca.pem => private
-# server.cert.pem => certs
-# server.pem => private
-# client.cert.pem => certs
-# client.pem => private
+```
+# ca.crt =>  cacerts
+# ca.key => private
+# server.crt => certs
+# server.key => private
+# client.crt => certs
+# client.key => private
 
 # CA 证书 Subject
 # C country 
@@ -431,11 +431,19 @@ conn shared
   # 本地(left)或远程(right)要求的身份认证方法. 可接受的值:
   # pubkey, 用于公钥认证(RSA/ECDSA)
   # psk, 用于预共享密钥认证
-  # eap, 用于 IKEv2 的可扩展协议
+  # eap, 用于 IKEv2 的可扩展协议.
   # xauth, 用于 IKEv1 的可扩展协议.
   #
   # 对于 eap, 可以附加一个可选的 EAP 方法. 当前定义的方法有 eap-tls, eap-tnc, eap-tnc, eap-md5, eap-ttls,
   # eap-dynamic, eap-radius, eap-identity, eap-peap.
+  #
+  # EAP(用户名/密码). [eap-md5]
+  # CERT [pubkey]
+  # CERT + EAP(用户名/密码). [pubkey + eap-md5]
+  # EAP-TLS. [eap-tls]
+  #
+  # 对于 EAP(用户名/密码), 需要在 ipsec.secrets 当中的 EAP 类型定义.
+  #
   leftauth = <auth method>
   
   # 左侧参与者的 X509 证书路径. 该文件可以采用 PEM 或 DER 格式进行编码. 也支持 OpenPGP 证书. 绝对路径或相对于 etc/
@@ -541,19 +549,6 @@ conn ikev2
     rightsourceip=%dhcp
     rightsendcert=never
 
-conn networkmanager-strongswan
-    auto=add
-    keyexchange=ikev2
-    rekey=no
-    left=%defaultroute
-    leftauth=pubkey
-    leftsubnet=0.0.0.0/0
-    leftcert=server.cert.pem
-    right=%any
-    rightauth=pubkey
-    rightsourceip=10.31.2.0/24
-    rightcert=client.cert.pem
-
 conn ios_ikev2
     auto=add
     eap_identity=%any
@@ -571,9 +566,8 @@ conn ios_ikev2
     rightauth=eap-mschapv2
     rightsourceip=10.31.2.0/24
     rightsendcert=never
-    
 
-conn windows7
+conn windows
     auto=add
     keyexchange=ikev2
     eap_identity=%any
@@ -598,11 +592,12 @@ RSA, 定义一个RSA私钥
 ECDSA, 定义一个ECDSA私钥
 PSK, 定义一个预共享密钥
 XAUTH, 定义一个XAUTH凭证
+EAP, 定义 EAP 的账号密码
 ```
 
 每个密钥前面有一个可选的ID选择器列表. 这两部分使用冒号(:)分隔. 如果未指定ID选择器, 则该行必须以冒号开头.
 
-选择器包含: IP地址, 完全限定域名, 域名, user@FQDN, %any.
+选择器包含: IP, DOMAIN, @DOMAIN, %any.
 
 ```
 # 使用 ip 地址 
@@ -612,17 +607,22 @@ XAUTH, 定义一个XAUTH凭证
 112.113.114.115  %any: PSK "secret shared"
 
 # 使用 %any, 域名
-%any  gateway.domain.com: PSK "secret shared"
+%any gateway.domain.com: PSK "secret shared"
 
 # 域名, ip 地址
-www.xs.nl @www.vax.ru
-    10.1.0.1 10.2.0.1 10.3.0.1: PSK "secret shared"
+www.xs.nl @www.vax.ru 10.1.0.1 10.2.0.1 10.3.0.1: PSK "secret shared"
 
-# RSA 私有密钥
+# RSA 密钥
 @my.com : RSA "rsa private key"
 
-# XAUTH 凭证
+# PSK 
+: PSK "pskkey"
+
+# XAUTH 账号
 @username: XAUTH "password"
+
+# EAP 账号
+"username" %any : EAP "password"
 
 include ipsec.*.secrets
 ```
@@ -635,22 +635,7 @@ include ipsec.*.secrets
 myUserName %any : EAP "myUserPass"
 ```
 
-- VPN账号文件: /opt/local/strongswan/ect/ipsec.d/passwd
-
-```
-admin:$1$P3Q2MST/$MjcjDrMUokEltHzYqSxTt0:xauth-psk
-```
-
-在 passwd 每一行是一个 VPN 账号, 其包含三部分, 分别是 username, password, conn_name. 使用冒号(:)进行分隔.
-
-password 是加盐哈希值. 加盐哈希命令 `openssl passwd -1|-5|-6 PASSWORD`, 其中使用 `-1` 表示使用 MD5 哈希, `-5` 
-是使用 SHA-256 哈希, `-6` 是使用 SHA-512 哈希.
-
-conn_name 是在 /etc/ipsec.conf 当中　`conn <name>`　当中的 <name>.
-
-
 - strongswan配置: /opt/local/strongswan/etc/strongswan.conf
-
 
 ```
 # 本地使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
@@ -695,7 +680,6 @@ net.ipv4.ip_forward = 1
 ### 客户端(Android)
 
 [strongSwan](https://download.strongswan.org/Android/)
-
 
 ## OpenVPN
 

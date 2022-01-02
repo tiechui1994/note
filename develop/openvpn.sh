@@ -182,12 +182,6 @@ local ${ip}
 port ${port}
 proto ${protocol}
 dev tun
-ca ca.crt
-cert server.crt
-key server.key
-dh dh.pem
-auth SHA512
-tls-crypt tc.key
 topology subnet
 server 10.8.0.0 255.255.255.0
 EOF
@@ -240,13 +234,22 @@ EOF
 
 cat >> ${PATH_SERVER}/server.conf <<-EOF
 keepalive 10 120
+auth SHA512
 cipher AES-256-CBC
+ca ca.crt
+cert server.crt
+key server.key
+dh dh.pem
+tls-crypt tc.key
+crl-verify crl.pem
+tls-server
+tls-version-min 1.2
+tls-cipher TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256
 user nobody
 group nogroup
 persist-key
 persist-tun
 verb 3
-crl-verify crl.pem
 EOF
 
     if [[ "$protocol" = "udp" ]]; then
@@ -315,6 +318,9 @@ persist-tun
 remote-cert-tls server
 cipher AES-256-CBC
 auth SHA512
+tls-client
+tls-version-min 1.2
+tls-cipher TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256
 nobind
 connect-retry 5 5
 resolv-retry infinite
