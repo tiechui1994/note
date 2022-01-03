@@ -447,6 +447,7 @@ conn shared
   # 注: 上述的认证方法, 需要在编译 strongSwan 的时候要启用的 plugin, 否则, 在实际当中旧无法使用.
   #
   leftauth = <auth method>
+  leftauth2 = <auth method>
   
   # 左侧参与者的 X509 证书路径. 该文件可以采用 PEM 或 DER 格式进行编码. 也支持 OpenPGP 证书. 绝对路径或相对于 etc/
   # ipsec.d/certs 的路径被接受. 默认情况下, leftcert 将 leftid 设置为证书subject的名称. 但是, 可以通过指定由证书
@@ -495,6 +496,10 @@ conn shared
   # 定义客户端用于回复EAP身份请求的身份. 如果在EAP服务器上定义, 则定义的身份在EAP身份验证期间使用对端的身份.
   # 特殊值 %identity 使用EAP身份方法向客户端询问EAP身份. 如果未定义, 使用 IKEv2 身份作为 EAP 身份.
   eap_identity = <id>
+  
+  # 启用 IKEv2 MOBIKE 协议. 如果设置为 no, charon 守护进程将不会主动提议 MOBIKE 作为发起者, 并忽略作为响应者的
+  # MOBIKE_SUPPORT 通知.
+  mobike = yes | no
 ```
 
 案例配置:
@@ -637,13 +642,14 @@ include ipsec.*.secrets
 myUserName %any : EAP "myUserPass"
 ```
 
-- strongswan配置: /opt/local/strongswan/etc/strongswan.conf
+- strongswan模块参数配置: /opt/local/strongswan/etc/strongswan.conf
 
 ```
-# 本地使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
+# 本地默认使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
+# 如果检测到NAT或启用MOBIKE, 则浮动到 port_nat_t 端口.
 charon.port = 500         
 
-# 在 NAT-T 的情况下本地使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
+# 在检测到NAT或启用MOBIKE情况下本地使用的 UDP 端口. 如果设置为 0, 将分配一个随机端口.
 # 必须与 charon.port 不同, 否则将分配一个随机端口.
 charon.port_nat_t = 4500  
 ```
@@ -653,23 +659,19 @@ charon.port_nat_t = 4500
 charon {
     load_modular = yes
     duplicheck {
-            enable = no
+        enable = no
     }
     compress = yes
     plugins {
-            include strongswan.d/charon/*.conf
+        include strongswan.d/charon/*.conf
     }
-    dns1 = 8.8.8.8
-    dns2 = 8.8.4.4
-    nbns1 = 8.8.8.8
-    nbns2 = 8.8.4.4
+    port = 2500
+    port_nat_t = 5500
 }
 include strongswan.d/*.conf
 ```
 
-### 设置内核参数和防火墙
-
-- 内核参数
+- 开启 ip 转发
 
 在文件 `/etc/sysctl.conf` 当中开启:
 
@@ -709,7 +711,7 @@ local IP
 port PORT
 
 # 使用的协议. 默认的udp
-proto udp|tcp
+proto udp | tcp
 
 # CA证书, Server证书/密钥, DH参数, CRL证书校验(这些文件都在 server 目录下)
 #  
@@ -739,7 +741,7 @@ tls-crypt keyfile
 # dev-type, 虚拟设备类型. tun 工作在三层, tap 工作在二层.
 # dev, 虚拟设备名称. 如果 dev 的值是以 tun 或 tap 开头, 则相应的虚拟设备类型就是 tun 或 tap.
 # 
-dev-type tun|tap
+dev-type tun | tap
 dev tunX | tapX | null
 
 # 简化服务器模式的配置. 该指令设置一个 OpenVPN 服务器, 该服务器将从给定的network/netmask为客户端分配ip. 服务器本身
@@ -756,11 +758,39 @@ server network netmask ['nopool']
 #
 # subnet, 通过使用本地 IP 地址和子网掩码配置 tun 网卡, 使用子网而不是点对点拓扑, 类似于 tap 当中的桥接模式的拓扑.
 #  
-topology net30|p2p|subnet
+topology net30 | p2p | subnet
 
 
-# 路由
+# 建立连接后将路由添加到路由表中. 可以指定多个路由. 在TUN/TAP设备关闭之前, 路由表按相关的顺序自动拆除.
 route network/IP [netmask] [gateway] [metric]
+
+# 在与 client 或 pull 一起使用时, 接收服务器推送的选项, 除了route, block-outside-dns 和 dhcp 选项.
+# 在客户端上使用时, 该选项会阻止服务器向客户端的路由表添加路由. 
+route-nopull
+
+
+# 客户端选项. 自动执行路由命令以通过VPN重定向所有传出IP流量.
+# 此选项执行的三个步骤:
+# 1) 为 route 地址创建一个静态路由, 转发到预先存在的默认网关. 这样做是为了 3) 不会创建路由循环. 
+# 2) 删除默认网关路由.
+# 3) 将新的默认网关设置为 VPN 端点地址.
+# 当VPN拆除时, 上述的步骤都将反过来, 从而恢复到原来的默认路由.
+#
+# local, 如果两个OpenVPN对等点通过公共子网(例如无线)直接连接, 则添加本地标志. 本地标志将导致上面的步骤 1 被省略.
+# autolocal, 尝试自动判断是否启用上面的本地标志.
+# def1, 此标志通过使用 0.0.0.0/1 和 128.0.0.0/1 而不是 0.0.0.0/0 来覆盖默认网关. 这具有覆盖但不会消除原始默认网
+# 关的好处.
+# bypass-dhcp, 添加到绕过隧道的DHCP服务器(如果它是非本地的)的直接路由(Windows客户端上可用, 非Windows客户端上可能不
+# 可用).
+# bypass-dns, 添加到绕过隧道的DNS服务器(如果它们是非本地的)的直接路由(Windows客户端上可用, 非Windows客户端上可能不
+# 可用).
+# block-local, 当隧道处于活动状态时, 阻止对本地LAN的访问, LAN网关本身除外. 这是通过将本地LAN(LAN网关地址除外)路由
+# 到隧道中来实现的.
+# ipv6, 将IPv6路由重定向到隧道中. 其作用类似于def1标志, 即添加了更具体的IPv6路由(2000::/4, 3000::/4), 覆盖了整个
+# IPv6单播空间.
+# !ipv4, 不重定向 IPv4 流量, 通常用于标志对 "ipv6 !ipv4" 以仅重定向 IPv6.
+#
+redirect-gateway flags
 ```
 
 
