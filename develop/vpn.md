@@ -722,12 +722,23 @@ dev tunX | tapX | null
 topology net30 | p2p | subnet
 
 
-# 建立连接后将路由添加到路由表中. 可以指定多个路由. 在TUN/TAP设备关闭之前, 路由表按相关的顺序自动拆除.
-route network/IP [netmask] [gateway] [metric]
-
 # 在与 client 或 pull 一起使用时, 接收服务器推送的选项, 除了route, block-outside-dns 和 dhcp 选项.
 # 在客户端上使用时, 该选项会阻止服务器向客户端的路由表添加路由. 
 route-nopull
+
+# 建立连接后将路由添加到路由表中. 可以指定多个路由. 在TUN/TAP设备关闭之前, 路由表按相关的顺序自动拆除.
+#
+# network 和 gateway 参数可以指定为 DNS 或 /etc/hosts 文件可解析名称, 或三个特殊关键字之一:
+# vpn_gateway, 远程VPN端点地址(派生自 route-gateway 或 ifconig 的第二个参数)
+# net_gateway, 预先存在的系统默认网关, 从路由表中读取.
+# remote_host, 如果OpenVPN在客户端模式下运行, 则为 remote 地址.
+route network/IP [netmask] [gateway] [metric]
+
+# route-gateway, 指定与 route 一起使用的默认网关 gw. 如果指定 'dhcp' 作为参数, 网关地址将从 OpenVPN 服务器端 LAN
+# 的 DHCP 协商中提取.
+# route-metric, 指定与 route 一起使用的默认路由度数 m.
+route-gateway gw | 'dhcp'
+route-metric m
 
 # 客户端选项. 自动执行路由命令以通过VPN重定向所有传出IP流量.
 # 此选项执行的三个步骤:
@@ -828,6 +839,18 @@ crl-verify crl.pem
 # 要求对等证书使用基于 RFC3280 TLS 规则的显式密钥用法和扩展密钥用法进行签名.
 # 对于客户端这是一个有用的安全选项, 以确保连接的主机是服务器.
 remote-cert-tls server | client
+```
+
+其他选项参数:
+```
+# 阻止其他网路适配器上的DNS服务器以防止DNS泄露. 此选项可防止任何应用程序访问TCP或UDP的53端口, 除了隧道内的应用程序.
+# 它使用 windows 过滤平台(WFP)并适用于 Windows 7 或更高版本. 在非 windows 平台是不支持的.
+block-outside-dns
+
+# 当在配置文件中遇到选项 opt1 ... optN 之一时, 如果此 OpenVPN 版本不支持该选项, 则配置文件不会解析失败. 可以提供多个
+# ignore-unknown-option 选项以支持更多要忽略的选项.
+# 请谨慎使用该选项.
+ignore-unknown-option opt1 opt2 ... optN
 ```
 
 
