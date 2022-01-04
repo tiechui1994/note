@@ -252,10 +252,6 @@ persist-tun
 verb 3
 EOF
 
-    if [[ "$protocol" = "udp" ]]; then
-        echo "explicit-exit-notify" >> ${PATH_SERVER}/server.conf
-    fi
-
     # 开启 ip 转发(修改 sysctl 文件)
     echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/99-openvpn-forward.conf
     echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -313,20 +309,22 @@ client
 dev tun
 proto ${protocol}
 remote ${ip} ${port}
+pull
+nobind
 persist-key
 persist-tun
+connect-retry 5 5
+resolv-retry infinite
+ignore-unknown-option block-outside-dns
+block-outside-dns
+
 remote-cert-tls server
 cipher AES-256-CBC
 auth SHA512
 tls-client
 tls-version-min 1.2
 tls-cipher TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256
-nobind
-connect-retry 5 5
-resolv-retry infinite
-route-nopull
-ignore-unknown-option block-outside-dns
-block-outside-dns
+
 verb 3
 EOF
 

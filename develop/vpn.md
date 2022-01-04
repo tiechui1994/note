@@ -1,6 +1,6 @@
 # VPN 环境
 
-## PPTP VPN
+## PPTP
 
 PPTP(点对点隧道协议) 是一种用于通过 Internet 创建虚拟专用网络的方法. 它是由微软开发的. 通过使用它, 用户可以从支持该协
 议的任何 Internet 服务商访问公司网络. PPTP 工作在 OSI 模型的数据链路层(二层).
@@ -9,7 +9,7 @@ PPTP 中, 控制流和数据流是分开的. 控制流通过TCP, 数据流通过
 通常不支持GRE.
 
 
-### 安装依赖服务包 ppp, pptpd
+### 安装服务pptpd
 
 ```bash
 sudo apt-get update && \
@@ -25,14 +25,6 @@ sudo apt-get install pptpd ppp -y --no-install-recommends --no-upgrade
 - 服务配置:
 
 ```
-###############################################################################
-# $Id: pptpd.conf,v 1.11 2011/05/19 00:02:50 quozl Exp $
-#
-# Sample Poptop configuration file /etc/pptpd.conf
-#
-# Changes are effective when pptpd is restarted.
-###############################################################################
-
 # TAG: ppp
 #	Path to the pppd program, default '/usr/sbin/pppd' on Linux
 ppp /usr/sbin/pppd
@@ -180,7 +172,7 @@ novjccomp
 nologfd
 ```
 
-重要的 tag:
+比较重要的内容:
 
 1) name
 
@@ -227,32 +219,31 @@ net.ipv4.ip_forward = 1
 然后执行 `sudo sysctl -p`
 
 
-- 防火墙(NAT转发, 网络设置)
+- 防火墙(NAT转发)
 
 ```
 cat > /etc/iptables.firewall.rules <<- 'TABLE'
 iptables -t nat -A POSTROUTING -s 172.31.1.1/24 -o eth0 -j MASQUERADE
-iptables -t filter -A FORWARD -s 172.31.1.1/24 -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200
 TABLE
 ```
+
+> 注: 这里转发到了 eth0 网卡上. 在实际当中, 可能是转发到其他网卡或IP地址, 配置有所不同
 
 然后执行 `sudo iptables-restore < /etc/iptables.firewall.rules`
 
 ### 服务重启并测试
 
-重启服务:
+重启服务: `sudo systemctl status pptpd.service`
 
-`sudo systemctl status pptpd.service`
-
-检查服务运行状态:
-
-`sudo netstat -ntlp | grep 1723`
+检查服务运行状态: `sudo netstat -ntlp | grep 1723`
 
 如果出现了条目, 则正常运行.
 
-测试:
+Android 下测试:
 
 ![image](/images/develop_env_pptpd_test.jpeg)
+
+> 这里的测试使用是的最原始的, 没有任何认证机制. 在实际应用当中, 可以选择相关的认证选项.
 
 Linux 下测试:
 
@@ -287,8 +278,7 @@ pty "pptp <serverip> --nolaunchpppd --debug"
 > replacedefaultroute, 此选项是 defaultroute 选项的标志. 如果设置了 defaultroute 并且也设置了该标志, pppd 会
 用新的默认路由替换现有的默认路由.
 
-[pppd选项](http://man.he.net/man8/pppd)
-
+更多的[pppd选项](http://man.he.net/man8/pppd)
 
 3. 启动/关闭连接
 ```
@@ -321,10 +311,9 @@ sudo iptables -t nat -A POSTROUTING -s 172.31.1.0/24 -j SNAT --to-source 192.168
 
 > 注: 如果要想服务器也能访问客户端的局域网, 也需要进行上述操作, 只不过是相反的操作而已.
 
+## IKEv2
 
-## IKEv2 VPN
-
-### 安装依赖服务 strongswan
+### 安装服务 strongswan
 
 ```bash
 wget https://github.com/tiechui1994/jobs/releases/download/strongswan_5.9.0/strongswan_5.9.0_ubuntu_18.04_amd64.deb
@@ -333,7 +322,9 @@ sudo dpkg -i strongswan_5.9.0_ubuntu_18.04_amd64.deb
 
 ### 服务配置
 
-- 生成秘钥
+- 生成证书秘钥
+
+生成证书脚本: https://github.com/tiechui1994/note/blob/master/develop/ikev2.sh
 
 ```
 # ca.crt =>  cacerts
@@ -348,8 +339,6 @@ sudo dpkg -i strongswan_5.9.0_ubuntu_18.04_amd64.deb
 # O organization
 # CN common name
 ```
-
-生成证书脚本: https://github.com/tiechui1994/note/blob/master/develop/ikev2.sh
 
 - ipsec 配置文件: /opt/local/strongswan/etc/ipesc.conf
 
@@ -701,7 +690,7 @@ Android客户端:
 
 - 服务端配置文件: server/server.conf
 
-重要的参数:
+Tunnel 参数:
 
 ```
 # 本地IP地址
@@ -713,30 +702,6 @@ port PORT
 # 使用的协议. 默认的udp
 proto udp | tcp
 
-# CA证书, Server证书/密钥, DH参数, CRL证书校验(这些文件都在 server 目录下)
-#  
-# dh, PEM 格式的 DH 参数文件(仅在设置 tls-server 时有效). 如果设置为 none 表示禁止 DH 密钥交换(仅使用ECDH), 这时
-# 需要对等方支持 ECDH TLS 密码套件的SSL库. 可以使用 openssl dhparam -out dh.pem 2048 生成 2048 位的 DH 参数.
-# 
-# crl-verify, 根据 PEM 格式的文件检查对等方的证书. 当特定密钥被泄露但整个PKI仍然完整时, 可以使用CRL(证书撤销列表)
-#
-ca cacert
-cert servercert
-key keykey
-dh file
-crl-verify crl.pem
-
-
-# tls-server, 在 TLS 握手期间启用 TLS 并承担 server 角色.
-# tls-client, 在 TLS 握手期间启用 TLS 并承担 client 角色.
-#
-tls-server
-tls-client 
-
-# 使用来着 keyfile 的密钥加密和验证所有控制通道的数据包.
-tls-crypt keyfile
-
-
 # TUN/TAP 虚拟网络设备
 # dev-type, 虚拟设备类型. tun 工作在三层, tap 工作在二层.
 # dev, 虚拟设备名称. 如果 dev 的值是以 tun 或 tap 开头, 则相应的虚拟设备类型就是 tun 或 tap.
@@ -744,10 +709,6 @@ tls-crypt keyfile
 dev-type tun | tap
 dev tunX | tapX | null
 
-# 简化服务器模式的配置. 该指令设置一个 OpenVPN 服务器, 该服务器将从给定的network/netmask为客户端分配ip. 服务器本身
-# 使用网络的 ".1" 作为本地 TUN/TAP 网卡的服务器IP地址. 
-#
-server network netmask ['nopool']
 
 # 在虚拟设备类型是 tun 时虚拟网络拓扑结构. 如果虚拟设备类型是 tap, 则它只能使用 subnet 拓扑.
 # 
@@ -768,7 +729,6 @@ route network/IP [netmask] [gateway] [metric]
 # 在客户端上使用时, 该选项会阻止服务器向客户端的路由表添加路由. 
 route-nopull
 
-
 # 客户端选项. 自动执行路由命令以通过VPN重定向所有传出IP流量.
 # 此选项执行的三个步骤:
 # 1) 为 route 地址创建一个静态路由, 转发到预先存在的默认网关. 这样做是为了 3) 不会创建路由循环. 
@@ -776,14 +736,12 @@ route-nopull
 # 3) 将新的默认网关设置为 VPN 端点地址.
 # 当VPN拆除时, 上述的步骤都将反过来, 从而恢复到原来的默认路由.
 #
-# local, 如果两个OpenVPN对等点通过公共子网(例如无线)直接连接, 则添加本地标志. 本地标志将导致上面的步骤 1 被省略.
-# autolocal, 尝试自动判断是否启用上面的本地标志.
+# local, 如果两个OpenVPN对等点通过子网(例如无线)直接连接, 则添加local标志. local标志将导致上面的步骤 1 被省略.
+# autolocal, 尝试自动判断是否启用上面的 local 标志.
 # def1, 此标志通过使用 0.0.0.0/1 和 128.0.0.0/1 而不是 0.0.0.0/0 来覆盖默认网关. 这具有覆盖但不会消除原始默认网
 # 关的好处.
-# bypass-dhcp, 添加到绕过隧道的DHCP服务器(如果它是非本地的)的直接路由(Windows客户端上可用, 非Windows客户端上可能不
-# 可用).
-# bypass-dns, 添加到绕过隧道的DNS服务器(如果它们是非本地的)的直接路由(Windows客户端上可用, 非Windows客户端上可能不
-# 可用).
+# bypass-dhcp, 添加直接到DHCP服务器的路由(Windows客户端上可用, 非Windows客户端上可能不可用).
+# bypass-dns, 添加直接到DNS服务器的路由(Windows客户端上可用, 非Windows客户端上可能不可用).
 # block-local, 当隧道处于活动状态时, 阻止对本地LAN的访问, LAN网关本身除外. 这是通过将本地LAN(LAN网关地址除外)路由
 # 到隧道中来实现的.
 # ipv6, 将IPv6路由重定向到隧道中. 其作用类似于def1标志, 即添加了更具体的IPv6路由(2000::/4, 3000::/4), 覆盖了整个
@@ -791,6 +749,85 @@ route-nopull
 # !ipv4, 不重定向 IPv4 流量, 通常用于标志对 "ipv6 !ipv4" 以仅重定向 IPv6.
 #
 redirect-gateway flags
+
+# persist-tun, 不关闭TUN/TAP设备(在SIGUSR1 或 ping-restart 时).
+# persist-key, 不重新读取key文件(在SIGUSR1 或 ping-restart 时).
+persist-tun
+persist-key
+
+# 成功启动/关闭TUN/TAP设备后运行命令 cmd.
+up cmd
+down cmd
+```
+
+Server 参数:
+```
+# 简化服务器模式的配置. 该指令设置一个 OpenVPN 服务器, 该服务器将从给定的network/netmask为客户端分配ip. 服务器本身
+# 使用网络的 ".1" 作为本地 TUN/TAP 网卡的服务器IP地址. 
+#
+server network netmask ['nopool']
+
+# 将配置文件选项推送到客户端以进行远程执行. 注意: option 必须使用双引号括起来. 客户端必须在其配置文件当中指定 pull 选
+# 项.
+# 支持推送的选项:
+# route, route-gateway, dhcp-option, redirect-gateway, persist-key, persist-tun, echo 等
+push option
+
+# ifconfig-pool, 子网池, 动态分配ip给连接的客户端. 类似于 DHCP 服务器. 对于 TUN 隧道, 客户端获取一个 /30 子网(Windows
+# 客户端的互操作性). 对于 TAP 隧道, 单独分配一个IP, 并且还向客户端推送可选的网络掩码.
+# 
+# ifconfig-pool-persist, 以秒为间隔(默认600)以及在程序启动或关闭时, 将 ifconfig-pool 的数据持久化到文件当中.
+#
+ifconfig-pool start-IP end-IP [netmask]
+ifconfig-pool-persist file [seconds]
+```
+
+Client 参数:
+```
+# 开启客户端模式
+client
+
+# 在连接到服务器的客户端上使用此选项. 它向OpenVPN表面它应该接受服务器推送的选项.
+pull
+
+# 如果选项以文本开头, 则过滤从服务器接收到的选项. 
+# accept 接受该选项
+# ignore 删除该选项
+# reject 标记为错误, 并出发重启.
+# 可以多次指定过滤器, 并且每个过滤器都按照它指定的顺序执行, 一旦找到匹配选项, 则停止后续的过滤器执行.
+pull-filter accept|ignore|reject text
+```
+
+TLS Mode 参数:
+```
+# CA证书, 证书/私钥, DH参数, CRL证书校验(这些文件都在 server 目录下)
+#  
+# dh, PEM 格式的 DH 参数文件(仅在设置 tls-server 时有效). 如果设置为 none 表示禁止 DH 密钥交换(仅使用ECDH), 这时
+# 需要对等方支持 ECDH TLS 密码套件的SSL库. 可以使用 openssl dhparam -out dh.pem 2048 生成 2048 位的 DH 参数.
+#
+ca cacert
+cert servercert
+key keykey
+dh file
+
+# 指定包含证书, 私钥和 CA证书的 PKCS#12 文件. 可以代替 ca, cert, key 选项.
+pkcs12 file
+
+# tls-server, 在 TLS 握手期间启用 TLS 并承担 server 角色.
+# tls-client, 在 TLS 握手期间启用 TLS 并承担 client 角色.
+#
+tls-server
+tls-client 
+
+# 使用来着 keyfile 的密钥加密和验证所有控制通道的数据包.
+tls-crypt keyfile
+
+# 根据 PEM 格式的文件检查对等方的证书. 当特定密钥被泄露但整个PKI仍然完整时, 可以使用CRL(证书撤销列表)
+crl-verify crl.pem
+
+# 要求对等证书使用基于 RFC3280 TLS 规则的显式密钥用法和扩展密钥用法进行签名.
+# 对于客户端这是一个有用的安全选项, 以确保连接的主机是服务器.
+remote-cert-tls server | client
 ```
 
 
@@ -802,28 +839,30 @@ proto udp
 
 dev tun
 topology subnet
-server 10.8.0.0 255.255.255.0
-ifconfig-pool-persist ipp.txt
-push "redirect-gateway def1 bypass-dhcp"
 push "dhcp-option DNS 8.8.8.8"
 push "dhcp-option DNS 114.114.114.114"
+push "dhcp-option DNS 192.168.1.1"
+push "redirect-gateway def1 bypass-dhcp"
 keepalive 10 120
-
-ca ca.crt
-cert server.crt
-key server.key
-crl-verify crl.pem
-
-dh dh.pem
-tls-crypt tc.key
-auth SHA512
-cipher AES-256-CBC
-
 user nobody
 group nogroup
 persist-key
 persist-tun
 explicit-exit-notify
+
+server 10.8.0.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+
+ca ca.crt
+cert server.crt
+key server.key
+dh dh.pem
+
+tls-crypt tc.key
+crl-verify crl.pem
+auth SHA512
+cipher AES-256-CBC
+
 verb 3
 ```
 
