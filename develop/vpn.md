@@ -856,35 +856,35 @@ ignore-unknown-option opt1 opt2 ... optN
 
 案例:
 ```
-local 192.168.1.100
-port 1194
+local 192.168.50.100
+port 21940
 proto udp
-
 dev tun
-topology subnet
-push "dhcp-option DNS 8.8.8.8"
-push "dhcp-option DNS 114.114.114.114"
-push "dhcp-option DNS 192.168.1.1"
-push "redirect-gateway def1 bypass-dhcp"
 keepalive 10 120
-user nobody
-group nogroup
 persist-key
 persist-tun
-explicit-exit-notify
-
 server 10.8.0.0 255.255.255.0
+topology subnet
+user nobody
+group nogroup
+
 ifconfig-pool-persist ipp.txt
+push "redirect-gateway def1 bypass-dhcp"
+push "dhcp-option DNS 8.8.8.8"
+push "dhcp-option DNS 114.114.114.114"
+push "dhcp-option DNS 192.168.50.1"
+push "route 10.0.0.0 255.0.0.0 vpn_gateway"
+push "route 192.168.50.0 255.255.255.0 vpn_gateway"
 
 ca ca.crt
 cert server.crt
 key server.key
 dh dh.pem
 
-tls-crypt tc.key
 crl-verify crl.pem
 auth SHA512
 cipher AES-256-CBC
+tls-crypt tc.key
 
 verb 3
 ```
