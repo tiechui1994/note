@@ -1,9 +1,9 @@
-# linux exec与重定向
+# exec与重定向
 
 exec 属于 bash 内部命令(shell builtin).
 
-linux bash shell 命令分为两类: 内部命令和外部命令. 外部命令是通过系统调用或独立的程序实现的. 如sed, find等. 内部命令
-是由特殊的文件格式(.def)所实现. 如cd, exec, history等
+bash shell 命令分为两类: 内部命令和外部命令. 外部命令是通过系统调用或独立的程序实现的. 如sed, find等. 内部命令是由特
+殊的文件格式(.def)所实现. 如cd, exec, history, source等
 
 ### fork 基本概念
 
@@ -12,19 +12,24 @@ fork 是 linux 的系统调用, 用于创建子进程(child process). 子进程�
 
 环境变量(传递给子进程的变量)只能单向从父进程传给子进程. 不管子进程的环境变量如何变化, 都不会影响父进程的环境变量.
 
-shell script执行方式: 一是产生一个shell, 然后执行相应的script. 二是在当前shell下执行, 不再启用其他shell.
+关于 shell script 执行方式: 1.产生一个新shell, 然后执行相应的脚本命令. 2.在当前shell下执行脚本命令, 不再启用其他shell.
 
-针对方法一, 需要在 script 开头加上 `#!/bin/bash` 或 `#!/usr/bin/env bash`, 然后执行脚本.
+针对方法1, 需要在 script 开头加上 `#!/bin/bash` 或 `#!/usr/bin/env bash`, 然后执行脚本(`sh xxx.sh`, `bash xxxsh`
+或 `./xxx.sh`).
 
-针对方法二, 可以使用 source 命令, 这时不再产生新的 shell, 而是在当前 shell 下执行命令.
+针对方法2, 可以使用 source 命令, 此时不会产生新的 shell, 而是在当前 shell 下执行命令.
 
 - source
 
-source 命令即点(.)命令. source命令是在当前进程中执行参数文件当中的命令, 而不用另起子进程.
+source 命令即点(.)命令. source 命令是在当前进程中执行参数文件当中的命令, 而不用另起子进程. 详情参考 `help source` 
+说明.
 
 - exec
 
-exec 命令在执行时会把当前的 shell process关闭, 然后切换到参数命令继续执行.
+exec 命令在执行时会把当前的 shell process 关闭, 然后切换到参数命令继续执行. 详情参考 `help exec` 说明.
+
+> 注: `exec [command [arguments ...]] [redirection ...]`, 如果未指定 command, 则任何重定向都会在当前shell中
+生效.  
 
 系统调用 exec 是以新的进程去代替原来的进程, 但进程的pid保持不变. 因此, 可以认为 exec系统调用并没有产生新的进程, 只是
 替换了原来进程的上下文的内容. 原进程的代码段, 数据段, 堆栈段被新的进程所代替.
@@ -39,7 +44,7 @@ exec 命令在执行时会把当前的 shell process关闭, 然后切换到参�
 copy 到子进程. 然而为了提高效率, 采用一种COW的策略, 即创建子进程的时候, 并不copy父进程的地址空间, 父子进程使用相同的地
 址空间, 只有当子进程需要写入数据时, 这时才会复制地址空间, 然后复制数据到子进程中. 从而父子进程拥有独立的地址空间.
 
-exec 与 system 的区别:
+- exec 与 system 的区别:
 
 exec 是直接用新的进程去代替原来的进程运行, 运行完毕之后不会回到原先的程序中去.
 
@@ -51,6 +56,15 @@ I/O重定向通常与FD相关. shell的FD通常为10个, 即0~9
 
 三个常用的FD: 0, 标准输入; 1, 标准输出; 2, 标准错误输出.
 
+查看文件描述符:
+```bash
+lsof -a -p $$ -d0,1,2
+
+ll /proc/$$/fd
+```
+
+> lsof 当中. `-a` 表示使用 AND 选择(默认是 OR). `-d` 表示选项的fd描述符集合
+
 bash 执行命令过程: 分析命令 - 变量求值 - 命令替换('``' 和 '$()') - 重定向 - 通配符展开 - 确定路径 - 执行命令.
 
 '()' 将 command group 置于 sub-shell 去执行, 也称为 nested sub-shell. 它有个非常重要的特性: 继承父shell的标准
@@ -61,19 +75,32 @@ exec 常用语替代当前 shell 并重新启动一个 shell. 换言之, 并没�
 
 ### 常用重定向
 
-```
-`cmd &n` 使用系统调用 dup 复制文件描述符 n, 并把其用作标准输出.
+- `cmd >&n` 使用系统调用 dup 复制文件描述符 n, 并把其用作标准输出.
 
-`&-` 关闭标准输出
+- `exec >&-` 关闭标准输出 => `exec 1>&-`.
 
-`n&-` 将文件描述符 n 关闭.
+- `exec n>&-` 或 `exec n<&-` 将文件描述符 n 关闭.
 
+- `exec old>&new`, old和new都是文件描述符. 如果old缺省, 默认值是1. 将 old 文件描述符重定向到 new.
 
-fd> filename,  
+`2>&1`, 因为 `>` 是改变送出的数据信道, 也就是说把 FD2 的"数据输出信道"改为 FD1 的"数据输出信道".
 
-old>&new, old和new都是文件描述符. 如果old缺省, 默认值是1. 将 old 文件描述符重定向到 new
+- `exec [j]<> file`, 为了读写 "file", 把文件"file"打开, 并且将文件描述符 "j" 分配给它. 如果文件 "file" 不存在,
+就创建它. 如果文件描述符 "j" 没有指定, 那默认是 0, 即stdin.
 
-```
+- `exec <file` 或 `exec 0<file`, 将 stdin 重定向到文件当中. 
 
+- `exec N>file` 将文件描述符N重定向到file当中.
 
+### 恢复
+
+如果 stdin, stdout, stderr 进行了重定向, 但没有保存原来的FD, 能否恢复到之前default状态吗?
+
+如果关闭了 stdin, 因为会导致退出, 肯定无法恢复.
+
+如果重定向或关闭 stdout, stderr 其中之一, 可以恢复.
+
+恢复重定向或关闭的stdout: `exec 1>&2`, 恢复重定向或关闭的stderr: `exec 2>&1`
+
+如果stdout和stderr全部关闭了, 又没有保存原来的FD, 可以: `exec 1>/dev/tty`
 
