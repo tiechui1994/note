@@ -35,49 +35,105 @@
 是数组中的元素个数. 其他情况, 则替换的值是 param 变量的长度.
 
 
-- `${param/word}`, `${param//word}`, 删除前缀匹配模式.
+- `${param#word}`, `${param##word}`, 删除前缀匹配模式.
 
 word 被扩展一个模式. 如果模式匹配 param 变量的前缀, 则扩展的结果是具有最短匹配模式('#') 或 最长匹配模式('##') 被删除.
 
 如果 param 是 `@` 或 `*`, 模式移除操作将依次应用于每个位置参数, 扩展是结果列表. 如果 param 是下标为 `@` 或 `*` 的
 数组变量, 模式移除操作将依次应用于数组的每个成员, 扩展的结果列表.
 
+> 注: 这里的 word 是一个字面量字符串. 
+
 ```bash
-word='a'
+word='*a'
 
 param1='aaaxyz'
-echo "${param1/word}"  # aaxyz
-echo "${param1//word}" # xyz
+
+# word 使用变量作为字面量字符串
+echo "${param1#$word}"  # aaxyz
+echo "${param1##$word}" # xyz
+
+# word 直接使用字面量字符串
+echo "${param1#*a}"  # aaxyz
+echo "${param1##*a}" # xyz 
+
 
 param2=('aaaxyz' 'aabc' 'abc')
-echo "${param2[@]/word}"  # aaxyz abc bc
-echo "${param2[*]//word}" # xyz bc bc
+echo "${param2[@]#$word}"  # aaxyz abc bc
+echo "${param2[*]##$word}" # xyz bc bc
 
-echo "${@/word}" # 位置参数最短匹配
-echo "${@//word}" # 位置参数最长匹配
+
+echo "${@#$word}" # 位置参数最短匹配
+echo "${@##$word}" # 位置参数最长匹配
 ```
 
 - `${param%word}`, `${param%%word}`, 删除后缀匹配模式.
 
 与 `删除前缀匹配模式` 类似.
 
+> 这里的 word 是一个字面量字符串. 
+
+
 - `${param/pattern/string}`, `${param//pattern/string}`, 模式替换. 
 
-pattern 被扩展以产生一个模式. 将模式的最长匹配替换为string. 
+pattern 被扩展以产生一个模式. 将模式的 "最长匹配" 替换为string. 
 
 如果 pattern 以 `/` 开头, 则 pattern 的所有匹配都被替换为字符串. 通常只替换第一个匹配的字符串. 
 
-如果 pattern 以 `#` 开头, 则必须匹配参数扩展值的开头.
-如果 pattern 以 `%` 开头, 它必须匹配参数扩展值的末尾.  
+如果 pattern 以 `#` 开头, 则必须匹配参数扩展值的开头. 最长匹配模式.
+如果 pattern 以 `%` 开头, 它必须匹配参数扩展值的末尾. 最长匹配模式.
 
 如果 string 为空, 则删除 pattern 的匹配项, 并且可以省略 `/` 后面的 pattern. 
 
 如果 param 是 `@` 或 `*`, 则依次对每个位置参数应用替换操作. 
 如果 param 是下标为 `@` 或 `*` 的数组变量, 则对数组的每个成员依次进行替换操作.
 
+> 这里的 pattern 是字面量字符串.
 
+```bash
+param1='bacadaxayaz'
 
-- `${param^pattern}`, `${param^^pattern}`, `${param,pattern}`, `${param,,pattern}`
+# 一个匹配替换, 所有匹配替换
+echo "${param1/a/'-'}"  # b-cadaxayaz
+echo "${param1//a/'-'}" # b-c-d-x-y-z
+
+# 前缀最长匹配
+echo "${param1/#b/'-'}"  # -acadaxayaz
+echo "${param1/#b*/'-'}" # -
+
+# 后缀最长匹配
+echo "${param1/%z/'-'}"  # bacadaxaya-
+echo "${param1/%*z/'-'}" # -
+```
+
+- `${param^pattern}`, `${param^^pattern}`, `${param,pattern}`, `${param,,pattern}`, 大小写修改.
+
+此扩展修改参数中字母字符的大小写. pattern 被扩展以产生一个模式, 与"pathname expansion"中一样.
+ 
+`^` 运算符将匹配模式的小写字母转换为大写;
+`,` 运算符将匹配模式的大写字母转换为小写.
+
+`^^` 和 `,,` 扩展转换扩展值中的每个匹配字符; 
+
+`^` 和 `,` 扩展仅匹配并转换扩展值中的第一个字符. 如果省略了 pattern , 则将其视为 `?` (匹配任意多个字符串). 
+
+如果 param 是 `@` 或`*`, 则对每个位置参数依次应用大小写修改操作.
+
+如果 param 是一个以 `@` 或 `*` 为下标的数组变量, 则对数组的每个成员依次应用大小写修改操作.
+
+> 这里的 pattern 是字面量字符串.
+
+```bash
+param1='bacadaxayaz'
+
+# 小写转大写
+echo "${param1^a}"  # bAcadaxayaz
+echo "${param1^^A}" # bAcAdAxAyAz
+
+# 小写转大写, 省略 pattern, 等价于 pattern 是 ?
+echo "${param1^}"   # Bacadaxayaz
+echo "${param1^^}"  # BACADAXAYAZ
+```
 
 ## 常见的内置命令
 
