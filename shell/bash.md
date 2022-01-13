@@ -4,18 +4,42 @@
 
 '$' 字符引入了参数扩展, 命令替换或算数扩展. 要扩展的参数名称或符号使用大括号括起来.
 
-- `${param:-word}`, 使用默认值. 如果 param "为空" 或 "未设置", 则替换 word 的扩展.
+- `${param:-word}`, 使用默认值. 如果 param "为空" 或 "未设置", 使用 word 替换. 否则, 使用 param 的值替换.
 
-- `${param:+word}`, 使用替代值. 如果 param "为空" 或 "未设置", 则不替换任何内容, 否则替换 word 的扩展.
+- `${param:+word}`, 使用替代值. 如果 param "为空" 或 "未设置", 使用 param 的值替换, 否则, 使用 word 替换.
 
-- `${param:=word}`, 分配默认值. 如果 param "为空" 或 "未设置", 则将 word 的扩展分配给参数. 然后替换参数的值. 不
-能以这种方式分配 `位置参数` 和 `特殊参数`.
+- `${param:=word}`, 分配默认值. 如果 param "为空" 或 "未设置", 则将 word 分配给参数,并且替换 param 的值. 不能以
+这种方式分配 `位置参数` 和 `特殊参数`.
 
-- `${param:?word}`, 显示错误. 如果参数 "为空" 或 "未设置", 则 word 的扩展 (或者如果 word 不存在, 则将产生一条消息)
-写入标准错误, 并且 shell 如果它不是交互式的, 则退出. 否则, 参数的值被替换.
+- `${param:?word}`, 显示错误. 如果 param "为空" 或 "未设置", 则 word (或者如果 word 不存在, 则将产生一条消息)
+写入标准错误, 并且如果 shell 不是交互式的, 则退出.
 
+> 上述的 word 都是字面量字符串.
 
-- `${param:offset}`, `${param:offset:length}`
+```bash
+# param 本身不会被修改, 只是扩展会修改
+param=""
+echo "${param:-word}" # 输出为 'word'
+echo "${param}"       # 输出为 ''
+
+param="1111"
+echo "${param:-word}" # 输出为 'word'
+echo "${param}"       # 输出为 '1111'
+
+# param 本身被初始化, 扩展也会修改
+param=""
+echo "${param:=word}" # 输出为 'word'
+echo "${param}"       # 输出为 'word'
+```
+
+- `${param:offset}`, `${param:offset:length}`, 子串扩展
+
+从 offset 指定的字符串开始处扩展到参数的最大长度字符. 如果省略 length, 则扩展为从 offset 指定的字符开始的参数的子字符
+串. 如果 offset 小于0, 则该值用作 param 末尾的偏移量. 
+
+如果 param 是 `@`, 则结果是从 offset 开始的位置参数.
+
+如果 param 是以 `@` 或 `*` 为下标的索引数组, 则结果是从索引 offset 开头的索引数组.
 
 
 - `${!prefix@}`, `${!prefix*}`, 变量名前缀匹配
@@ -23,6 +47,7 @@
 搜索以 prefix 开头的变量名, 由 IFS 特殊变量的第一个字符分隔. 当使用 `@` 并且扩展出现在双引号内时, 每个变量名都会扩展
 为一个单独的单词.
 
+> prefix 是字面量字符串.
 
 - `${!name[@]}`, `${!name[*]}`, 数组键列表.
 
