@@ -113,6 +113,9 @@ gpg [选项]
 
 秘钥管理:
 
+- `--keyid-format none|short|long`, 选择如何显示密钥ID, "none" 不显示密钥ID. "short", 是传统的8字符密钥ID, 
+"long"是16字符的密钥ID.
+ 
 - `-k, --list-keys` 查看已有的 key
 - `--list-signatures` 查看已有的 key 和 signature
 - `--fingerprint` 查看已有的 key 和 fingerprint

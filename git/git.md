@@ -1,4 +1,6 @@
-## .git 常用的配置文件
+# git
+
+## git 目录结构
 
 一般初始化一个 git 项目之后, 在项目的根目录下会出现一个 .git 目录, 目录下的内容如下: 
 
@@ -126,4 +128,41 @@ merge 和 branch 一起定义了分支的上游分支. 它告诉 `git fetch` 和
 
 如果脚本的退出状态非0, 则 git commit 将终止.
 
-## git 
+## git 密钥
+
+### git GPG 密钥对
+
+- 生成 GPG 密钥对
+
+`gpg --full-gen-key`, 可以选择`算法类型`, `有效期`, `名称`, `电子邮件`, `密码`等.
+
+- 获取 GPG 密钥的 ID.
+
+`gpg --list-keys --keyid-format long`. 其中 `pub` 行的 `/` 后面的内容是密钥ID. 下例是 `17FA6CF726EC0733`
+
+```
+$ gpg --list-keys --keyid-format long
+-----------------------------
+pub   rsa3072/17FA6CF726EC0733 2022-01-01 [SC] [expires: 2023-01-01]
+      1357901357901357901357901357901357901357
+uid                 [ultimate] NAME (COMMENT) <EMAIL>
+sub   rsa3072/17FA6CF726EC0733 2022-01-01 [E] [expires: 2023-01-01]
+```
+
+- 导出密钥ID的公钥
+
+```
+gpg -a --export ID
+```
+
+> 将导出的密钥ID的公钥复制到 github, gitlab, coding 等的 GPG 公钥处进行添加(类似SSH公钥).
+
+- 配置使用 GPG 签名提交
+
+```
+# 配置密钥签名key, 也就是前面的 GPG 密钥ID
+git config user.signingkey ID
+
+# 配置自动 commit gpg 签名. 默认情况下, 在 'git commit' 时使用 '-S' 参数才会使用 GPG 签名.
+git config commit.gpgsign true
+```
