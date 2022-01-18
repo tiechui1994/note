@@ -113,9 +113,12 @@ gpg [选项]
 
 秘钥管理:
 
-- `--gen-key` 生成秘钥
+- `-k, --list-keys` 查看已有的 key
+- `--list-signatures` 查看已有的 key 和 signature
+- `--fingerprint` 查看已有的 key 和 fingerprint
 
-- `--list-keys` 查看已有的秘钥
+- `--gen-key` 生成秘钥
+- `--full-gen-key`, 生成秘钥, 可以选择加密方式.
 
 - `--delete-key [UID]` 删除秘钥
 

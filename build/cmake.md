@@ -14,12 +14,12 @@ int main() {
 
 CMakeLists.txt
 ```
+# 项目名称
+project(hello)
+
 # 设置cmake最低版本 和 CMAKE_C_STANDARD (C版本)
 cmake_minimum_required(VERSION 3.5)
 set(CMAKE_C_STANDARD 11)
-
-# 指定工程名称
-project(hello)
 
 # 打印系统的变量
 message(STATUS "this is PROJECT_SOURCE_DIR " ${PROJECT_SOURCE_DIR})
@@ -48,12 +48,9 @@ lib
 
 CMakeLists.txt
 ```
-# 设置cmake最低版本 和 CMAKE_C_STANDARD (C版本)
+project(math)
 cmake_minimum_required(VERSION 3.5)
 set(CMAKE_C_STANDARD 11)
-
-# 指定工程名称
-project(hello)
 
 # 把当前工程下的src目录下的所有的.c文件赋值给 SRC_LIST
 # aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
@@ -92,11 +89,9 @@ int main(int argc, char* argv[]){
 
 CMakeLists.txt
 ```
+project(hello)
 cmake_minimum_required(VERSION 3.5)
 
-project(hello)
-
-# 指定头文件目录位置
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # 添加共享库搜索路径(很重要)
@@ -125,7 +120,7 @@ cmake_minimum_required(VSERSION 3.0)
 
 - aux_source_directory
 
-将dir目录下所有源文件的名称保存再变量var中
+将 <dir> 目录下所有源文件的名称保存再变量 <var> 中
 
 语法:
 ```
@@ -137,7 +132,7 @@ aux_source_directory(. DIR_SRC)
 
 - add_executable
 
-用于指定从一组源文件source1, source2... sourceN编译出一个可执行文件且命名为name
+用于指定从一组源文件 source1, source2... sourceN编译出一个可执行文件且命名为 name
 
 语法:
 ```
@@ -146,23 +141,57 @@ add_executable(<name> [WIN32] [MACOS_BUNDLE] [EXCLUDE_FROM_ALL] source1 source2 
 
 - add_libiary
 
-用于指定从一组源文件source1, source2... sourceN编译出一个库文件且命名为name
+用于指定从一组源文件 source1, source2... sourceN 编译出一个库文件且命名为 <name>
 
 语法:
 ```
 add_libiary(<name> [STATIC|SHARED|MOUDLE] [EXCLUDE_FROM_ALL] source1 source2 ...)  
 ```
 
-- add_dependencies
+- target_link_libraries
 
-用于指定某个目标(可执行文件或者库文件)依赖于其他的目录. 这里的目标必须是add_executable, add_library, add_custom_target
-命令创建的目标
+用于指定 target 需要链接 item1 item2 ..., 这里的 <target> 必须已经被创建, 链接的item可以是已经存在的 target(依赖
+关系会自动添加)
 
 语法:
 ```
-add_dependencies(target-name denpend-target1 denpend-target2 ...)
+target_link_libraries(<target> item1 item2 ... [debug|optimized|general])
 ```
 
+- include_directories
+
+用于设置目录, 这些设定的目录被编译器用于查找 include 文件
+
+语法:
+```
+include_directories([AFTER | BEFORE] [SYSTEM] dir1 dir2 ...)
+```
+
+- file
+
+包含丰富的文件和目录的相关操作.
+
+a. 目录的遍历
+b. GLOB用于产生一个文件(目录)路径列表并保存再var中
+c. 文件路径列表中的每个文件的文件名都能匹配globbing expressions(非正则表达式, 但是类似)
+d. 如果指定了 REVATIVE 路径, 那么返回的文件路径列表中的路径相对于 REVATIVE 的路径
+
+```
+file(GLOB var [RELVATIVE path] [globbing expressions] ...)
+```
+
+file(GLOB VAR RELATIVE ${PROJECT_BINARY_DIR} "${PROJECT_BINARY_DIR}/*/*.c")
+
+
+- add_dependencies
+
+用于指定某个目标(可执行文件或者库文件)依赖于其他的目录. 这里的 <target> 必须是 add_executable, add_library, 
+add_custom_target 命令创建的目标. <denpend-target> 是 add_library, add_custom_target 命令创建的目标.
+
+语法:
+```
+add_dependencies(<target> denpend-target1 denpend-target2 ...)
+```
 
 - add_subdirectory
 
@@ -173,18 +202,6 @@ add_dependencies(target-name denpend-target1 denpend-target2 ...)
 add_subdirectory(source_dir [binary_dir] [EXCLUDE_FROM_ALL])
 ```
 
-add_subdirectory(lib)
-
-
-- target_link_libraries
-
-用于指定target需要链接 item1 item2 ..., 这里的target必须已经被创建, 链接的item可以是已经存在的target(依赖关系会自
-动添加)
-
-语法:
-```
-target_link_libraries(<target> item1 item2 ... [debug|optimized|general])
-```
 
 - message
 
@@ -193,15 +210,6 @@ target_link_libraries(<target> item1 item2 ... [debug|optimized|general])
 语法:
 ```
 message([STATUS | WARNING | AUTHOR_WARNING | FATAL_ERROR | SEND_ERROR] "message")
-```
-
-- include_directories
-
-用于设置目录, 这些设定的目录被编译器用于查找include文件
-
-语法:
-```
-include_directories([AFTER | BEFORE] [SYSTEM] dir1 dir2 ...)
 ```
 
 - find_path
@@ -239,21 +247,6 @@ find_library(<VAR> name1 [path1 path2 ..])
 ```
 add_definitions(-DFOO -DBAR ...)
 ```
-
-- file
-
-丰富的文件和目录的相关操作
-
-a. 目录的遍历
-b. GLOB用于产生一个文件(目录)路径列表并保存再var中
-c. 文件路径列表中的每个文件的文件名都能匹配globbing expressions(非正则表达式, 但是类似)
-d. 如果指定了 REVATIVE 路径, 那么返回的文件路径列表中的路径相对于 REVATIVE 的路径
-
-```
-file(GLOB var [RELVATIVE path] [globbing expressions] ...)
-```
-
-file(GLOB VAR RELATIVE ${PROJECT_BINARY_DIR} "${PROJECT_BINARY_DIR}/*/*.c")
 
 
 ## 常用的变量
