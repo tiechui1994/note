@@ -237,7 +237,6 @@ if(NOT LUA_INCLUDE_PATH)
 endif()
 ```
 
-
 - find_library
 
 用于查找库文件name1的路径, 如果找到则将路径保存在VAR中(此路径为一个绝对路径), 如皋没有找到则结果为<VAR>-NOTFOUND. 一
@@ -258,6 +257,15 @@ find_library(<VAR> name1 [path1 path2 ..])
 add_definitions(-DFOO -DBAR ...)
 ```
 
+- add_compile_options 
+
+设置编译选项.
+
+例子:
+```
+add_compile_options("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes")
+```
+
 
 ## 常用的变量
 
@@ -270,3 +278,25 @@ CMAKE_ARCHIVE_OUTPUT_DIRECTORY 用于设置ARCHIVE目标的输出路径
 CMAKE_LIBRARY_OUTPUT_DIRECTORY 用于设置LIBRARY目标的输出路径
 
 CMAKE_RUNTIME_OUTPUT_DIRECTORY 用于设置RUNTIME目标的输出路径
+
+## 常用案例
+
+### cmake 设置编译选项方法
+
+- 使用 add_compile_options
+
+```
+add_compile_options("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes")
+```
+
+- 使用 add_definitions
+
+```
+add_definitions("-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes")
+```
+
+- 使用 set 修改 CMAKE_CXX_FLAGS 或 CMAKE_C_FLAGS
+
+```
+set(CMAKE_C_FLAGS "-Wall -Werror -Wstrict-prototypes -Wmissing-prototypes")
+```
