@@ -80,10 +80,10 @@ add_library(math SHARED ${SRC_LIST})
 #include "add.h"
 
 int main(int argc, char* argv[]){
-        int a = 20;
-        int b = 10;
-        printf("%d+%d=%d\n",a,b,add(a,b));
-        return 0;
+    int a = 20;
+    int b = 10;
+    printf("%d+%d=%d\n",a,b,add(a,b));
+    return 0;
 }
 ```
 
@@ -120,15 +120,17 @@ cmake_minimum_required(VSERSION 3.0)
 
 - aux_source_directory
 
-将 <dir> 目录下所有源文件的名称保存再变量 <var> 中
+将 `<dir>` 目录下所有源文件的名称保存再变量 `<var>` 中
 
 语法:
 ```
 aux_source_directory(<dir> <var>)
 ```
 
+例子:
+```
 aux_source_directory(. DIR_SRC)
-
+```
 
 - add_executable
 
@@ -150,7 +152,7 @@ add_libiary(<name> [STATIC|SHARED|MOUDLE] [EXCLUDE_FROM_ALL] source1 source2 ...
 
 - target_link_libraries
 
-用于指定 target 需要链接 item1 item2 ..., 这里的 <target> 必须已经被创建, 链接的item可以是已经存在的 target(依赖
+用于指定 target 需要链接 item1 item2 ..., 这里的 `<target>` 必须已经被创建, 链接的item可以是已经存在的 target(依赖
 关系会自动添加)
 
 语法:
@@ -172,21 +174,26 @@ include_directories([AFTER | BEFORE] [SYSTEM] dir1 dir2 ...)
 包含丰富的文件和目录的相关操作.
 
 a. 目录的遍历
+
 b. GLOB用于产生一个文件(目录)路径列表并保存再var中
+
 c. 文件路径列表中的每个文件的文件名都能匹配globbing expressions(非正则表达式, 但是类似)
+
 d. 如果指定了 REVATIVE 路径, 那么返回的文件路径列表中的路径相对于 REVATIVE 的路径
 
 ```
 file(GLOB var [RELVATIVE path] [globbing expressions] ...)
 ```
 
+例子:
+```
 file(GLOB VAR RELATIVE ${PROJECT_BINARY_DIR} "${PROJECT_BINARY_DIR}/*/*.c")
-
+```
 
 - add_dependencies
 
-用于指定某个目标(可执行文件或者库文件)依赖于其他的目录. 这里的 <target> 必须是 add_executable, add_library, 
-add_custom_target 命令创建的目标. <denpend-target> 是 add_library, add_custom_target 命令创建的目标.
+用于指定某个目标(可执行文件或者库文件)依赖于其他的目录. 这里的 `<target>` 必须是 add_executable, add_library, 
+add_custom_target 命令创建的目标. `<denpend-target>` 是 add_library, add_custom_target 命令创建的目标.
 
 语法:
 ```
@@ -222,10 +229,13 @@ message([STATUS | WARNING | AUTHOR_WARNING | FATAL_ERROR | SEND_ERROR] "message"
 find_path(<VAR> name1 [path1 path2 ...])
 ```
 
+例子:
+```
 find_path(LUA_INCLUDE_PATH lua.h ${LUA_INCLUDE_FIND_PATH})
 if(NOT LUA_INCLUDE_PATH)
     message(SEND_ERROR "Header file lua.h not found")
 endif()
+```
 
 
 - find_library
