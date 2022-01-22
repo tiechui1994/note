@@ -107,7 +107,7 @@ gpg 命令:
 gpg [选项]
 ```
 
-- `-a, --armor` 输出经 ASCII 封装.
+- `-a, --armor` 输出 ASCII.(导出公钥, 私钥使用)
 
 - `-o, --output [FILE]` 输出到指定文件
 
@@ -123,9 +123,12 @@ gpg [选项]
 - `--gen-key` 生成秘钥
 - `--full-gen-key`, 生成秘钥, 可以选择加密方式.
 
-- `--delete-key [UID]` 删除秘钥
+- `--delete-secret-keys <UID>` 删除密钥第一步, 删除私钥.
+- `--delete-keys <UID>` 删除密钥第二步, 删除公钥.
 
-- `--export [UID]`, `--export-secret-keys` 导出公钥, 私钥
+- `--export <UID>`, 导出公钥
+- `--export-secret-keys` 导出私钥
+- `--export-ssh-key`, 导出用作 OpenSSH 的公钥.
 
 ```
 gpg --armor --output public.key --export UID
@@ -133,10 +136,30 @@ gpg --armor --output public.key --export UID
 gpg --armor --output secret.key --export-secret-keys
 ```
 
-- `--send-keys [UID]` 上传公钥
+- `--send-keys <UID>` 上传公钥
 
 ```
 gpg --send-keys UID --keyserver hkp://subkeys.pgp.net
+```
+
+- `--edit-key UID`, 编辑密钥, 进入交互式命令. 常用的命令:
+
+```
+1. adduid, 增加一个用户标识. 此时会要求输入新的 `名称`, `邮箱`, `备注`. 
+
+2. deluid, 删除选定用户标识. 可以使用 "uid N" 命令选择要删除的用户标识(如果某个用户标识前面出现 "*", 则该用户标识就
+被选中了)
+
+3. expire, 变更密钥的使用期限. 此时会要求输入 `有效期`
+
+4. password, 变更密码. 此时会要求输入旧密码, 然后变更密码.
+
+5. addkey, 添加一个新的子密钥. 按要求输入内容. 添加完成之后会多一个 `ssb` 条目.
+
+6. delkey, 删除选择的子密钥. 可以使用 "key N" 命令选择要删除的子密钥(如果某个子密钥前面出现 "*", 则该子密钥就被选中
+了)
+
+7. save, 保存所有的修改.
 ```
 
 加密与解密:

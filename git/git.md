@@ -134,11 +134,18 @@ merge 和 branch 一起定义了分支的上游分支. 它告诉 `git fetch` 和
 
 - 生成 GPG 密钥对
 
-`gpg --full-gen-key`, 可以选择`算法类型`, `有效期`, `名称`, `电子邮件`, `密码`等.
+`gpg --full-gen-key`, 可以选择`算法类型`, `有效期`, `名称`, `电子邮件`, `备注`.
 
-- 获取 GPG 密钥的 ID.
+> `电子邮件` 要与 github 当中的 `email` 一致, 否则 GPG 导出的公钥无法验证成功.
 
-`gpg --list-keys --keyid-format long`. 其中 `pub` 行的 `/` 后面的内容是密钥ID. 下例是 `17FA6CF726EC0733`
+> 如果本地已经存在了一个 gpg 密钥对, 可以在原来的密钥对基础上添加新的用户标识(`邮箱`, `名称`, `备注`). 方法如下:
+> 1) 首先使用命令 `gpg --edit-key UID`, 其中密钥UID的获取方法参考下面 '获取GPG密钥UID'. 进入交互式密钥编辑.
+> 2) 输入命令 `adduid`, 添加一个新的用户标识. 然后依次输入 `名称`, `邮箱`, `备注`, 之后保存输入的内容.
+> 3) 输入命令 `save`, 保存当前的修改, 就这样添加了新的用户标识.
+
+- 获取 GPG 密钥的 UID.
+
+`gpg --list-keys --keyid-format long`. 其中 `pub` 行的 `/` 后面的内容是密钥UID. 下例是 `17FA6CF726EC0733`
 
 ```
 $ gpg --list-keys --keyid-format long
@@ -149,10 +156,10 @@ uid                 [ultimate] NAME (COMMENT) <EMAIL>
 sub   rsa3072/17FA6CF726EC0733 2022-01-01 [E] [expires: 2023-01-01]
 ```
 
-- 导出密钥ID的公钥
+- 导出密钥UID的公钥
 
 ```
-gpg -a --export ID
+gpg -a --export UID
 ```
 
 > 将导出的密钥ID的公钥复制到 github, gitlab, coding 等的 GPG 公钥处进行添加(类似SSH公钥).
@@ -160,8 +167,8 @@ gpg -a --export ID
 - 配置使用 GPG 签名提交
 
 ```
-# 配置密钥签名key, 也就是前面的 GPG 密钥ID
-git config user.signingkey ID
+# 配置密钥签名key, 也就是前面的 GPG 密钥UID
+git config user.signingkey UID
 
 # 配置自动 commit gpg 签名. 默认情况下, 在 'git commit' 时使用 '-S' 参数才会使用 GPG 签名.
 git config commit.gpgsign true
