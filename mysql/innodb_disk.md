@@ -10,7 +10,6 @@ InnoDB Data Dictionary 由内部system table组成, 其中包含用于追踪对�
 InnoDB system tablespace当中. 由于历史原因, Data Dictionary元数据在某种程度上与存储在InnoDB表元数据文件(.frm
 文件)中的信息重叠.
 
-
 ### Log Buffer
 
 Log Buffer 是保存要写入磁盘上日志文件的数据的内存区域. Log Buffer 大小由 `innodb_log_buffer_size` 变量定义. 默认
@@ -107,3 +106,49 @@ Segment 中的 Undo Slot数量根据 InnoDB 的页大小而有所不同.
 
 如果每个事务对一个临时表执行一个INSERT, 和一个UPDATE或DELETE操作, 最大并发读写数:
 (innodb_page_size / 16 / 2) * 32
+
+### tablespace
+
+#### system tablespace
+
+数据字典(Data Dictionary), 双写缓冲区(Doublewrite Buffer), 修改缓冲区(Change Buffer), undo日志(Undo Logs)
+的存储区域. 如果在 system tablespace 中创建table, 而不是在 file-per-table 或 general tablespace 当中创建 table,
+则它也可能包含table和索引数据.
+
+system tablespace 可以具有一个或多个数据文件. 默认情况下, 在 data 目录下创建一个名为 `ibdata1` 的单个文件. 文件的
+大小和数量由 `innodb_data_file_path` 启动选项定义.
+
+#### file-per-table tablespace
+
+包含单个InnoDB表的数据和索引, 并存储在文件系统中单个数据文件中.
+
+配置:
+
+InnoDB 默认情况下在 file-per-table tablespace 当中创建 table. 此行为由 `innodb_file_per_table` 变量控制.
+当 `innodb_file_per_table` 为 OFF 时, InnoDB 会在 system tablespace 当中创建 table.
+
+数据文件:
+
+在 MySQL 数据库目录中的 `.idb` 数据文件中, 创建了 file-per-table tablespace. `.ibd` 文件是以表名称命名的.
+
+> 可以使用 `CREATE TABLE` 语句的 `DATA DIRECTORY` 子句在 data 目录之外创建 file-per-table tablespace的数据
+文件.
+
+优点:
+
+1. `TRUNCATE` 或 `DROP` 在 file-per-table tablespace 当中创建的表后, 磁盘空间将返还给OS. `TRUNCATE` 或 `DROP` 
+在 share tablespace 当中创建的表后, 该可用空间仅可用于 InnoDB 数据(换句话, share tablespace数据文件的大小不会缩小).
+
+2. 对驻留在 share tablespace 的表进行复制 ALTER TABLE 操作可以增加 tablespace 占用的磁盘空间. 此类操作可能需要与
+表中数据加索引一样多的额外空间. 该空间不会像file-per-table tablespace那样释放返还给OS.
+
+3. file-per-table tablespace 的表中执行删除时, `TRUNCATE TABLE` 性能会更好.
+
+4. 可以在单独的存储设备上创建 file-per-table tablespace数据文件, 以进行IO优化, 空间管理或备份.
+ 
+
+#### undo tablespace
+
+#### general tablespace
+
+#### temp tablespace

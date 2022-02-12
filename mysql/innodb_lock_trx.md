@@ -429,7 +429,7 @@ rollback;
 加 S 锁 避免了数据的不可重复读
 加上 Next Key 避免了数据的幻读
 
-# Transaction (事务)
+# TRANSACTION MODEL
 
 事务隔离是数据库处理的基础之一. 隔离级别是在多个事务进行更改并同时执行查询时, 对结果的性能和可靠性, 一致性和可重现性进行
 微调的设置.
@@ -447,7 +447,9 @@ InnoDB使用不同的锁定策略支持此处描述的每个事务隔离级别. 
 
 以下列表描述了MySQL如何支持不同的事务级别. 该列表从最常用的级别变为最少使用的级别.
 
-## REPEATABLE READ
+## TRANSACTION LEVEL 
+
+### REPEATABLE READ
 
 这是InnoDB的默认隔离级别. 同一事务中的一致读取读取第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通(非锁定)
 SELECT语句, 则这些SELECT语句也相互一致.
@@ -459,7 +461,7 @@ SELECT语句, 则这些SELECT语句也相互一致.
 
 - 对于其他搜索条件, InnoDB锁定扫描的索引范围, 使用间隙锁或下一键锁来阻止其他会话插入范围所覆盖的间隙.
 
-## READ COMMITTED
+### READ COMMITTED
 
 即使在同一事务中, 每个一致的读取也会设置和读取自己的新快照.
 
@@ -560,20 +562,18 @@ UPDATE t SET b = 4 WHERE b = 2 AND c = 4;
 
 因此, `READ COMMITTED` 提供比innodb_locks_unsafe_for_binlog更精细和更灵活的控制.
 
-## READ UNCOMMITED
+### READ UNCOMMITED
 
 SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此, 使用此隔离级别, 此类读取不一致. 这也称为脏读. 否则, 此隔离级
 别与 `READ COMMITTED` 类似.
 
-## SERIALIZABLE
+### SERIALIZABLE
 
 此级别与 `REPEATABLE READ` 类似, 如果禁用自动提交, InnoDB将隐式地将所有普通 SELECT 语句转换为 
 `SELECT ... LOCK IN SHARE MODE`. 如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作
 为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. (要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
 
 ---
-
-# 读取
 
 ## Consistent Nonlocking Reads (一致性非锁定读取)
 
@@ -665,7 +665,6 @@ v          SELECT * FROM t;
 - 要在这种情况下使用一致读取, 请启用innodb_locks_unsafe_for_binlog选项并将事务的隔离级别设置为 `READ UNCOMMITTED`,
 `READ COMMITTED` 或 `REPEATABLE READ` (即SERIALIZABLE以外的任何其他内容). 在这种情况下, 不会对从所选表中读取的行
 设置锁定.
-
 
 ## Locking Reads (锁定读取)
 
@@ -873,3 +872,48 @@ InnoDB在不设置任何锁定的情况下获取先前初始化的AUTO_INCREMENT
 
 - 如果在表上定义了FOREIGN KEY约束, 任何需要检查约束条件的插入,更新或删除都会在其查看的记录上设置 "共享记录级锁" 定以检
 查约束. 在约束检查失败的情况下, InnoDB还是会设置这些锁.
+
+# 幻读行
+
+在一个事务中, 当同一个查询在不同的时间产生不同的结果集时, 事务就产生了所谓的幻读现象. 例如, 一个SELECT 执行了两次, 但第
+二次返回了第一次没有返回的行, 则该行是"幻"行.
+
+假设 child 表的 id 列加上索引, 并且想要读取并锁定表中 id 大于 100 的所有行, 以便稍后更改选中行的某些列:                   
+
+```
+           Session A                                     Session B
+
+       START TRANSACTION;                               START TRANSACTION;
+time
+ |     SELECT * FROM child WHERE id > 100 FOR UPDATE;
+ |                                                      INSERT INTO child (id) VALUES (101);
+ |
+ v     SELECT * FROM child WHERE id > 100 FOR UPDATE;
+```
+
+此时在 Session A 当中查询的结果会出现 id 为 101 的行("幻读"). 
+
+为了防止幻读, InnoDB 使用了 next-key lock 算法. 该算法将 间隙锁 和 记录锁 相结合.
+
+InnoDB 执行行级锁的方式: 当它搜索或扫描表索引时, 它会在遇到的索引记录上设置共享锁或互斥锁. 因此, 行级锁实际上是索引记录
+锁. 索引记录上的 next-key lock 也会影响该索引记录之前的"间隙". 也就是说, next-key lock是 "索引记录锁" + "索引记录
+之前的间隙上的间隙锁". 如果一个会话在索引中的记录R上具有共享或互斥锁, 则另一个会话不能在索引顺序中的R之前的间隙中插入新的
+索引记录.
+
+InnoDB 在扫描索引时, 还可以锁定索引中最后一条记录之后的间隙. 在前面的例子中就是这样: 为了防止任何插入 id 大于 100 的记
+录到表中, InnoDB 设置的锁包括 id 值 102 之后的间隙上的锁.
+
+可以使用 next-key lock 在应用程序中实现唯一性检查: 如果你在共享锁下读取数据, 并且没有插入重复项, 那么你可以安全地插入
+行, 因为 next-key lock 可以防止任何人同时插入重复的项. 因此, next-key lock 能够锁定表中不存在的东西. (MySQL实现"
+分布式锁"的原理.)  
+
+
+
+
+
+
+
+
+
+
+
