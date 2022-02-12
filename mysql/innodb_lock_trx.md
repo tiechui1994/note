@@ -21,7 +21,6 @@ InnoDB实现标准的行级锁定, 其中有两种类型的锁, 即shared(S)锁�
 
 - 独占(X)锁(写锁): 允许事务对一条数据进行更新或删除.
 
-
 ## Intention Lock (意向锁)
 
 无论是共享锁还是互斥锁其实都只是对某一行数据进行加锁, InnoDB支持多个粒度锁定, 也就是行锁和表锁. 为了实现多个粒度级别的锁定, 
@@ -35,7 +34,7 @@ InnoDB有两种类型的意向锁使用:
 例如, `SELECT ... LOCK IN SHARE MODE` 设置IS锁定, `SELECT ... FOR UPDATE` 设置IX锁定.
 
 意向锁定协议如下:
-- 在一个事物可以获得一个表中一行的共享锁之前, 它必须首先获得这张表的IS锁或这张表的更强的锁.
+- 在一个事务可以获得一个表中一行的共享锁之前, 它必须首先获得这张表的IS锁或这张表的更强的锁.
 - 在一个事务可以获得一个表中一行的互斥锁之前, 它必须先获得这张表IX锁.
 
 这些规则可以通过下面的锁类型兼容性矩阵方便地总结.
@@ -78,16 +77,15 @@ TABLE LOCK table `test`.`t` trx id 10080 lock mode IX
 
 ### Record Lock (记录锁)
 
-记录锁是加到**索引记录**上的锁. 例如, `SELECT c1 FROM t WHERE c1 = 10 FOR UPDATE;` 阻止其他任何事务插入, 更新 或 删除
-t.c1的值为10的行.
+记录锁是加到**索引记录**上的锁. 例如, `SELECT c1 FROM t WHERE c1 = 10 FOR UPDATE;` 阻止其他任何事务插入, 更新 
+或 删除 t.c1的值为10的行.
 
-记录锁也始终锁定索引记录, 即使是一个没有索引的表. 对于这种情况, InnoDB创建一个隐藏的 `clustered index` 并使用此索引进行
+记录锁始终锁定索引记录, 即使是一个没有索引的表. 对于这种情况, InnoDB创建一个隐藏的 `clustered index` 并使用此索引进行
 记录锁定.
 
-记录锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `LATEST DETECTED DEADLOCK` 行当中显示类似于以下内容:
+记录锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `TRANSACTIONS` 或 `LATEST DETECTED DEADLOCK`:
 ```
-RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` 
-trx id 10078 lock_mode X locks rec but not gap
+RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` trx id 10078 lock_mode X locks rec but not gap
 Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  0: len 4; hex 8000000a; asc     ;;
  1: len 6; hex 00000000274f; asc     'O;;
@@ -96,50 +94,63 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
 
 ### Gap Lock (间隙锁)
 
-间隙锁是对 **索引记录中** 的一段连续区域的锁. 间隙锁是锁定索引记录之间的间隙, 或锁定在第一个或最后一个索引记录之前的间隙. 
+间隙锁是对 **索引记录之间** 一段连续区域的锁. 间隙锁是在 "索引记录之间", 或 "第一条索引记录之前" 或 "最后一个索引记录
+之后" 的间隙上的锁.
 
 例如, `SELECT c1 FROM t WHERE c1 BETWEEN 10 AND 20 FOR UPDATE;` 会阻止其他事务向表中插入 id=15 的记录. 无论
-列中是否已存在任何此类值, 因为 **该范围内所有现有值之间的间隔** 都被锁定.
+列中是否已存在任何此类值, 因为 **该范围内所有现有值之间的间隙** 都被锁定.
 
 间隙可能跨越单个索引值或多个索引值, 甚至可能为空.
 
-> 间隙锁定是性能和并发之间权衡的一部分, 并且只用于某些事务隔离级别.
+> 间隙锁定是性能和并发之间权衡的一部分, 并且只用于某些事务隔离级别(READ COMMITTED).
 
 虽然间隙锁中也分为共享锁和互斥锁, 不过它们之间并不是互斥的, 也就是不同的事务可以同时持有一段相同范围的共享锁和排他锁, 它唯一阻
 止的就是**其它事务向这个范围中添加新的记录**. 
 
-使用唯一索引锁定行以搜索唯一行的语句不需要间隙锁定. (这不包括搜索条件仅包含多列唯一索引的某些列的情况; 在这种情况下, 确实
-会发生间隙锁定.) 例如, 如果id列具有唯一索引, 则以下语句仅使用具有id值100的行的索引记录锁定, 其他会话是否在前一个间隙中插
-入行无关紧要:
+在使用唯一索引去搜索唯一行的状况下是不需要间隙锁定. (这不包括搜索条件仅包含 "多列唯一索引" 的某些列的情况; 在这种情况下, 
+确实会发生间隙锁定.) 例如, 如果id列具有唯一索引, 则以下语句仅使用具有 id 值 100 的行的记录锁, 其他会话是否在前一个间隙
+中插入行无关紧要:
 ```
 SELECT * FROM child WHERE id=100;
 ```
 
-如果id未编入索引或具有非唯一索引, 则该语句会锁定前一个间隙.
-此处值得注意的是, 冲突锁可以通过不同的事务保持在间隙上. 例如, 事务A可以在间隙上保持共享间隙锁定(间隙S锁定), 而事务B在同
-一间隙上保持独占间隙锁定(间隙X锁定). 允许冲突间隙锁定的原因是, 如果从索引中清除记录, 则必须合并由不同事务保留在记录上的间
-隙锁定.
+如果 id 没有索引或具有非唯一索引, 则该语句会锁定间隙.
 
-InnoDB 中的间隙锁定是"purely inhibitive(纯粹的抑制)", 这意味着它们的唯一目的是防止其他事务插入间隙. 差距锁可以共存.
-一个事务占用的间隙锁定不会阻止另一个事务在同一个间隙上进行间隙锁定. 共享和独占间隙锁之间没有区别. 它们彼此不冲突, 它们执行
+此处值得注意的是, 不同的事务可以在间隙上持有"冲突的"锁. 例如, 事务A可以在间隙上持有共享间隙锁(gap S-lock), 而事务B在同
+一间隙上持有独占间隙锁(gap X-lock). 允许"冲突的"间隙锁的原因是, 如果从索引中清除记录, 则必须合并不同事务在记录上持有的间
+隙锁.
+
+InnoDB 中的间隙锁是 "purely inhibitive(纯粹的抑制)", 这意味着它们的唯一目的是防止其他事务插入间隙. 间隙锁可以共存.
+一个事务占用的间隙锁定不会阻止另一个事务在同一个间隙上采用的间隙锁. 共享和独占间隙锁之间没有区别. 它们彼此不冲突, 它们执行
 相同的功能.
 
-可以明确禁用间隙锁定, 如果将事务隔离级别更改为 `READ COMMITTED` 或启用innodb_locks_unsafe_for_binlog系统变量(现
-已弃用,5.7), 则会发生这种情况. 在这些情况下, 对于搜索和索引扫描禁用间隙锁定, 并且间隙锁定仅用于外键约束检查和重复键检查.
+可以显示禁用间隙锁, 如果将事务隔离级别更改为 `READ COMMITTED` 或启用 `innodb_locks_unsafe_for_binlog` 系统变量(
+现已弃用,5.7), 则会发生这种情况. 在这些情况下, 对于搜索和索引扫描禁用间隙锁, 并且间隙锁仅用于 "外键约束检查" 和 "重复键
+检查".
 
-使用 `READ COMMITTED` 隔离级别或启用innodb_locks_unsafe_for_binlog还有其他影响. 在MySQL评估WHERE条件后,将释放
-不匹配行的记录锁. 对于UPDATE语句, InnoDB执行"semi-consistent(半一致)"读取, 以便将最新提交的版本返回给MySQL, 以便
-MySQL可以确定该行是否与 UPDATE 的 WHERE条件匹配.
+使用 `READ COMMITTED` 隔离级别或启用 `innodb_locks_unsafe_for_binlog` 还有其他影响. 在MySQL评估WHERE条件后,
+将释放不匹配行的记录锁. 对于 UPDATE 语句, InnoDB 执行"semi-consistent(半一致)"读取, 以便将最新提交的版本返回给MySQL, 
+以便 MySQL 可以确定该行是否与 UPDATE 的 WHERE条件匹配.
+
+间隙锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `TRANSACTIONS` 或 `LATEST DETECTED DEADLOCK`:
+```
+RECORD LOCKS space id 764 page no 3 n bits 72 index PRIMARY of table `db`.`t` trx id 2680921 lock_mode X waiting
+Record lock, heap no 2 PHYSICAL RECORD: n_fields 4; compact format; info bits 0
+ 0: len 4; hex 80000001; asc     ;;
+ 1: len 6; hex 00000028e850; asc    ( P;;
+ 2: len 7; hex a60000025d0110; asc     ]  ;;
+ 3: len 4; hex 80000064; asc    d;;
+```
 
 ### Next-Key Lock (下一键锁定)
 
-下一键锁定是索引记录上的记录锁定和索引记录之前的间隙上的间隙锁定的组合.
+下一键锁是索引记录上的 "记录锁" 和 索引记录之前的间隙上的 "间隙锁" 的组合.
 
-InnoDB以这样一种方式执行行级锁定: 当它搜索或扫描表索引时, 它会在遇到的索引记录上设置共享锁或互斥锁. 因此, 行级锁实际上是
-索引记录锁. 索引记录上的下一键锁定也会影响该索引记录之前的"间隙". 也就是说, 下一键锁定是索引记录锁定加上索引记录之前的间隙
-上的间隙锁定. 如果一个会话在索引中的记录R上具有共享或互斥锁, 则另一个会话不能在索引顺序中的R之前的间隙中插入新的索引记录.
+InnoDB 执行行级锁的方式: 当它搜索或扫描表索引时, 它会在遇到的索引记录上设置共享锁或互斥锁. 因此, 行级锁实际上是索引记录锁. 
+索引记录上的下一键锁也会影响该索引记录之前的"间隙". 也就是说, 下一键锁定是 "索引记录锁" + "索引记录之前的间隙上的间隙锁". 
+如果一个会话在索引中的记录R上具有共享或互斥锁, 则另一个会话不能在索引顺序中的R之前的间隙中插入新的索引记录.
 
-假设索引包含值10, 11, 13和20. 此索引的可能的下一个键锁定覆盖以下间隔, 其中圆括号表示排除间隔端点, 方括号表示包含端点:
+假设索引包含值10, 11, 13和20. 此索引的可能的下一个键锁覆盖以下间隔, 其中圆括号表示排除间隔端点, 方括号表示包含端点:
 
 ```
 (-oo, 10]
@@ -149,16 +160,15 @@ InnoDB以这样一种方式执行行级锁定: 当它搜索或扫描表索引时
 (20, +oo)
 ```
 
-对于最后一个间隔, 下一个键锁定将间隙锁定在索引中最大值之上, 而"supremum"伪记录的值高于索引中实际的任何值. supremum不是
+对于最后一个间隙, 下一个键锁将间隙锁定在索引中最大值之上, 而"supremum"伪记录的值高于索引中实际的任何值. supremum不是
 真正的索引记录, 因此, 实际上, 此下一键锁定仅锁定最大索引值之后的间隙.
 
 默认情况下, InnoDB在 `REPEATABLE READ` 事务隔离级别运行. 在这种情况下, InnoDB使用下一键锁进行搜索和索引扫描. 从而
-防止幻读行.
+防止幻读.
 
-下一键锁的事务数据类似于 `SHOW ENGINE INNODB STATUS` 和 `InnoDB` 监视器输出中的以下内容:
+下一键锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `TRANSACTIONS` 或 `LATEST DETECTED DEADLOCK`:
 ```
-RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` 
-trx id 10080 lock_mode X
+RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` trx id 10080 lock_mode X
 Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
  0: len 8; hex 73757072656d756d; asc supremum;;
 
@@ -192,10 +202,10 @@ mysql> START TRANSACTION;
 mysql> INSERT INTO child (id) VALUES (101);
 ```
 
-插入意向锁的事务数据 `SHOW ENGINE INNODB STATUS` 和InnoDB监视器输出中的以下内容类似:
+插入意向锁的事务数据 `SHOW ENGINE INNODB STATUS` 的 TRANSACTIONS 当中包含如下内容:
 ```
-RECORD LOCKS space id 31 page no 3 n bits 72 index `PRIMARY` of table `test`.`child`
-trx id 8731 lock_mode X locks gap before rec insert intention waiting
+------- TRX HAS BEEN WAITING 4 SEC FOR THIS LOCK TO BE GRANTED:
+RECORD LOCKS space id 31 page no 3 n bits 72 index `PRIMARY` of table `test`.`child` trx id 8731 lock_mode X insert intention waiting
 Record lock, heap no 3 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  0: len 4; hex 80000066; asc    f;;
  1: len 6; hex 000000002215; asc     " ;;
@@ -419,7 +429,7 @@ rollback;
 加 S 锁 避免了数据的不可重复读
 加上 Next Key 避免了数据的幻读
 
-# Transaction (事物)
+# Transaction (事务)
 
 事务隔离是数据库处理的基础之一. 隔离级别是在多个事务进行更改并同时执行查询时, 对结果的性能和可靠性, 一致性和可重现性进行
 微调的设置.
@@ -492,7 +502,7 @@ UPDATE t SET b=4; WHRER b=2;
 ```
 
 当InnoDB执行每个UPDATE时, 它首先为它读取的每一行获取一个互斥锁, 然后确定是否修改它. 如果InnoDB没有修改该行, 它将释放
-锁. 否则, InnoDB会保留锁定, 直到事物结束. 这会影响事务处理, 如下所示.
+锁. 否则, InnoDB会保留锁定, 直到事务结束. 这会影响事务处理, 如下所示.
 
 使用默认的 `REPEATABLE READ` 隔离级别时, 第一个UPDATE在它读取的每一行上获取一个X锁, 并且不释放它们中的任何一个:
 ```

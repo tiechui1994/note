@@ -4,6 +4,13 @@ InnoDB 架构模型:
 
 ![image](/images/mysql_innodb_architecture.png)
 
+### Data Dictionary
+
+InnoDB Data Dictionary 由内部system table组成, 其中包含用于追踪对象(例如表, 索引和列)的元数据. 元数据物理上位于
+InnoDB system tablespace当中. 由于历史原因, Data Dictionary元数据在某种程度上与存储在InnoDB表元数据文件(.frm
+文件)中的信息重叠.
+
+
 ### Log Buffer
 
 Log Buffer 是保存要写入磁盘上日志文件的数据的内存区域. Log Buffer 大小由 `innodb_log_buffer_size` 变量定义. 默认
