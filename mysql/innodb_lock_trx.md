@@ -85,7 +85,7 @@ TABLE LOCK table `test`.`t` trx id 10080 lock mode IX
 
 记录锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `TRANSACTIONS` 或 `LATEST DETECTED DEADLOCK`:
 ```
-RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` trx id 10078 lock_mode X locks rec but not gap
+RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` trx id 10078 lock_mode X locks rec but not gap waiting
 Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  0: len 4; hex 8000000a; asc     ;;
  1: len 6; hex 00000000274f; asc     'O;;
@@ -132,22 +132,13 @@ InnoDB 中的间隙锁是 "purely inhibitive(纯粹的抑制)", 这意味着它�
 将释放不匹配行的记录锁. 对于 UPDATE 语句, InnoDB 执行"semi-consistent(半一致)"读取, 以便将最新提交的版本返回给MySQL, 
 以便 MySQL 可以确定该行是否与 UPDATE 的 WHERE条件匹配.
 
-间隙锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `TRANSACTIONS` 或 `LATEST DETECTED DEADLOCK`:
-```
-RECORD LOCKS space id 764 page no 3 n bits 72 index PRIMARY of table `db`.`t` trx id 2680921 lock_mode X waiting
-Record lock, heap no 2 PHYSICAL RECORD: n_fields 4; compact format; info bits 0
- 0: len 4; hex 80000001; asc     ;;
- 1: len 6; hex 00000028e850; asc    ( P;;
- 2: len 7; hex a60000025d0110; asc     ]  ;;
- 3: len 4; hex 80000064; asc    d;;
-```
 
 ### Next-Key Lock (下一键锁定)
 
 下一键锁是索引记录上的 "记录锁" 和 索引记录之前的间隙上的 "间隙锁" 的组合.
 
 InnoDB 执行行级锁的方式: 当它搜索或扫描表索引时, 它会在遇到的索引记录上设置共享锁或互斥锁. 因此, 行级锁实际上是索引记录锁. 
-索引记录上的下一键锁也会影响该索引记录之前的"间隙". 也就是说, 下一键锁定是 "索引记录锁" + "索引记录之前的间隙上的间隙锁". 
+索引记录上的下一键锁也会影响该索引记录之前的"间隙". 也就是说, 下一键锁定是 "索引记录锁" + "索引记录之间间隙上的间隙锁". 
 如果一个会话在索引中的记录R上具有共享或互斥锁, 则另一个会话不能在索引顺序中的R之前的间隙中插入新的索引记录.
 
 假设索引包含值10, 11, 13和20. 此索引的可能的下一个键锁覆盖以下间隔, 其中圆括号表示排除间隔端点, 方括号表示包含端点:
@@ -168,7 +159,7 @@ InnoDB 执行行级锁的方式: 当它搜索或扫描表索引时, 它会在遇
 
 下一键锁的事务数据在 `SHOW ENGINE INNODB STATUS` 的 `TRANSACTIONS` 或 `LATEST DETECTED DEADLOCK`:
 ```
-RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` trx id 10080 lock_mode X
+RECORD LOCKS space id 58 page no 3 n bits 72 index `PRIMARY` of table `test`.`t` trx id 10080 lock_mode X waiting
 Record lock, heap no 1 PHYSICAL RECORD: n_fields 1; compact format; info bits 0
  0: len 8; hex 73757072656d756d; asc supremum;;
 
@@ -178,16 +169,16 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  2: len 7; hex b60000019d0110; asc        ;;
 ```
 
-### Insert Intention Locks (插入意向锁定)
+### Insert Intention Locks (插入意向锁, 间隙锁的一种)
 
-插入意向锁定是在行插入之前由INSERT操作设置的一种间隙锁定. 该锁定表示以这样的方式插入的意图: 如果插入到相同索引间隙中的多
-个事务不插入间隙内的相同位置, 则不需要等待彼此. 假设存在值为4和7的索引记录. 分别尝试插入值5和6的单独事务, 在获取插入行上
-的互斥锁之前, 每个锁定4和7之间的间隙和插入意向锁, 但是不要互相阻塞因为行是非冲突的.
+插入意向锁是在插入行之前由 INSERT 操作设置的一种间隙锁. 该锁表示插入的意向: 如果插入到同一索引间隙中的多个事务没有在间隙
+内的同一位置插入, 则它们不需要等待彼此. 例如, 假设存在值为 4 和 7 的索引记录, 分别尝试插入值 5 和 6 的单独事务, 在获得
+插入行上的排他锁之前, 每个使用插入意向锁锁定 4 和 7 之间的间隙, 但是不会相互阻塞, 因为行是不冲突的.
 
-以下示例演示了在获取插入记录的独占锁之前采用插入意向锁定的事务. 该示例涉及两个客户端, A和B.
+下面示例演示了在获取插入记录的独占锁之前采用插入意图锁的事务. 该示例涉及两个客户端, A和B.
 
-客户端A创建一个包含两个索引记录(90和102)的表, 然后启动一个事务, 该事务对ID大于100的索引记录放置独占锁. 独占锁包括记录
-102之前的间隙锁:
+客户端A创建一个包含两个索引记录(90和102)的表, 然后启动一个事务, 该事务将排它锁设置在ID大于100的索引记录上. 排他锁包括记
+录102之前的间隙锁:
 ```
 mysql> CREATE TABLE child (id int(11) NOT NULL, PRIMARY KEY(id)) ENGINE=InnoDB;
 mysql> INSERT INTO child (id) values (90),(102);
@@ -196,7 +187,7 @@ mysql> START TRANSACTION;
 mysql> SELECT * FROM child WHERE id > 100 FOR UPDATE;
 ```
 
-客户端B开始事务以将记录插入间隙. 该事务在等待获取独占锁时采用插入意向锁.
+客户端B开始事务, 将记录插入间隙中. 该事务在等待获取排他锁时采用插入意图锁.
 ```
 mysql> START TRANSACTION;
 mysql> INSERT INTO child (id) VALUES (101);
@@ -226,7 +217,7 @@ innodb_autoinc_lock_mode配置选项控制用于自动增量锁定的算法. 它
 
 - 共享锁
 
-> 又称之为 读锁，简称 S 锁，顾名思义,共享锁就是**多个事务对于同一数据**可以共享一把锁, 都能访问到数据库, 但是只能读不
+> 又称之为 读锁, 简称 S 锁, 顾名思义,共享锁就是**多个事务对于同一数据**可以共享一把锁, 都能访问到数据库, 但是只能读不
 能修改;
 
 
@@ -258,7 +249,7 @@ update t set name='ww' where id=1; // 2
 
 - 排他锁
 
-> 又称为 写锁，简称 X 锁, 排它锁不能与其他锁并存, 如一个事务获取了一个数据行的排它锁, 其他事务就不能再获取改行的锁 (包
+> 又称为 写锁, 简称 X 锁, 排它锁不能与其他锁并存, 如一个事务获取了一个数据行的排它锁, 其他事务就不能再获取改行的锁 (包
 括共享锁和排它锁), 只有当前获取了排它锁的事务可以对数据进行读取和修改(此时其他事务要读取数据可从快照获取).
 
 加锁方式:
@@ -289,8 +280,8 @@ select * from t lock in share mode; // 3
 
 - 行锁
 
-InnoDB的行锁是通过索引上的索引项加锁实现的, 只有通过索引条件进行数据检索, InnoDB才使用行锁. 否则, 将使用表锁(锁住
-索引的所有记录). 条件指定为特定的一行.
+InnoDB的行锁是通过索引上的索引项加锁实现的, 只有通过索引条件进行数据检索, InnoDB才使用行锁. 否则, 将使用表锁(锁住索引
+的所有记录). 条件指定为特定的一行.
 
 
 测试:
@@ -308,22 +299,24 @@ update t set name='qqq' where id=1; // 2
 update t set name='zzz' where id=2; // 3
 ```
 
-注意: 1 和2 不能同时执行, 因为在操作1的时候,已经添加了行锁, 那么2将无法执行,除非 1 commit/rollback. 但是
-1 和 3 可以同时执行, 属于不同的行, 是不同的行锁.
+注意: 1 和 2 不能同时执行, 因为在操作1的时候,已经添加了行锁, 那么2将无法执行,除非 1 commit/rollback. 但是1 和 3 可
+以同时执行, 属于不同的行, 是不同的行锁.
 
 
 **行锁的算法**
 
-- 临键锁 Next-Key locks
-  当sql执行按照索引进行数据的检索时, 查询条件为范围查找(between and < > 等等)并有数据命中, 则测试SQL语句加上的
-  锁为Next-Key locks, 锁住索引的记录区间加下一个记录区间, 这个区间是`左开右闭的`
-
-- 间隙锁 Gap:
-  当记录不存在时, 临键锁退化成Gap. 在上述检索条件下, 如果没有命中记录,则退化成Gap锁, 锁住数据不存在的区间(`左开右开`)
-
 - 记录锁 Record Lock:
-  唯一性索引条件为精准匹配, 退化成Record锁. 当SQL执行按照唯一性(Primary Key, Unique Key) 索引进行数据的检索时,
-  查询条件等值匹配且查询的数据存在, 这是SQL语句上加的锁即为记录锁Record locks, 锁住具体的索引项.
+唯一性索引条件为精准匹配, 退化成Record Lock. 当SQL执行按照唯一性(Primary Key, Unique Key) 索引进行数据的检索时,
+查询条件等值匹配且查询的数据存在, 这是SQL语句上加的锁即为记录锁Record Lock, 锁住具体的索引项.
+
+- 下一键值锁 Next-Key Lock
+当sql执行按照索引进行数据的检索时, 查询条件为范围查找(between and < > 等等)并有数据命中, 则测试SQL语句加上的锁为 
+Next-Key Lock, 锁住索引的记录 + 锁住索引的记录区间, 这个区间是`左开右闭的`.
+
+- 间隙锁 Gap Lock:
+当记录不存在时, Next-Key Lock 退化成 Gap Lock. 在上述检索条件下, 如果没有命中记录, 则退化成 Gap Lock, 锁住数据不
+存在的区间(`左开右开`)
+
 
 关系: next-key = gap + record
 
@@ -338,19 +331,20 @@ update t set name='zzz' where id=2; // 3
 | 4  | 2000    | 2   |
 | 7  | 122     | 12  |
 | 9  | 11      | 110 |
+| 10 | 10      | 10  |
 +----+---------+-----+
 ```
-在上述状况下, InnoDB默认的行锁算法(Next-Key Lock), 此时的区间是 (-oo, 1] (1, 4] (4,7] (7,10], (10,+oo)
+在上述状况下, InnoDB 默认的行锁算法(Next-Key Lock), 此时的区间是 (-oo, 1] (1, 4] (4,7] (7,10], (10,+oo)
 
 
 ```
 begin;
-select * from t where id>5 and id<9 for update;
+select * from t where id>4 and id<9 for update;
 ```
 
-锁定的区间: (4,7] 和 (7,10]
+锁定的范围: (4, 7], (7, 9]
 
-验证next-key
+验证 Next-Key
 
 左开:
 ```
@@ -359,16 +353,15 @@ select * from t where id=4 for update; // 验证左开, 可以正常执行. id=4
 
 右闭:
 ```
-select * from t where id=7 for update; // 验证右闭, 不能执行. id=7的记录被锁住
+select * from t where id=9 for update; // 验证右闭, 不能执行. id=9的记录被锁住
 ```
 
-下一区间:  
+区间:
 ```
-insert into t (id,account,i) values(9,100,100); // 插入id=9, 不能执行, 说明命中区间[7,10) 的下一区间记录被
-锁定
+insert into t (id,account,i) values(8,100,100); // 插入id=8, 不能执行, 说明命中区间(7,9] 区间记录被锁定
 ```
 
-验证gap:
+验证 Gap:
 
 ```
 begin;
@@ -376,7 +369,7 @@ select * from t where id>4 and id<6 for update; // 1
 select * from t where id=6 for update; // 2
 ```
 
-1或者2产生锁住的区间 (4,7)
+1或者2产生锁住的区间 (4,6)
 
 左开:
 ```
@@ -385,26 +378,19 @@ select * from t where id=4 for update; // 可以执行
 
 右开:
 ```
-select * from t where id=7 for update; // 可以执行
+select * from t where id=6 for update; // 可以执行
 ```
 
-下一区间:  
+区间:  
 ```
-insert into t (id,account,i) values(5,1,1); // 插入id=5, 不能执行, 说明命中区间(4,7) 的下一区间记录被
-锁定
+insert into t (id,account,i) values(5,1,1); // 插入id=5, 不能执行, 说明命中区间(4,6) 的下一区间记录被锁定
 ```
 
-验证record
+验证 Record
 
 ```
 begin;
 select * from t where id=4 for update; 
-```
-
-下一区间:  
-```
-insert into t (id,account,i) values(5,1,1); // 可以执行, 没有被锁定
-锁定
 ```
 
 - 自增锁
@@ -419,8 +405,8 @@ insert into t (name) values('aaa');
 rollback;
 ```
 
-执行3次之后, 发现新增加的主键是上一条记录加3. 原因是, 3次插入导致自增主键增加, 但是由于事务未提交, 所以, 自增的主键
-永久性丢失.
+执行3次之后, 发现新增加的主键是上一条记录加3. 原因是, 3次插入导致自增主键增加, 但是由于事务未提交, 所以, 自增的主键永久
+性丢失.
 
 
 结论:
