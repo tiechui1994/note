@@ -1,4 +1,4 @@
-# Innodb 锁定与事务模型
+# InnoDB 锁与事务模型
 
 锁的种类一般分为乐观锁和悲观锁两种, **InnoDB存储引擎中使用是的悲观锁**.
 
@@ -437,13 +437,13 @@ InnoDB使用不同的锁定策略支持此处描述的每个事务隔离级别. 
 
 ### REPEATABLE READ
 
-这是InnoDB的默认隔离级别. 同一事务中的一致读取读取第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通(非锁定)
-SELECT语句, 则这些SELECT语句也相互一致.
+这是InnoDB的默认隔离级别. 同一事务中的一致读取读取第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通 (非锁定)
+SELECT 语句, 则这些SELECT语句也相互一致.
 
-对于锁定读取(使用`FOR UPDATE` 或 `LOCK IN SHARE MODE`的 SELECT), UPDATE 和 DELETE语句, 锁定取决于语句是使用具
-有唯一搜索条件的唯一索引还是范围类型搜索条件.
+对于锁定读取(使用`FOR UPDATE` 或 `LOCK IN SHARE MODE`的 SELECT), UPDATE 和 DELETE 语句, 锁定取决于语句是使用
+具有唯一搜索条件的唯一索引还是范围类型搜索条件.
 
-- 对于具有唯一搜索条件的唯一索引, InnoDB仅锁定找到的索引记录, 而不是之前的间隙.
+- 对于具有唯一搜索条件的唯一索引, InnoDB仅锁定找到的索引记录, 而不是间隙.
 
 - 对于其他搜索条件, InnoDB锁定扫描的索引范围, 使用间隙锁或下一键锁来阻止其他会话插入范围所覆盖的间隙.
 
@@ -451,15 +451,16 @@ SELECT语句, 则这些SELECT语句也相互一致.
 
 即使在同一事务中, 每个一致的读取也会设置和读取自己的新快照.
 
-对于锁定读取(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的SELECT), UPDATE 语句和DELETE语句, InnoDB仅锁定索引记录, 而不锁
-定它们之前的间隙, 因此允许在锁定记录旁边自由插入新记录. 间隙锁定仅用于外键约束检查和重复键检查.
+对于锁定读取(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的SELECT), UPDATE 语句和DELETE语句, InnoDB仅锁定索引
+记录, 而不锁定它们的间隙, 因此允许在锁定记录旁边自由插入新记录. 间隙锁定仅用于外键约束检查和重复键检查.
 
 由于禁用了间隙锁定, 因此可能会出现幻像问题, 因为其他会话可以在间隙中插入新行.
 
 READ COMMITTED 隔离级别仅支持基于行的二进制日志记录. 如果对binlog_format=MIXED使用READ COMMITTED, 则服务器会自
 动使用基于行的日志记录.
 
-使用READ COMMITTED还有其他影响:
+使用 READ COMMITTED 其他影响:
+
 - 对于UPDATE或DELETE语句, InnoDB仅为其更新或删除的行保留锁定. MySQL评估WHERE条件后, 将释放不匹配行的记录锁. 这大大
 降低了死锁的可能性, 但它们仍然可以发生.
 
@@ -470,7 +471,7 @@ MySQL可以确定该行是否与 UPDATE 的 WHERE 条件匹配. 如果行匹配(
 案例:
 ```
 CREATE TABLE t (a INT NOT NULL, b INT) ENGINE=InnoDB;
-INSERT INTO t VALUES (1,20, (2,3), (3,2), (4,3), (5,2);
+INSERT INTO t VALUES (1,2), (2,3), (3,2), (4,3), (5,2);
 COMMIT;
 ```
 
@@ -514,6 +515,7 @@ x-lock(3,2); unlock(3,2)
 x-lock(4,3); update(4,3) to (4,5); retain x-lock
 x-lock(5,2); unlock(5,2)
 ```
+
 对于第二个UPDATE, InnoDB执行"semi-consistent(半一致)"读取, 返回它读取到MySQL的每一行的最新提交版本,以便MySQL可以
 确定该行是否与UPDATE的WHERE条件匹配:
 ```
@@ -559,9 +561,8 @@ SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此,
 `SELECT ... LOCK IN SHARE MODE`. 如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作
 为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. (要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
 
----
 
-## Consistent Nonlocking Reads (一致性非锁定读取)
+## Consistent Nonlocking Read (一致性非锁定读取)
 
 一致的读取意味着InnoDB使用多版本控制在某个时间点向查询提供数据库的快照. 查询将查看在该时间点之前提交的事务所做的更改, 并
 且不会对以后或未提交的事务所做的更改进行更改. 

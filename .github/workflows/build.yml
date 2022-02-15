@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: tiechui1994/blog
-          fetch-depth: 1
+          fetch-depth: 2
           ref: master
           persist-credentials: false
           token: ${{secrets.TOKEN}}
@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: tiechui1994/note
-          fetch-depth: 1
+          fetch-depth: 2
           ref: master
           path: static/md/note
           persist-credentials: false
@@ -41,4 +41,4 @@ jobs:
 
       - name: Deploy vercel [note]
         if: ${{ success() }}
-        run: node src/deploy/vercel.js --project note --token ${{secrets.VERCEL}}
+        run: node src/deploy/vercel.js --project note --domain blog --token ${{secrets.VERCEL}}
