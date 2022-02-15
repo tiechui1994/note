@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: tiechui1994/blog
-          fetch-depth: 2
+          fetch-depth: 5
           ref: master
           persist-credentials: false
           token: ${{secrets.TOKEN}}
@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: tiechui1994/note
-          fetch-depth: 2
+          fetch-depth: 5
           ref: master
           path: static/md/note
           persist-credentials: false

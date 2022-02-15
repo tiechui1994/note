@@ -149,6 +149,98 @@ InnoDB 默认情况下在 file-per-table tablespace 当中创建 table. 此行�
 
 #### undo tablespace
 
+undo tablespace 包括 Undo Log, 它们是有关如何撤销事务对聚集索引记录的更新信息记录.
+
+Undo Log 默认存储在 system tablespace 当中, 但可以存储在一个会多个 undo tablespace 当中. 使用 undo tablespace
+可以减少任何一个tablespace中 Undo Log 所需的空间数量. 
+
+InnoDB 使用的 undo tablespace 的数量由 `innodb_undo_tablespaces` 控制. 该选项只能在初始化 MySQL 实例时配置, 之
+后无法修改.
+
+undo tablespace 和 tablespace 当中的 segment 不能删除. 但是, 存储在undo tablespace当中的 Undo Log 可以截断.
+
+配置:
+
+当配置了 undo tablespace 时, Undo Log 存储在 undo tablespace 而不是 system tablespace.
+
+undo tablespace 的数量只能在初始化 MySQL 实例时配置, 并且实例的生命周期内是固定的.
+
+1. 使用 `innodb_undo_directory` 指定 undo tablespace 的目录位置. 如果未指定, 则为数据目录.
+
+2. 使用 `innodb_rollback_segments` 变量定义回滚段的数量. 从一个相对较低的值开始, 随着时间的推移, 逐渐增加它以检查
+对性能的影响. `innodb_rollback_segments` 默认值是 128, 这也是最大值.
+
+一个 rollback segment 总数分配给 system tablespace, 32 个rollback segment 保留给temporary tablespace.
+因此, 要将rollback segment分配给 undo tablespace, 需要将 `innodb_rollback_segments` 设置为大于 33 的值. 例
+如, 如果有 2 个undo tablespace中的每一个分配一个rollback segment. `innodb_rollback_segments` 设置为 35. 
+rollback segment 以循环方式分布在 undo tablespace中.
+
+当增加 undo tablespace时, system tablespace 当中的 rollback segment 将表现为非活动状态.
+
+3. 使用 `innodb_undo_tablespace` 定义 undo tablespace 的数量. 
+
+截断:
+
+截断 undo tablespace 要求 MySQL 实例至少有两个 active 的 undo tablespace, 确保一个undo tablespace保持active,
+从而另一个可以脱机截断. undo tablespace 空间的数量由 `innodb_undo_tablespaces`. 默认值是 0.
+
+要截断 undo tablespace, 请启用 `innodb_undo_log_truncate` 变量. 例如:
+
+```
+mysql> set global innodb_undo_log_truncate=ON; 
+```
+
+当启用 `innodb_undo_log_truncate` 时, 超过 `innodb_max_undo_log_size` 的大小限制的 undo tablespace 将被截断.
+`innodb_max_undo_log_size` 是动态的, 默认值是 1024 MB
+
+当启用 `innodb_undo_log_truncate` 时:
+
+1. 超过 `innodb_max_undo_log_szie` 的 undo tablespace 被标记为截断. 以循环方式选择用于截断的 undo tablespace,
+以避免每次截断相同的 undo tablespace.
+
+2. 驻留在选定的 undo tablespace 中的回滚段变为 inactive 状态, 因此它们不会分配给新事务. 当前正在使用回滚段的现有事务
+被允许完成.
+
+3. 通过释放 Undo Log 不再使用的空间来清空回滚段.
+
+4. 在 undo tablespace 中所有回滚段都被释放后, 截断操作允许, 并将 undo tablespace截断为其初始大小. undo tablespace
+的初始大小取决于 `innodb_page_size` 值. 对于默认的 16KB 页, 初始undo tablespace文件大小为 10MB. 对于4KB, 8KB,
+32KB, 64KB, 初始大小分别是7MB, 8MB, 20MB, 40MB.
+
+由于在截断操作完成后立即使用 undo tablespace, 因此, 截断后 undo tablespace的大小可能大于初始大小.
+
+`innodb_undo_directory` 定义了 undo tablespace 的文件位置. 如果未定义, 默认的位置是数据目录.
+
+5. 回滚段被重新变为 active, 以便将它们分配给新的事务.
+
+加快截断:
+
+purge线程负责清空和截断 undo tablespace. 默认情况下, purge 线程每调用 128 次清除就会查找undo tablespace 以截断
+一次. purge 线程查找要截断的 undo tablespace 的频率由 `innodb_purge_rseg_truncate_frequency` 控制, 默认值是 
+128
+
 #### general tablespace
+
+general tablespace 是使用 `CREATE TABLESPACE` 语法创建的共享 InnoDB tablespace.
+
+功能:
+
+1. 与 system tablespace 类似, general tablespace 是能够为多个表存储数据的共享tablespace.
+
+2. 与 file-per-table tablespace 相比, general tablespace 具有潜在的内存优势. 服务器在tablespace的整个生命周期
+内将 tablespace 元数据保存在内存当中. 与单独的 file-per-table tablespace中相同数量的表相比, 较少的 general tablespace
+中的多个表消耗的 tablespace 元数据内存更少.
+
+3. general tablespace 数据文件可以防止在相对于或独立于 MySQL 数据目录的目录当中. 与 file-per-table tablespace
+一样, 将数据文件放在 MySQL 数据目录之外的能力允许你单独管理关键表的性能.
+
+4. general tablespace 支持 Antelope 和 Barracuda 文件格式, 因此支持所有表行格式相关功能. 有支持这两种文件格式, 
+general tablespace 不依赖 innodb_file_format 或 innodb_file_per_table 设置.
+
+5. TABLESPACE 选项可以与 `CREATE TABLE` 一起使用, 以在 general tablespace, file-per-table tablespace 或
+system tablespace 中创建表.
+
+6. TABLESPACE 选项可以与 `ALTER TABLE` 一起使用, 以在 general tablespace, file-per-table tablespace 或
+system tablespace 之间移动表.
 
 #### temp tablespace
