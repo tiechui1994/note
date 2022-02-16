@@ -1,4 +1,4 @@
-## grep
+# shell 三剑客 - grep
 
 grep usage:
 ```
@@ -6,14 +6,14 @@ grep [OPTIONS] PATTERN [FILE...]
 grep [OPTIONS] [-e PATTERN]...  [-f FILE]...  [FILE...]
 ```
 
-#### OPTIONS - (Matcher Selection)
+### OPTIONS - (Matcher Selection)
 
 - `-E, --extended-regexp` 将PATTERN解释为扩展正则表达式.
 - `-F, --fixed-strings` 将PATTERN解释为固定字符串列表(而不是正则表达式), 由换行符分隔, 其中任何一个都要匹配.
 - `-G, --basic-regexp` 将PATTERN解释为基本正则表达式(BRE). 这是默认值.
 - `-P, --perl-regexp` 将模式解释为Perl兼容的正则表达式(PCRE). 这是高度实验性的, grep -P可能会警告未实现的功能.
 
-#### OPTIONS - (Matching Control)
+### OPTIONS - (Matching Control)
 
 - `-e  PATTERN, --regexp=PATTERN` 使用PATTERN作为模式. 如果多次使用此选项或与-f(--file)选项组合使用, 将搜索给
 定的所有模式. 此选项可用于保护以"-"开头的模式.
@@ -27,7 +27,7 @@ grep [OPTIONS] [-e PATTERN]...  [-f FILE]...  [FILE...]
 - `-x, --line-regexp` 仅选择与整行完全匹配的匹配项. 对于正则表达式模式, 这就像括号模式然后用 `^和$` 包围它.
 
 
-#### OPTIONS - (General Output Control)
+### OPTIONS - (General Output Control)
 
 - `-c, --count` 抑制正常输出; 而是为每个输入文件打印匹配行的计数. 使用-v, -inverse-match选项,计算不匹配的行.
 
@@ -41,18 +41,18 @@ grep [OPTIONS] [-e PATTERN]...  [-f FILE]...  [FILE...]
 - `-q, --quiet, --silent` 不输出任何内容
 
 
-#### OPTIONS - (Output Line Prefix Control)
+### OPTIONS - (Output Line Prefix Control)
 
 - `-n, --line-number` 在输入文件中使用基于1的行号为每行输出添加前缀.
 
-#### OPTIONS - (Context Line Control)
+### OPTIONS - (Context Line Control)
 
 - `-A NUM, --after-context=NUM`  匹配行后的NUM行
 - `-B NUM, --before-context=NUM` 匹配行前的NUM行
 - `-C NUM, --context=NUM`        匹配行前的NUM行和匹配行后的NUM行
 
 
-#### OPTIONS - (File and Directory Selection)
+### OPTIONS - (File and Directory Selection)
 
 - `-a, --text` 像处理文本一样处理二进制文件; 这相当于 `--binary-files=text` 选项.
 
