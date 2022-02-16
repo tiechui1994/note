@@ -188,3 +188,7 @@ Change Buffer 位于 `INSERT BUFFER AND ADAPTIVE HASH INDEX` 下方.
 ```
 > SELECT NAME, COMMENT FROM INFORMATION_SCHEMA.INNODB_METRICS WHERE NAME LIKE '%ibuf%';
 ```
+
+### Log Buffer
+
+### Adaptive Hash Index
