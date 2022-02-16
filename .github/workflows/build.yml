@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      store: ${{ steps.install.outputs.store }}
 
     strategy:
       matrix:
@@ -35,9 +37,28 @@ jobs:
           path: static/md/note
           persist-credentials: false
 
+      - name: Restore Cache
+        uses: actions/cache@v2
+        with:
+          path: ./node_modules
+          key: vercel_note_blog
+
       - name: Install
+        id: install
         run: |
-          npm install
+          if [[ -n $(git show --name-status --format=format:|grep -o 'package.json') || ! -e ./node_modules ]];
+          then
+            echo "::set-output name=store::1"
+            npm install
+          fi
+        shell: bash
+
+      - name: Store Cache
+        uses: actions/cache@v2
+        if: ${{ success() && steps.install.outputs.store == 1 }}
+        with:
+          path: ./node_modules
+          key: vercel_note_blog
 
       - name: Deploy vercel [note]
         if: ${{ success() }}
