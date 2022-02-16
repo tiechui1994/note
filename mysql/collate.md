@@ -1,4 +1,4 @@
-# COLLATE
+# MySQL 数据编码
 
 MySQL 中使用 COLLATE 来指定非二进制字符串列(例, VARCHAR, CHAR, TEXT类型)的排序规则. **简而言之, COLLATE 会影响
 到ORDER BY语句的顺序, 会影响到 WHERE 条件中大于小于号筛选的结果, 会影响 DISNCT, GROUP BY, HAVING 语句的查询结果.** 

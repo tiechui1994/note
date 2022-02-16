@@ -1,4 +1,4 @@
-## ALTER
+## MySQL命令 - ALTER
 
 > ALTER TABLE
 

@@ -561,13 +561,22 @@ SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此,
 `SELECT ... LOCK IN SHARE MODE`. 如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作
 为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. (要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
 
+## View
+
+MySQL 当中, 有两个 "view" 概念:
+
+1. 一个是 view, 它是一个用查询语句定义的虚拟表, 在调用的时候执行查询语句并生成结果. 创建视图的语法是 `CREATE VIEW`,
+它的查询方法与表是一样的.
+
+2. 另一个是 InnoDB 在实现 MVVC 时用到的"一致性读视图", 即consistent read view, 用于支持 RC(读提交)和RR(可重复读)
+隔离级别的实现. 
 
 ## Consistent Nonlocking Read (一致性非锁定读取)
 
-一致的读取意味着InnoDB使用多版本控制在某个时间点向查询提供数据库的快照. 查询将查看在该时间点之前提交的事务所做的更改, 并
-且不会对以后或未提交的事务所做的更改进行更改. 
+一致性读取意味着InnoDB使用 MVCC 在某个时间点向查询提供数据库的快照. 查询将查看 "在该时间点之前提交的事务所做的更改", 并
+且不会对以后或未提交的事务所做的更改进行更改. 注意: 快照是基于库的.
 
-此规则的例外是查询查看同一事务中早期语句所做的更改. 此异常导致以下异常: 如果更新表中的某些行, SELECT 将查看更新行的最新
+此规则的例外是 "查询同一事务中早期语句所做的更改". 此异常导致以下结果: 如果更新表中的某些行, SELECT 将查看更新行的最新
 版本, 但它也可能会看到任何行的旧版本. 如果其他会话同时更新同一个表, 则异常意味着可能会看到该表处于从未存在于数据库中的状态.
 
 如果事务隔离级别是 `REPEATABLE READ`(默认级别), 则同一事务内的所有一致性读取将读取该事务中第一次读取所创建的快照. 你
@@ -610,11 +619,11 @@ SELECT COUNT(c2) FROM t1 WHERE c2 = 'cba';
 
            SET autocommit=0;      SET autocommit=0;
 time
-|          SELECT * FROM t;
-|          empty set
-|                                 INSERT INTO t VALUES (1, 2);
-|
-v          SELECT * FROM t;
+ |         SELECT * FROM t;
+ |         empty set
+ |                                INSERT INTO t VALUES (1, 2);
+ |
+ v         SELECT * FROM t;
            empty set
                                   COMMIT;
 

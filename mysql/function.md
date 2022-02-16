@@ -1,4 +1,4 @@
-## MySQL FUNCTION
+## MySQL 函数
 
 ```
 DELIMITER $$

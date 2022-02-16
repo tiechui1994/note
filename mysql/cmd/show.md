@@ -1,4 +1,6 @@
-#  SHOW
+## MySQL命令 - SHOW
+
+### show 常用命令
 
 1. `show databases`; -- 显示mysql中所有数据库的名称. 
 2. `show tables` 或 `show tables from database_name`; -- 显示当前数据库中所有表的名称.
@@ -22,3 +24,27 @@
 15. `show logs;` -- 显示BDB存储引擎的日志. 
 16. `show warnings;` -- 显示最后一个执行的语句所产生的错误、警告和通知. 
 17. `show errors;` -- 只显示最后一个执行语句所产生的错误.
+
+### 设置配置参数
+
+事务隔离级别
+
+当前会话事务隔离级别:
+```
+select @@tx_isolation;
+```
+
+当前系统事务隔离级别:
+```
+select @@global.tx_isolation;
+```
+
+设置当前会话事务隔离级别:
+```
+set session transaction isolation level read uncommitted;
+```
+
+设置系统事务隔离级别:
+```
+set global transaction isolation level repeatable read;
+```

@@ -1,4 +1,4 @@
-# Closure Table(闭包表)
+# MySQL 树类型结构表 - 闭包表(Closure Table)
 
 闭包表的思路和路径枚举类似, 都是空间换时间.
 
