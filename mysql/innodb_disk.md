@@ -243,4 +243,100 @@ system tablespace 中创建表.
 6. TABLESPACE 选项可以与 `ALTER TABLE` 一起使用, 以在 general tablespace, file-per-table tablespace 或
 system tablespace 之间移动表.
 
-#### temp tablespace
+为table添加 tablespace:
+
+在创建完成 general tablespace 后, 可以使用 `CREATE TABLE ... TABLESPACE tablespace` 或 `ALTER TABLE table TABLESPACE tablespace`
+为表添加 tablespace.
+
+```
+mysql> CREATE TABLE t1 (c1 INT PRIMARK KEY) TABLESPACE ts1;
+
+mysql> ALTER TABLE t1 TABLESPACE ts1;
+```
+
+行格式:
+
+general tablespace 支持所有表行格式(REDUNDANT, COMPACT, DYNAMIC, COMPRESSED), 但需要注意, 由于物理页大小不同,
+压缩表, 未压缩表不能在同一个 general tablespace 中共存.
+
+对于包含压缩表(ROW_FORMAT=COMPRESSED)的 general tablespace, 必须指定 FILE_BLOCK_SIZE 选项, 并且该值必须是与
+`innodb_page_size` 值相关的有效压缩页面大小. 此外, 压缩表的物理页大小(KEY_BLOCK_SIZE) 必须等于 FILE_BLOCK_SIZE/1024.
+例如, innodb_page_size = 16KB, 并且 FILE_BLOCK_SIZE = 8K, 则表的 KEY_BLOCK_SIZE 必须是8
+
+innodb_page_size, FILE_BLOCK_SIZE, KEY_BLOCK_SIZE 关系.
+
+| innodb_page_size | FILE_BLOCK_SIZE | KEY_BLOCK_SIZE |
+| ---------------- | --------------- | -------------- |
+| 64KB | 64K | Compression not support |
+| 32KB | 32K | Compression not support |
+| 16KB | 16K | None. 当 innodb_page_size = FILE_BLOCK_SIZE, 表空间不能包含压缩表 |
+| 16KB | 8K  | 8 |
+| 16KB | 4K  | 4 |
+| 16KB | 2K  | 2 |
+| 16KB | 1K  | 1 |
+| 8KB | 8K | None. 当 innodb_page_size = FILE_BLOCK_SIZE, 表空间不能包含压缩表 |
+| 8KB | 4K  | 4 |
+| 8KB | 2K  | 2 |
+| 8KB | 1K  | 1 |
+| 4KB | 4K  | None. 当 innodb_page_size = FILE_BLOCK_SIZE, 表空间不能包含压缩表 |
+| 4KB | 2K  | 2 |
+| 4KB | 1K  | 1 |
+
+创建 general tablespace 和 添加压缩表. innodb_page_size=16KB, FILE_BLOCK_SIZE=8K, KEY_BLOCK_SIZE=8
+
+```
+> CREATE TABLESPACE ts ADD DATAFILE 'ts.ibd' FILE_BLOCK_SIZE=8192 Engine=InnoDB;
+> CREATE TABLE t (id int PRIMARY KEY) TABLESPACE ts ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+```
+
+如果在创建 general tablespace 时不指定 FILE_BLOCK_SIZE, 则 FILE_BLOCK_SIZE 默认为 innodb_page_size, 此时表
+空间只包含未压缩格式(COMPACT, REDUNANT 和 DYNAMIC 行格式)的表.
+
+使用 `ALTER TABLE` 在 tablespace 之间移动表:
+
+带有 TABLESPACE 选项的 `ALTER TABLE` 可用于将表移动到现有的 general tablespace, 新的 file-per-table tablespace
+或 system tablespace.
+
+```
+# 从 file-per-table tablespace 或 system tablespace 中的表移动到 general tablespace
+ALTER TABLE table TABLESPACE tablespace;
+
+# 从 file-per-table tablespace 或 general tablespace 中的表移动到 system tablespace
+ALTER TABLE table TABLESPACE innodb_system;
+
+# 从 system tablespace 或 general tablespace 中的表移动到 file-per-table tablespace
+ALTER TABLE table TABLESPACE innodb_file_per_table;
+```
+
+`ALTER TABLE ... TABLESPACE` 操作会导致一次全表重建. 即使 TABLESPACE 属性值没有改变.
+
+`ALTER TABLE ... TABLESPACE` 不能将一个表从 temporary tablespace 到持久化 tablespace. 
+
+`DATA DIRECTORY` 子句允许与 `CREATE TABLE ... TABLESPACE innodb_file_per_table` 一起使用.
+
+限制:
+
+1. general tablespace 不支持临时表.
+
+2. 现有的tablespace 不能修改为 general tablespace.
+
+3. 存储在 general tablespace 的表只能在支持 general tablespace 的 MySQL 版本中打开.
+
+4. 与 system tablespace 类似, 截断/删除存储在 general tablespace 中的表所释放的空间, 所释放的空间不会归还给给操
+作系统, 该空间只能用于新的 InnoDB 数据.
+
+. 位于共享 tablespace(general tablespace 和 system tablespace) 中的表执行表复制 `ALTER TABLE` 操作会增加 
+tablespace 的使用量. 此类操作需要与表中的数据加上索引一样多的额外空间. 
+
+#### temporary tablespace
+
+非压缩的, 用户创建的临时表和磁盘内部临时表是在 temporary tablespace 中创建的. innodb_temp_data_file_path 定义
+temporary tablespace 数据文件的相对路径, 名称, 大小, 属性. 如果未设置, 默认是在 innodb_data_home_dir 目录中创建
+一个 ibtmp1 的自动扩展数据文件, 该文件略大于12MB.
+
+压缩临时表是使用 ROW_FORMAT=COMPRESSED 属性创建的临时表, 是在 temporary 文件目录的 file-per-table tablespace
+中创建的.
+
+temporary tablespace 在正常关闭或中止初始化时时被删除, 并在每次服务器启动时重新创建. temporary tablespace 在创建
+时会收到一个动态生成的 space ID. 如果无法创建 temporary tablespace, 则拒绝启动. 如果服务器意外停止, 则不会删除temporary
+tablespace
