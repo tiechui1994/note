@@ -58,3 +58,12 @@ postgres=# \q
 - 查看当前连接信息: `\conninfo`
 
 - 开启/关闭展开列信息: `\x`
+
+- 帮助命令: `help`, 它会展示 `\h`(SQL命令查询), `\?`(psql命令查询).
+
+- `\?`, pgsql 命令帮助
+
+- `\h [SQL]`, SQL 命令帮助
+
+- `show ALL|name`, 查询系统变量. 常见的变量有: `data_directory` (存储的文件目录).  `transaction_isolation`(
+事务隔离级别, 默认值是RC)
