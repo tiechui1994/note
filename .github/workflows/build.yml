@@ -46,9 +46,10 @@ jobs:
       - name: Install
         id: install
         run: |
-          if [[ -n $(git diff --name-status HEAD^^^^ HEAD|grep -o 'package.json') || ! -e ./node_modules ]];
+          if [[ -n $(git diff --name-status HEAD^ HEAD|grep -o 'package.json') || ! -e ./node_modules ]];
           then
             echo "::set-output name=store::1"
+            rm -rf ./node_modules
             npm install
           fi
         shell: bash
