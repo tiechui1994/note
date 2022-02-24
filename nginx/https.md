@@ -1,4 +1,4 @@
-# SSL server 配置
+# ssl server 配置
 
 ## SSL证书生成 (使用openssl)
 

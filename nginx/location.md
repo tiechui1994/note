@@ -58,7 +58,6 @@ location @named {
 
 ```
 server {
-    
     try $uri @tornado;
     
     location @tornado {
@@ -140,7 +139,7 @@ location ^~ /t/ {
 可以配置的位置: server, location
 ```
 
-- try_files 会根据index指令指示的文件,设置内部指向
+- try_files 会根据index指令指示的文件, 设置内部指向
 
 ```
 root /web;
@@ -150,8 +149,8 @@ location / {
 }
 ```
 
-> nginx会依次查找 `/static/index.html`, `/web/$uri` 文件, `/web/$uri` 目录, 前面一旦找到存在的响应的文件,
-则立即返回文件内容. 都找不到内容重定向到 @callbak 处理.
+> nginx会依次查找 `/static/index.html`, `/web/$uri` 文件, `/web/$uri` 目录, 前面一旦找到存在的响应的文件, 则立
+即返回文件内容. 都找不到内容重定向到 @callbak 处理.
 
 > @callbak 可以是一个文件, 也可以是一个状态码 (=404)
 

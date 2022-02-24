@@ -32,7 +32,8 @@
 3. 执行选定的location中的rewrite指令
 ```
 
-> 如果其中某步URI被重写, 则重新循环执行1-3, 直到找到真实存在的文件; 循环超过10次, 则返回500 Internal Server Error错误.
+> 如果其中某步URI被重写, 则重新循环执行1-3, 直到找到真实存在的文件; 循环超过10次, 则返回500 Internal Server Error
+错误.
 
 
 ### rewrite 语法
