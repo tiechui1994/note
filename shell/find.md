@@ -105,8 +105,8 @@ G GB(1024*1024*1024 byte)
 
 - `-exec cmd {} +`, 构建一个命令 cmd 来处理所有匹配的文件. 例如, 通过所有文件的总大小: `find . -type f -exec wc -c {} +` 
 
-- `-prune`, 如果文件是目录, 不要深入其中. 如果给出 `-depth`, 则值为 false, 没有任何影响. 由于 `-delete` 意味着
-`-depth`, 所以 `-prune` 不能和 `-delete` 同时使用.
+- `-prune`, 忽略某个目录, 返回 true. 如果给出 `-depth`, 则值为 false, 没有任何影响. 由于 `-delete` 意味着 `-depth`, 
+所以 `-prune` 不能和 `-delete` 同时使用.
 
 - `-print`, 打印每个匹配的文件的全路径名称.
 

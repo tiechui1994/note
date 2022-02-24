@@ -77,6 +77,9 @@ TABLE LOCK table `test`.`t` trx id 10080 lock mode IX
 
 锁的算法: Record Lock, Gap Lock, Next-Key Lock
 
+> 在 information_schema 库的 `innodb_locks`(查看当前各个事务加锁状况), `innodb_lock_waits`(查看当前各个事务锁
+等待状态)
+
 ### Record Lock (记录锁)
 
 **记录锁是加到索引记录**上的锁. 例如, `SELECT c1 FROM t WHERE c1 = 10 FOR UPDATE;` 阻止其他任何事务插入, 更新 
@@ -220,6 +223,46 @@ AUTO-INC锁定是由插入到具有 `AUTO_INCREMENT` 列的表中的事务所采
 
 `innodb_autoinc_lock_mode` 选项控制用于自动增量锁定的算法. 它允许您选择如何在可预测的自动增量值序列和插入操作的最大
 并发之间进行权衡.
+
+### Metadata Lock
+
+MySQL 使用 Metadata Lock来管理对数据库对象的并发访问, 并确保数据一致性. Metadata Lock不仅适用于 table, 还适用于
+schema, 存储程序(procedure, function, trigger, event), tablespace, 使用 GET_LOCK() 函数获取的用户锁.
+
+`performance_schema.metadata_locks` 表展示了 Metadata Lock 的使用情况(哪些会话持有锁, 哪些会话阻塞等待锁等).
+
+为了防止对同时被另一个事务使用的表进行 DDL 操作. 
+
+Online 操作的增强, 主要集中在减少元数据锁定的数量上. 目标: 当 DDL 操作不改变表结构 (例如 InnoDB 表的 `CREATE INDEX`
+和 `DROP INDEX`) 时, 其他事务可以在当前的表上进行查询, 更新.
+
+- Metadata Lock 获取
+
+如果给定锁有多个等待者, 则首先满足最高优先级的锁请求.
+
+语句一个一个地获取 Metadata Lock, 而不是同时获取, 并在这个过程中进行死锁检测.
+
+DML 语句按照语句中提及的表的顺序获取锁.
+
+DDL语句, LOCK TABLES和其他类似语句尝试通过按名称顺序获取显示命名表上的锁来减少并发DDL语句之间可能出现的死锁数量. 对于
+隐式使用的表(例如, 必须锁定的外键值关系中的表), 可能会以不同的顺序获取锁.
+
+例如, RENAME TABLE 是一个按名称顺序获取锁的 DDL 语句:
+
+```
+RENAME TABLE tbla TO tbld, tblc TO tbla;
+```
+
+该语句按顺序获取 tbla, tblc 和 tbld 上的 Metadata Lock(因为, 按名称顺序, tbld 在 tblc 之后).
+
+```
+RENAME TABLE tbla TO tblb, tblc TO tbla;
+```
+
+该语句按顺序获取 tbla, tblb 和 tblc 上的 Metadata Lock(因为, 按名称顺序, tblb 在 tblc 之前).
+
+
+- Metadata Lock 释放
 
 
 # Lock 测试
