@@ -1,4 +1,4 @@
-# MySQL 优化
+# MySQL Optimization
 
 ## Metadata Lock
 
@@ -115,15 +115,3 @@ LOCK TABLE t ... WRITE;
 在自动提交模式下, 每个语句都是一个完整的事务. 因此, 为语句获取的 Metadata Lock 只保留到语句的末尾.
 
 在 PREPARE 语句期间获取的 Metadata Lock 在 PREPARE 完成之后被释放, 即使 PREPARE 工作期间发生在多语句事务中.
-
-
-
-
-
-
-
-
-
-
-
-

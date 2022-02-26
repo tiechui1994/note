@@ -1,4 +1,4 @@
-# MySQL replication
+# MySQL  Replication
 
 ### MySQL 主从原理
 

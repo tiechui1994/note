@@ -1,6 +1,6 @@
 ## MySQL OPTIMIZER_TRACE
 
-### OPTIMIZER_TRACE相关参数
+### OPTIMIZER_TRACE 相关参数
 
 - optimizer_trace
 
@@ -31,7 +31,7 @@ repeated_subselect: 是否跟踪子查询, 如果设置为 off, 只跟踪第一�
 
 控制 optimizer_trace 堆栈信息允许的最大内存, 默认 1048576
 
-### OPTIMIZER_TRACE结果分析
+### OPTIMIZER_TRACE 结果分析
 
 #### join_preparation
 
