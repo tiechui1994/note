@@ -691,7 +691,7 @@ time
 
 - SELECT ... FOR UPDATE
 
-对于搜索遇到的索引记录, 锁定行和任何关联的索引条目, 就像为这些行发出 UPDATE 语句一样. 当在其他事务当中 '更新这些行',或
+对于搜索遇到的索引记录, 锁定'行和关联的索引条目', 就像为这些行发出 UPDATE 语句一样. 当在其他事务当中 '更新这些行', 或
 '执行 SELECT ... LOCK IN SHARE MODE 语句', 或 '从某些事务隔离级别读取数据' 时, 都会被阻塞. 一致性读取将忽略在读
 取视图中存在的记录上设置的任何锁定. (旧版本的记录无法被锁定; 它们通过在记录的内存中副本上应用 undo log 来重建.)
 
@@ -918,20 +918,11 @@ TABLES ... WRITE` 隐式(eg: triggers) 或 `LOCK TABLES ... READ` 锁定以进�
 
 假设 child 表的 id 列加上索引, 并且想要读取并锁定表中 id 大于 100 的所有行, 以便稍后更改选中行的某些列:                   
 
-```
-           Session A                                     Session B
-
-       START TRANSACTION;                               START TRANSACTION;
-time
- |     SELECT * FROM child WHERE id > 100 FOR UPDATE;
- |                                                      INSERT INTO child (id) VALUES (101);
- |
- v     SELECT * FROM child WHERE id > 100 FOR UPDATE;
-```
+![image](/images/mysql_innodb_trx_phantom_read.png)
 
 此时在 Session A 当中查询的结果会出现 id 为 101 的行("幻读"). 
 
-为了防止幻读, InnoDB 使用了 next-key lock 算法. 该算法将 间隙锁 和 记录锁 相结合.
+为了防止幻读, InnoDB 使用了 next-key lock 算法. 该算法将 gap lock 和 record lock 相结合.
 
 InnoDB 执行行级锁的方式: 当它搜索或扫描表索引时, 它会在遇到的索引记录上设置共享锁或互斥锁. 因此, 行级锁实际上是索引记录
 锁. 索引记录上的 next-key lock 也会影响该索引记录之前的"间隙". 也就是说, next-key lock是 "索引记录锁" + "索引记录
