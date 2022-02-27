@@ -631,29 +631,8 @@ SELECT COUNT(c2) FROM t1 WHERE c2 = 'cba';
 这称为多版本并发控制.
 
 在以下示例中, 会话A仅在 "B已提交插入" 且 "A已提交" 时才看到由B插入的行, 以便时间点超过B的提交.
-```
-             Session A              Session B
 
-           SET autocommit=0;      SET autocommit=0;
-time
- |         SELECT * FROM t;
- |         empty set
- |                                INSERT INTO t VALUES (1, 2);
- |
- v         SELECT * FROM t;
-           empty set
-                                  COMMIT;
-
-           SELECT * FROM t;
-           empty set
-
-           COMMIT;
-
-           SELECT * FROM t;
-           ---------------------
-           |    1    |    2    |
-           ---------------------
-```
+![image](/images/mysql_innodb_trx_consistent_read.png)
 
 如果要查看数据库的"最新"状态, 请使用 `READ COMMITTED` 隔离级别或锁定读取: `SELECT * FROM t FOR SHARE;`
 
