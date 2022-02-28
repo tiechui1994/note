@@ -224,208 +224,6 @@ AUTO-INC锁定是由插入到具有 `AUTO_INCREMENT` 列的表中的事务所采
 `innodb_autoinc_lock_mode` 选项控制用于自动增量锁定的算法. 它允许您选择如何在可预测的自动增量值序列和插入操作的最大
 并发之间进行权衡.
 
-# Lock 测试
-
-- 共享锁
-
-> 又称之为 读锁, 简称 S 锁, 顾名思义,共享锁就是**多个事务对于同一数据**可以共享一把锁, 都能访问到数据库, 但是只能读不
-能修改;
-
-
-加锁方式:
-select * from users where id = 1 lock in share mode;
-
-释放方式:
-rollback/commit;
-
-
-测试
-
-事务t1:(先)
-```
-begin;
-select * from t lock in share mode; // 1
-```
-
-事务t2:(后)
-```
-begin;
-update t set name='ww' where id=1; // 2
-```
-
-注意: 1 和 2 不能同时执行, 必须要有一方commit/rollback, 另一方才能继续执行.
-
-共享锁不影响其他事务的读取操作, 但是会影响更改操作(删除,更新,添加)
-
-
-- 互斥锁
-
-> 又称为 写锁, 简称 X 锁, 排它锁不能与其他锁并存, 如一个事务获取了一个数据行的排它锁, 其他事务就不能再获取改行的锁 (包
-括共享锁和排它锁), 只有当前获取了排它锁的事务可以对数据进行读取和修改(此时其他事务要读取数据可从快照获取).
-
-加锁方式:
-delete  update  insert 默认加互斥锁
-select * from users where id = 1 for update;
-
-释放方式:
-rollback/commit;
-
-
-测试
-
-事务t1:(先)
-```
-begin;
-select * from t for update; // 1
-```
-
-事务t2:(后)
-```
-begin;
-update t set name='ww' where id=1; // 2
-select * from t lock in share mode; // 3
-```
-
-注意: 1与2, 或者 1与3 不能同时执行. 
-
-
-- 行锁
-
-InnoDB的行锁是通过索引上的索引项加锁实现的, 只有通过索引条件进行数据检索, InnoDB才使用行锁. 否则, 将使用表锁(锁住索引
-的所有记录). 条件指定为特定的一行.
-
-
-测试:
-
-事务t1:(先)
-```
-start;
-update t set name='www' where id=1; // 1
-```
-
-事务t2:(后)
-```
-start;
-update t set name='qqq' where id=1; // 2
-update t set name='zzz' where id=2; // 3
-```
-
-注意: 1 和 2 不能同时执行, 因为在操作1的时候,已经添加了行锁, 那么2将无法执行,除非 1 commit/rollback. 但是1 和 3 可
-以同时执行, 属于不同的行, 是不同的行锁.
-
-
-**行锁的算法**
-
-- 记录锁 Record Lock:
-唯一性索引条件为精准匹配, 退化成Record Lock. 当SQL执行按照唯一性(Primary Key, Unique Key) 索引进行数据的检索时,
-查询条件等值匹配且查询的数据存在, 这是SQL语句上加的锁即为记录锁Record Lock, 锁住具体的索引项.
-
-- 下一键值锁 Next-Key Lock
-当sql执行按照索引进行数据的检索时, 查询条件为范围查找(between and < > 等等)并有数据命中, 则测试SQL语句加上的锁为 
-Next-Key Lock, 锁住索引的记录 + 锁住索引记录之前的区间, 这个区间是`左开右闭的`.
-
-- 间隙锁 Gap Lock:
-当记录不存在时, Next-Key Lock 退化成 Gap Lock. 在上述检索条件下, 如果没有命中记录, 则退化成 Gap Lock, 锁住数据不
-存在的区间(`左开右开`)
-
-
-关系: next-key = gap + record
-
-测试:
-
-已经存在的数据
-```
-+----+---------+-----+
-| id | account | i   |
-+----+---------+-----+
-| 1  | 333     | 1   |
-| 4  | 2000    | 2   |
-| 7  | 122     | 12  |
-| 9  | 11      | 110 |
-| 10 | 10      | 10  |
-+----+---------+-----+
-```
-在上述状况下, InnoDB 默认的行锁算法(Next-Key Lock), 此时的区间是 (-oo, 1] (1, 4] (4,7] (7,10], (10,+oo)
-
-
-```
-begin;
-select * from t where id>4 and id<9 for update;
-```
-
-锁定的范围: (4, 7], (7, 9]
-
-验证 Next-Key
-
-左开:
-```
-select * from t where id=4 for update; // 验证左开, 可以正常执行. id=4的记录没有被锁住.
-```
-
-右闭:
-```
-select * from t where id=9 for update; // 验证右闭, 不能执行. id=9的记录被锁住
-```
-
-区间:
-```
-insert into t (id,account,i) values(8,100,100); // 插入id=8, 不能执行, 说明命中区间(7,9] 区间记录被锁定
-```
-
-验证 Gap:
-
-```
-begin;
-select * from t where id>4 and id<6 for update; // 1
-select * from t where id=6 for update; // 2
-```
-
-1或者2产生锁住的区间 (4,6)
-
-左开:
-```
-select * from t where id=4 for update; // 可以执行
-```
-
-右开:
-```
-select * from t where id=6 for update; // 可以执行
-```
-
-区间:  
-```
-insert into t (id,account,i) values(5,1,1); // 插入id=5, 不能执行, 说明命中区间(4,6) 的下一区间记录被锁定
-```
-
-验证 Record
-
-```
-begin;
-select * from t where id=4 for update; 
-```
-
-- 自增锁
-
-针对自增列自增长的一个特殊的表级别锁.
-
-测试:
-
-```
-begin;
-insert into t (name) values('aaa');
-rollback;
-```
-
-执行3次之后, 发现新增加的主键是上一条记录加3. 原因是, 3次插入导致自增主键增加, 但是由于事务未提交, 所以, 自增的主键永久
-性丢失.
-
-
-结论:
-
-加 X 锁 避免了数据的脏读
-加 S 锁 避免了数据的不可重复读
-加上 Next Key 避免了数据的幻读
-
 # TRANSACTION MODEL
 
 事务隔离是数据库处理的基础之一. 隔离级别是在多个事务进行更改并同时执行查询时, 对结果的性能和可靠性, 一致性和可重现性进行
@@ -914,4 +712,123 @@ InnoDB 在扫描索引时, 还可以锁定索引中最后一条记录之后的�
 可以使用 next-key lock 在应用程序中实现唯一性检查: 如果你在共享锁下读取数据, 并且没有插入重复项, 那么你可以安全地插入
 行, 因为 next-key lock 可以防止任何人同时插入重复的项. 因此, next-key lock 能够锁定表中不存在的东西. (MySQL实现"
 分布式锁"的原理.)  
+
+# Lock 规则
+
+加锁的原则, 包含两个"原则", 两个"优化", 一个"bug".
+
+- 原则1: **加锁的基本单位是 next-key lock.** 
+
+- 原则2: **查找过程中访问到的对象才会加锁.**
+
+- 优化1: **索引上的等值查询, 给唯一索引加锁时, next-key lock 退化为 record lock.**
+
+- 优化2: **索引上的等值查询, 向右遍历时且最后一个值不满足条件时, next-key lock 退化为 gap lock.**
+
+- 一个bug: **唯一索引上的 '范围查找' 会访问到 '不满足条件的第一个值' 为止.**
+
+> 针对 "一个bug" 的前提是 "范围查找", 如果没有这个前提, 则不会有下文.
+
+下面的案例的数据: 
+
+```
+CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  `c` int(11) DEFAULT NULL,
+  `d` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `c` (`c`)
+) ENGINE=InnoDB;
+
+insert into t values(0,0,0),(5,5,5),(10,10,10),(15,15,15),(20,20,20),(25,25,25);
+```
+
+### 案例1: 等值查询
+
+![image](/images/mysql_lock_equal_value.png)
+
+1)表t当中没有 id=7 的记录. 根据原则1, 单位是next-key lock, session A 锁定范围是 (5, 10]. 
+
+2)根据优化2, 这是一个等值查询(id=7), 而 id=10 不满足条件, next-key lock退化为gap lock. 锁定范围是 (5, 10)
+
+### 案例2: 非唯一索引等值
+
+![image](/images/mysql_lock_not_unique_equal_value.png)
+
+1)根据原则1, 加锁单位是next-key lock, session A 锁定范围是 (0, 5]. 
+
+2)由于 c 是普通索引, 因此仅访问 c=5 这一条记录不能马上停下来, 需要向右边遍历, 查找到10. 根据原则2, 访问到的对象都要加
+锁, 因此 (5,10] 加锁.
+
+3)根据优化2, 等值判断, 向右遍历, 最后一个值不满足 c=5 的条件, 退化味为 gap lock, 锁定范围(5,10)
+
+4)根据原则2, 只有访问到的对象才加锁, 这个查询使用索引覆盖, 并不需要访问主键索引, 因此主键索引不加锁.
+
+
+### 案例3: 主键索引范围
+
+![image](/images/mysql_lock_unique_range_value.png)
+
+1)开始执行, 查找到第一个id=10的行, 锁定 (5, 10], 根据优化1, 主键索引等值查询, 退化为行锁, 只是锁定 id=10 这一行.
+
+2)id 上的范围查询, 找到第一个不满足要求才停止(id=15), 加锁 (10, 15].
+
+> 需要注意, 在第2步, 是根据 id<11 的条件停止下来的, 没有等值查询, 因此, 不能使用优化2.
+
+### 案例4: 非唯一索引范围
+
+![image](/images/mysql_lock_not_unique_range_value.png)
+
+1)开始执行, 查找到第一个c=10的记录, 所以锁定范围是 (5, 10]. 注意, c是普通索引不能使用优化1.
+
+2)根据原则2, 继续查询到 c=15, 满足 c<11 的条件, 锁定范围 (10, 15]. 注意, 这里需要扫描到 c=15 才停止扫描, 是合理的.
+
+### 案例5: 唯一索引范围
+
+![image](/images/mysql_lock_unique_range_value.png)
+
+1)开始查询, 首先查找到第一个 id=15 的记录(由于id=10不满足 id>10 的条件, 因此这个值被忽略), 根据原则1, 加锁范围(10,15]
+
+2)id=15是满足 id>=15 的范围查询的, 根据bug, 需要扫描到第一个不满足条件的值(id=20), 加锁范围为 (15,20]
+
+### 案例6: 非唯一索引存在"等值"
+
+在这里, 先需要向 t 当中插入一条数据: `insert into t values(30,10,30)`.
+
+虽然有两个 c=10, 但是它们的主键id是不同的(分别是10和30), 因此这两个c=10的记录之间, 是有间隙的.
+
+![image](/images/mysql_lock_not_unique_exist_equal_value.png)
+
+1)开始查询, 首先查找到第一个 c=10 的索引记录(10,10), 加锁索引范围是 ((5,5), (10,10)]
+
+2)继续向右查找, 直到碰到(15,15) 索引记录, 循环结束. 根据优化2, 等值查询, 向右查询不满足条件, 退化成了 gap lock, 锁定
+范围 ((10,10), (15,15))
+
+### 案例7: limit 语句
+
+在这里, 先需要向 t 当中插入一条数据: `insert into t values(30,10,30)`
+
+![image](/images/mysql_lock_limit.png)
+
+1)开始查询, 首先查找到第一个 c=10 的索引记录(10,10), 由于 `limit 2`, 只需要再查找到一个 c=10 的记录(如果存在的话),
+就停止查找了, 这里是查找到了 (10,30), 因此加锁范围是 ((5,5), (10,30))].
+
+`limit` 会限制查找的范围, 从而缩小查找的范围. 如果查找过程中不能满足 limit 条件, 这时候 limit 就失去了缩小范围的作用
+了.
+
+### 案例8: 死锁
+
+![image](/images/mysql_lock_deadlock.png)
+
+1)session A, 在索引 c 上加锁范围: (5, 10] 和 (10, 15)
+
+2)session B的 update 语句要在 c 上锁定范围 (5, 10], 进入锁等待.
+
+3)session A再次插入(8,8,8)这一行, 被session B的间隙锁锁住. 由于出现死锁, InnoDB 让 session B 回滚.
+
+注意, session B的 next-key lock (5,10] 是分为两步的, 先加(5,10) 间隙锁, 成功; 然后加 c=10 行锁, 这时候阻塞.
+
+### 案例9: 不等号条件里的等值查询
+
+![image](/images/mysql_lock_not_equal_value.png)
 
