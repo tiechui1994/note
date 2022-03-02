@@ -647,15 +647,14 @@ COMMIT;
 - 如果唯一键上没有冲突, REPLACE 就像 INSERT 一样完成. 否则, 将在要替换的行上设置独占 next-key lock.
 
 - `INSERT INTO T SELECT ... FROM S WHERE ...` 在插入T的每一行上设置一个独占 record lock(没有 gap lock). 如
-果事务隔离级别为 RC, 或启用了 innodb_locks_unsafe_for_binlog 且事务隔离级别不是SERIALIZABLE, InnoDB将 S 上
-的搜索作为一致读取(无锁). 否则, InnoDB 在来自 S 的行上设置共享 next-key lock. 在后一种情况下, InnoDB 必须设置锁: 
-在使用基于语句的二进制日志的前滚恢复期间, 每个 SQL 语句必须以与它完全相同的方式执行.
+果事务隔离级别为 RC, 或启用 innodb_locks_unsafe_for_binlog 但事务隔离级别不是 SERIALIZABLE, InnoDB 将 S 上
+的搜索作为一致读取(无锁). 否则, InnoDB 在来自 S 的行上设置共享 next-key lock. 在后一种情况下, InnoDB 必须设置锁,
+因为在使用基于语句的binlog的回滚恢复期间, 每个 SQL 语句必须以与它完全相同的方式执行.
 
-`CREATE TABLE ... SELECT ...` 执行带有共享 next-key lock 的 SELECT 或作为一致读取, 与 `INSERT ... SELECT` 
-一样.
+`CREATE TABLE ... SELECT`, 与 `INSERT ... SELECT` 的情况是一致的.
 
-当在构造中使用 `SELECT REPLACE INTO t SELECT ... FROM s WHERE ...` 或 `UPDATE t ... WHERE col IN (SELECT 
-... FROM s ...)`时, InnoDB 为表中行设置共享 next-key lock.
+当在构造中使用 `REPLACE INTO t SELECT ... FROM s WHERE ...` 或 `UPDATE t ... WHERE col IN (SELECT ... 
+FROM s ...)`时, InnoDB 为表中行设置共享 next-key lock.
 
 - 在初始化表上的先前指定的 AUTO_INCREMENT 列时, InnoDB 在与 AUTO_INCREMENT 列关联的索引的末尾设置独占锁. 
 
@@ -832,3 +831,23 @@ insert into t values(0,0,0),(5,5,5),(10,10,10),(15,15,15),(20,20,20),(25,25,25);
 
 ![image](/images/mysql_lock_not_equal_value.png)
 
+### 案例10: 批量插入语句
+
+- 查询插入 或 查询创建
+
+```sql
+INSERT INTO t SELECT ... FROM s WHERE ...;
+CREATE TABLE ... SELECT ... FROM s WHERE ...;
+```
+
+这种情况下, 会在表 s 上加锁 next-key lock(具体的分析, 与前面的原则是一致的)
+
+- 查询替换或子查询更新
+
+```sql
+REPLACE INTO t SELECT ... FROM s WHERE ...;
+
+UPDATE t ... WHERE col IN (SELECT ... FROM s ...);
+```
+
+这种情况下, 会在表 s 上加锁 next-key lock(具体的分析, 与前面的原则是一致的)
