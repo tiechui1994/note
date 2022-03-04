@@ -97,8 +97,6 @@ ALTER TABLE 操作使用下面其中之一的算法进行处理:
 - ALGORITHM子句是可选的. 如果省略ALGORITHM子句, MySQL将 "ALGORITHM = INPLACE" 用于存储引擎, 并
 使用支持它的ALTER TABLE子句. 否则, 使用"ALGORITHM = COPY".
 
-
-
 ## CHANGE, MODIFY 和 ALTER子句允许更改现有列的名称和定义, 区别如下:
 
 - CHANGE: 可以对一个列进行 **重命名** 或者 **修改其定义**;

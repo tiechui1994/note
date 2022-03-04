@@ -180,10 +180,12 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  2: len 7; hex b60000019d0110; asc        ;;
 ```
 
-### Insert Intention Lock (插入意向锁, 间隙锁的一种)
+### Insert Intention Lock (插入意向锁)
 
-插入意向锁是在插入行之前由 INSERT 操作设置的一种间隙锁. 该锁表示插入的意向: 如果插入到同一索引间隙中的多个事务没有在间隙
-内的同一位置插入, 则它们不需要等待彼此. 
+插入意向锁是在插入行之前由 INSERT 操作设置的一种"间隙锁定". 该锁表示插入的意向: 如果插入到同一索引间隙中的多个事务没有在
+间隙内的同一位置插入, 则它们不需要等待彼此. 
+
+> 注: Insert Intention Lock 与 Gap Lock 的相似之处在于都锁定的范围是间隙, 除此之外, 没有任何关联.
 
 例如, 假设存在值为 4 和 7 的索引记录, 分别尝试插入值 5 和 6 的单独事务, 在获得插入行上的互斥锁之前, 每个使用插入意向锁
 锁定 4 和 7 之间的间隙, 但是不会相互阻塞, 因为行是不冲突的.
@@ -215,6 +217,9 @@ Record lock, heap no 3 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
  1: len 6; hex 000000002215; asc     " ;;
  2: len 7; hex 9000000172011c; asc     r  ;;...
 ```
+
+> `n_fields 3` 表示记录的字段数, `0:...`, 第一个字段 id, 值是102, `1:...`, 第二个在字段, 事务id, `2:...`, 第
+三个字段, undo_log 位置.
 
 ### AUTO-INC Lock
 
