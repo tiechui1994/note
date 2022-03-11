@@ -165,3 +165,36 @@ MySQL本身异常重启也会丢数据, 风险太大. 而设置为2, 与设置�
 
 数据库的代码逻辑: 达到了 sync_binlog 设置的 N 次以后, 就可以刷盘了, 然后再进入(sync_delay 和 no_delay_count) 的
 判断逻辑. 也就说这两者之间没有关联.
+
+### xid, trx_id
+
+Xid 是 MySQL server 层维护的, MySQL 内部维护了一个全局变量 global_query_id, 每次执行语句的时候将它赋值给 Query_id,
+然后这个变量加1. 如果当前语句是这个事务执行的第一条语句, 那么 MySQL 还会同时把 Query_id 赋值给这个事务的 Xid.
+
+global_query_id 是一个纯粹的内存变量, 重启之后就清零了. 因此, 在同一个数据库实例中, 不同事务的 Xid 也是有可能相同的.
+
+但是 MySQL 重启之后会重新生成新的 binlog 文件, 这就保证了同一个 binlog 文件里, Xid 一定是唯一的.
+
+虽然 MySQL 重启不会导致同一个 binlog 里面出现两个相同的 Xid, 但是如果 global_query_id 达到上限后, 就会继续从 0 开
+始计数. 从理论上讲, 还是会出现在一个 binlog 里面出现相同的 Xid 的场景.
+
+由于 global_query_id 定义的长度是 8 字节, 自增值的上限是 2^64-1. 要出现这种情况, 必须是这样的过程:
+
+1.执行一个事务, 此时Xid=A
+
+2.接下来再执行 2^64 次查询语句, 让 global_query_id 回到 A
+
+3.再启动一个事务, 这个事务的 Xid 也是A
+
+> 2^64 值太大了, 大到这个可能性只会存在理论上.
+
+trx_id 是在 InnoDB 当中维护的. 在 InnoDB 内部使用 Xid, 是为了能够在 InnoDB 事务和 Server 之间关联.
+
+InnoDB 内部维护了一个 max_trx_id 全局变量, 每次需要申请一个新的 trx_id 时, 就会获得 max_trx_id 的当前值, 然后并将
+max_trx_id 加 1.
+
+InnoDB 数据可见性的核心思想是: 每一行数据都记录了更新它的 trx_id, 当一个事务读到一行数据的时候, 会判断这个数据是否可见
+的方法, 就是通过事务的一致性视图与这行数据的 trx_id 做对比.
+
+对于正在执行的事务, 可以从 information_schema.innodb_trx 当中查找到事务的 trx_id.
+
