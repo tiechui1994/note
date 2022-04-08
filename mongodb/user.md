@@ -2,7 +2,7 @@
 
 ## 用户创建和授权
 
-> 注意: 创建用户或者更新用户的时候需要先切换到对应的数据库当中
+> 注意: 创建用户或者更新用户的时候需要先切换到对应的数据库当中. 一般情况下, 切换的数据库是 admin
 
 - 创建用户, 并且授权
 
@@ -12,7 +12,7 @@ db.createUser({
     pwd:"<pwd>",
     roles:[{
         role: "<role>",
-        db: "<database>",
+        db: "<accessdb>",
     }]
 })
 ```
@@ -35,7 +35,7 @@ db.revokeRolesFronUser("<username>", [ <roles> ], { <writeConcern> })
 db.updateUser("<username>", {
     roles:[{
         role:"<role>",
-        db:"<database>"
+        db:"<accessdb>"
     }],
     pwd:"<pwd>"
 }, { <writeConcern > })

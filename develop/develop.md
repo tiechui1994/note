@@ -316,3 +316,28 @@ rm -rf ~/snap
 ```
 sudo apt-mark hold snapd
 ```
+
+### Ubuntu 找回密码
+
+1. Ubuntu 加电重启, 长按 `Esc + Shift` 按键, 进入 grub 的界面.
+
+2. 在 grub 界面的时候, 输入 `exit` 退出 grub, 此时会出现三个选择, F1(to retry boot), F2(to reboot into setup),
+F5(run onboard diagnostics). 选择按下 `F1`, 然后立即再次按一下 `Esc + Shift`, 此时, 会进入 Boot 页面.
+
+3. 按 `↓` 切换到 `Advanced options for ubuntu` 选项, 接下来按一下 `e` 按键, 进入编辑模式.
+
+4. 在编辑模式当中(选择高版本的内核版本), 将 `ro recovery nomodeset` 修改为 `rw single init=/bin/bash`
+
+5. 按 `Esc` 进入 Grub 界面, 按 `Ctrl + x` 或 `F10` 进入单用户模式. 当前的用户是 root. 开始修改密码文件 `/etc/shadow`, `/etc/shadow-`,
+下面是修改root用户密码.
+
+```
+pass=$(echo "password"|openssl passwd -6 -stdin)
+sed -i -E "s|root:([^:]+?):(.*)|root:$pass:\2|" /etc/shadow
+sed -i -E "s|root:([^:]+?):(.*)|root:$pass:\2|" /etc/shadow-
+```
+
+6. 操作完成之后, 按 `exit` 退出系统, 密码就修改完成了.
+
+> 注: 在第3步, 按 `Enter` 会进入一个系统恢复的界面, 在这里有 `network`(网络连接), `fsck`(磁盘修复), `dpkg`(系统
+缺失项修复) 等选项. 如果无法开机, 先选择 `network`, 然后选择 `dpkg`, 尝试修复系统.
