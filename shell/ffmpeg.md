@@ -4,6 +4,8 @@
 
 [相关的文档](https://www.kancloud.cn/zhenhuamcu/ffmpeg/758350)
 
+## 视频格式转换
+
 - mp3 -> wav 
 
 ```bash
@@ -64,3 +66,23 @@ ffmpeg -i input.wav -f s16be -ar 8000 -ac 1 -acodec pcm_s16be output.pcm
 > - `-aframes number`, 设置录制音频帧的个数. `-frames:a` 的别名
 > - `-an` 禁止音频录制
  
+ 
+
+## 生成视频缩略图
+
+- 等比例缩放
+
+```
+ffmpeg -i input.mp4 -vf scale=320:-1 -t 0.001 -y -f mjpeg out.jpeg
+```
+
+- 固定大小 
+
+```
+ffmpeg -i input.mp4 -s 200x200 -t 0.001 -y -f mjpeg out.jpeg
+```
+
+> -t duration, 录制或转码 "duration" 秒的音频/视频
+> -s size, 生成的帧大小(WxH)
+> -vf filter_graph 设置视频过滤. 参数参考: https://ffmpeg.org/ffmpeg-filters.html 
+> -f fmt, 强制输出的格式. 针对图片, 格式有: singlejpeg(jpeg) mpjpeg(jpeg), webp(webp), apng(png)
