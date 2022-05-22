@@ -82,12 +82,14 @@ Host-Only模式其实就是NAT模式去除了虚拟NAT设备, 然后使用 `VMwa
 网卡配置,设置静态ip(非必须), 配置文件 /etc/network/interface
 
 ```
-auto eth0               # 添加网卡
-iface eth0 inet static  # 选择静态IP分配方式
-address 10.0.2.4        # 指定需要的IP
-gateway 10.0.2.1        # 默认网关
-netmask 255.255.255.0   # 掩码 
+auto eth0                   # 添加网卡
+iface eth0 inet static      # 选择静态IP分配方式
+    address 10.0.2.4        # 指定需要的IP
+    gateway 10.0.2.1        # 默认网关
+    netmask 255.255.255.0   # 掩码 
 ```
+
+> 这里 address 和 gateway 与宿主机的网卡需要在同一个网段当中.
 
 DNS配置(非必须), /etc/resolve.conf
 
@@ -104,3 +106,34 @@ nameserver 192.168.0.1
 2. 设置虚拟机的网卡
 
 到 `设置` -> `网络` 当中, 连接方式选择 `仅主机(Host-Only)网络`, 界面名称选择上一步添加的Host-Only Network.
+
+3. 虚拟机当中网卡配置
+
+netplan 方式:
+
+```
+network:
+  ethernets:
+    enp0s8:
+      addresses: [192.168.56.2/24]
+      nameservers:
+         addresses: [114.114.114.114]
+  version: 2
+
+```
+
+> 其中 enp0s8 是网卡名称. 这里的 addresses 和 gateway4 要与宿主机当中的网卡 `VirtualBox Host-Only Network` 保持在同一个网段.
+
+
+interfaces 方式:
+
+```
+auto enp0s8
+iface enp0s8 inet static
+    address 192.168.56.2
+    netmask 255.255.255.0
+```
+
+
+注意: Host-Only 模式本身是无法上网的, 只能是虚拟机和宿主机进行通信, 如果要想上网, 需要宿主机对应的网卡增加共享网络. 如果一个虚拟机当中配置了两块
+网卡, 其中一个网卡是 Host-Only 模式网段, 这时最好不要为这个网卡设置网关(gateway), 这样可能导致整个虚拟机无法上网的情况发生.

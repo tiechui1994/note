@@ -128,3 +128,21 @@ InitialPreference=3
 deb 下载地址: `https://github.com/tiechui1994/jobs/releases/download/wps-office-2019-zh-CN/wps-office_11.1.0.8392_amd64.deb`
 
 中文语言安装: `https://gist.github.com/tiechui1994/2912e4d5990a0ab26ddd8db75c42ae57`
+
+
+### 问题
+
+1. `dbus-daemon[987]: [system] Failed to activate service 'org.bluez': timed out (service_start_timeout=25000ms)`
+
+这个是 bluetooth(蓝牙) 服务无法启动, 可以禁用该服务.
+
+```
+systemctl stop bluetooth.service
+systemctl disable bluetooth.service
+```
+
+2. `Exiting GPU process due to errors during initialization` 
+
+这个是在 virtualbox 虚拟机当中使用 google-chrome 浏览器, Google 浏览器默认是启用 GPU 的, 但是 virtualbox 某些版本是无法使用到宿主机的
+GPU, 因此需要在禁用掉 GPU, 使用参数 --disable-gpu
+
