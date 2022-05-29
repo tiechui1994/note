@@ -106,9 +106,13 @@ merge 和 branch 一起定义了分支的上游分支. 它告诉 `git fetch` 和
 
 ### hooks 文件
 
-常见的 hook 文件, 及其调用的时机.
+hooks 在 git 执行 的某些点触发操作. 如果 hook 文件没有可执行权限, 则将被忽略. 
 
-- `applypatch-msg`, 该 hook 由 gita-am 调用. 它接收一个参数, 即保存建议的提交日志消息的文件名称.
+> **注: 如果要启用 hook 脚本, 将该文件放到配置的 hooks 目录当中, 该文件具有适当的名称(没有任何扩展名)并且是可执行的.**
+
+默认情况下, hooks 目录是 `$GIT_DIR/hooks`, 可以通过 `core.hooksPath` 配置进行更改.
+
+- `applypatch-msg`, 该 hook 由 git-am 调用. 它接收一个参数, 即保存建议的提交日志消息的文件名称.
 
 - `pre-commit`, 该 hook 由 git-commit 调用, 可以使用 `-no-verfiy` 选项绕过. 它不带任何参数, 并且在获取提交日志
 消息之前被调用. 如果此脚本以非0状态退出会导致 git commit 命令在创建提交之前终止.
@@ -127,6 +131,18 @@ merge 和 branch 一起定义了分支的上游分支. 它告诉 `git fetch` 和
 `--amend` 选项).
 
 如果脚本的退出状态非0, 则 git commit 将终止.
+
+- `pre-push`, 该 hook 由 git-push 调用, 可用于阻止推送. 使用两个参数调用 hook. 第一个参数远程仓库的名称, 第二个参数是远程仓库的URL.
+hook 的标准输入中提供了有关要推送的内容信息, 格式如下:
+
+```
+<local ref> <local sha1> <remote ref> <remote sha1>
+```
+
+它们分别代表本地分支ref, sha1 和远程分支 ref, sha1. 如果远程 ref 尚不存在, 则 `<remote sha1>` 的值为 40 个 0.  如果要删除 ref, 则 
+`<local ref>` 将作为 (delete) 提供, `<local sha1>` 的值为 40 个 0
+
+> 详情参考 `man githooks` 文档.
 
 ## git 密钥
 

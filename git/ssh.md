@@ -83,7 +83,7 @@ Host test
     ProxyCommand nc -X 5 -x 127.0.0.1:1086 %h %p
 ```
 
-> nc: ncat, 一个网络连接工具. `-X` 指定代理协议, 三个值 4(SOCKS v4), 5(SOCKS v5), connect(HTTPS). `-x`, 指
+> nc: ncat, 一个网络连接工具. `-X` 指定代理协议, 三个值 **4(SOCKS v4), 5(SOCKS v5), connect(HTTPS)**. `-x`, 指
 定代理的主机地址和端口. `%h %p`, 变量, 替换 ssh 真正要连接的服务器的主机名(host) 和端口(port)
 
 
