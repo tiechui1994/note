@@ -282,10 +282,72 @@ a=candidate:<foundation> <component-id> <transport> <priority> <connection-addre
 则 `<rel-addr>` 和 `<rel-port>` 等于分配给客户端响应
 
 
+#### ICE 协商
+
+ICE 主要有5种状态, 其中前四种是正常的状态, 第五种状态 Frozen 涉及到 ICE Frozen Algorithm.
+
+ICE 状态:
+
+- Waiting: 当连通性检查还没有开始的时候(Binding Request还未发送)
+
+- In Progress: 当连通性检查发送了, 但是相应检查的事务仍在执行中(Binding Request已发送).
+
+- Successed: 当连通性检查执行完成且返回结果成功(Binding Request 已完成).
+
+- Failed: 连通性检查执行完成且返回结果成功(Binding Request已完成).
+
+- Frozen: 所有 Candidate Pair 初始化完成以后就是这个状态, 对于相同的 Foundation (相似的Candidate), 会按照优先级依次选取一个 Pair,
+Unfreeze, 并设置为 Waiting 状态, 其他则保持 Frozen. 直到选取的 Pair 完成, 才会继续 Unfreeze 另一个 Pair.
+
+ICE 提名方式:
+
+-  常规提名(Regular Nomination)
+
+![image](/images/webrtc_sdp_regular.png)
+
+Controlling 模式下的 Agent 发起 Binding Request, 并且收到对端的 Binding Response, 同时对端发起的 Connective Check 完成, 
+Controlling 一端再次发出一个携带 USE_CANDIDATE 标志位的 Binding Request, 当 Controlled 一端收到了, 就接受这次提名.
+
+- 激进提名(Aggressive Nomination)
+
+![image](/images/webrtc_sdp_aggressive.png)
+
+Controlling 模式下的 Agent 发起 Binding Request, 但是在这个 Binding Request 中直接携带 USE_CANDIDATE 的标志位, Controlled 模式
+下的 Agent 收到了以后就接受这次提名.
+
+在激进提名模式下, 可以节约一次握手, 但是当多个 Pair 同时接受提名时, 会根据这些 Pair 的优先级进行选择, 选择出优先级最高的 Pair 作为实际的
+信道.
+
+当一个新的提名产生时, 会对 ICE 内部状态进行对应的变化.
+
+1. 当一端的 Binding Request 携带了 Use Candidate 的标志位时, 则会产生一次提名(Nomination)
+
+2. 不管 Controlling 或者 Controlled 模式下的 Agent, 处理提名的状态更新规则建议如下:
+
+- 如果没有提名的 Pair, 则继续进行连通性检查的过程.
+
+- 如果至少有一个有效的提名:
+    - Agent 必须删除该 Component 下的所有 Waiting 状态和 Frozen 状态的 Pair
+    - 对于 In Progress 状态下的 Pair, 优先级低于当前提名 Pair 优先级的, 停止重传(取消)
+
+- 当某一个 Stream 的所有 Component 都至少拥有一个提名时, 且检查仍然在进行时:
+    - Agent 必须将该 Stream 标记为已完成.
+    - Agent 可以开始传输媒体流
+    - Agent 必须持续响应收到的消息
+    - Agent 必须重传当前仍然在 In Progress 的 Pair(优先级高于当前提名的, 不然已经被删除或者取消)
+
+- 当检查列表中的所有 Pair 都完成时:
+    - ICE 完成
+    - Controlling Agent 根据优先级更新 Offer
+
+- 当检查列表检查有失败时:
+    - 所有 Pair 都失败时, 关闭 ICE
+    - 当有某个流的检查成功时, Controlling Agent 移除失败的 Pair, 并更新 Offer
+    - 如果有些检查没有完成, 则 ICE 继续
+
 ## 编码确定?
 
 如何确定最后的编码? 对方在 Answer 中给出, 如果在 Offer 中给出了多个编码. 在 Answer 中会选择一个, 如果 Answer 给了多个, 会选择第一个.
-
 
 
 
