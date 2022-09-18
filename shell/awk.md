@@ -181,15 +181,16 @@ awk '/sh/ && /root/ {print $1}' /etc/passwd
 - 内置函数(在action当中使用):
 
 ```
-gsub(regex, str, repl) 全局替换, 使用repl替换regex匹配的字符串
-sub(regex, str, repl) 只替换第一个
-index(str, sub)
-length(str)
-match(str, regex)
-split(str, array, separator), split(str, array)此时separator为FS
-substr(str, index, length)
+gsub(regex, repl, [str]) 全局替换, 使用repl替换regex匹配的字符串, 返回值是整数
+sub(regex, repl, [str]) 只替换第一个, 返回值是整数
+index(str, sub) 查询 str 当中 sub 的位置
+length(str) 字符串长度
+substr(str, index, [len]) 子字符串 
+match(str, regex) 正则匹配
+split(str, array, [separator]), split(str, array)此时separator为FS, 返回值是整数. array 用于存储结果
 tolower(str)
 toupper(str)
+sprintf(format, var), 字符串格式化
 ```
 
 

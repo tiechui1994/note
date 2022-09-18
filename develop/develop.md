@@ -341,3 +341,18 @@ sed -i -E "s|root:([^:]+?):(.*)|root:$pass:\2|" /etc/shadow-
 
 > 注: 在第3步, 按 `Enter` 会进入一个系统恢复的界面, 在这里有 `network`(网络连接), `fsck`(磁盘修复), `dpkg`(系统
 缺失项修复) 等选项. 如果无法开机, 先选择 `network`, 然后选择 `dpkg`, 尝试修复系统.
+
+### Google Colab
+
+nvidia 无法使用
+
+问题:
+```
+~# nvidia-smi -L
+Failed to initialize NVML: Driver/library version mismatch
+```
+
+解决: 
+```
+export LD_LIBRARY_PATH="/usr/lib64-nvidia"
+```

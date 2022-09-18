@@ -345,6 +345,29 @@ Controlling 模式下的 Agent 发起 Binding Request, 但是在这个 Binding R
     - 当有某个流的检查成功时, Controlling Agent 移除失败的 Pair, 并更新 Offer
     - 如果有些检查没有完成, 则 ICE 继续
 
+
+## TURN 和 STUN
+
+TURN(Traversal Using Relays around NAT) 是一个中继, 两个客户端都将数据发送到 TURN 服务器, 然后再将其转发给另一个客户端.
+
+STUN(Session Traversal Utilities for NAT) 是中继, STUN 服务器帮助客户端之间 "建立连接" (通过发现和交换它们的外部 host:port 对), 然后它们直接相互发送数据. 然而, STUN 不适用于所有 NAT/firewall 设置, 因此当 STUN 失败时使用 TURN.
+
+NAT 类型:
+
+- Full-cone NAT, 
+
+- (Address)-restricted-cone NAT,
+
+- Port-restricted-cone NAT,
+
+- Symmetric NAT
+
+peer-to-peer 交互过程:
+
+![image](https://i.stack.imgur.com/OwbWR.png)
+
+
+
 ## 编码确定?
 
 如何确定最后的编码? 对方在 Answer 中给出, 如果在 Offer 中给出了多个编码. 在 Answer 中会选择一个, 如果 Answer 给了多个, 会选择第一个.

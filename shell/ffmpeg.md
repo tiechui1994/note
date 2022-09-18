@@ -86,3 +86,32 @@ ffmpeg -i input.mp4 -s 200x200 -t 0.001 -y -f mjpeg out.jpeg
 > -s size, 生成的帧大小(WxH)
 > -vf filter_graph 设置视频过滤. 参数参考: https://ffmpeg.org/ffmpeg-filters.html 
 > -f fmt, 强制输出的格式. 针对图片, 格式有: singlejpeg(jpeg) mpjpeg(jpeg), webp(webp), apng(png)
+
+## FFmpeg 编译
+
+使用 NVIDIA 硬件加速
+
+- compile ffmpeg with NVIDIA we need ffnvcodec
+
+```
+mkdir ~/nvidia/ && cd ~/nvidia/
+git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
+
+cd nv-codec-headers && sudo make install
+```
+
+- compile ffmpeg
+
+```
+cd ~/nvidia/
+git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
+
+sudo apt install build-essential yasm cmake libtool libc6 libc6-dev unzip wget libnuma1 libnuma-dev
+
+cd ~/nvidia/ffmpeg/
+./configure --enable-nonfree --enable-cuda-nvcc --enable-libnpp --extra-cflags=-I/usr/local/cuda/include --extra-ldflags=-L/usr/local/cuda/lib64
+
+make -j $(nproc)
+
+ls -l ffmpeg
+```

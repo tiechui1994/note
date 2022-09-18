@@ -1,4 +1,4 @@
-# NATS 学习
+## NATS
 
 NATS(Message bus)是一个开源的、轻量级、高性能的，支持发布、订阅机制的分布式消息队列系统. 其核心原理就是基于消息发布订阅机制。每个台服务器上
 的每个模块会根据自己的消息类别，向MessageBus发布多个消息主题; 而同时也向自己需要交互的模块，按照需要的信息内容的消息主题订阅消息.
@@ -38,6 +38,299 @@ NATS提供称为队列订阅的负载均衡功能, 虽然名字为 queue(队列)
 
 ![image](/images/webrtc_nats_queue.svg)
 
+## Google Protoc 安装
+
+```
+# protoc 
+curl -L https://github.com/protocolbuffers/protobuf/releases/download/v21.6/protoc-21.6-linux-x86_64.zip -o protoc.zip
+
+# protoc-gen-go-grpc
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# protoc-gen-go
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+```
 
 ## 应用
+
+### NATS gRPC
+
+github.com/cloudwebrtc/nats-grpc/pkg/rpc, nats-grpc-server, 实现了 grpc.GRPCServer, 使用 NATS 作为通信传输层来进行 RPC 调用.
+
+
+```protobuf
+syntax = "proto3";
+
+option go_package = ".;echo";
+
+package echo;
+
+service Echo {
+    rpc SayHello(HelloRequest) returns (HelloReply) {}
+    rpc Echo(stream EchoRequest) returns (stream EchoReply) {}
+}
+
+message HelloRequest {
+    string msg = 1;
+}
+
+message HelloReply {
+    string msg = 1;
+}
+
+message EchoRequest {
+    string msg = 1;
+}
+
+message EchoReply {
+    string msg = 1;
+}
+```
+
+
+- echo 实现
+
+```golang
+type echoServer struct {
+	echo.UnimplementedEchoServer
+}
+
+func (e *echoServer) Echo(stream echo.Echo_EchoServer) error {
+	i := int(0)
+	for {
+		req, err := stream.Recv()
+		if err != nil {
+			log.Errorf("err: " + err.Error())
+			return err
+		}
+		i++
+		log.Infof("Echo: req.Msg => %v, count => %v", req.Msg, i)
+		stream.Send(&echo.EchoReply{
+			Msg: req.Msg + fmt.Sprintf(" world-%v", i),
+		})
+
+		if i >= 100 {
+			//stop loop now, close streaming from server side.
+			return nil
+		}
+	}
+}
+
+func (e *echoServer) SayHello(ctx context.Context, req *echo.HelloRequest) (*echo.HelloReply, error) {
+	fmt.Printf("SayHello: req.Msg => %v\n", req.Msg)
+	return &echo.HelloReply{Msg: req.Msg + " world"}, nil
+}
+```
+
+- 原生 gRPC 的 Server 与 Client
+
+// Server
+
+```golang
+import (
+    "google.golang.org/grpc"
+)
+
+func main() {
+    listen, err := net.Listen("tcp", ":8080")
+    if err != nil {
+        log.Fatalf("failed to listen: %v", err)
+    }
+
+    s := grpc.NewServer()
+    echo.RegisterGreeterServer(s, &echoServer{})
+    
+    log.Printf("server listening at %v", listen.Addr())
+    if err := s.Serve(listen); err != nil {
+        log.Fatalf("failed to serve: %v", err)
+    }
+}
+```
+
+// Client
+
+```golang
+import (
+    "google.golang.org/grpc"
+)
+
+func main() {
+    conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	
+    client := echo.NewGreeterClient(conn)
+
+	// Contact the server and print out its response.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+    
+    // Request
+    reply, err := client.SayHello(ctx, &echo.HelloRequest{Msg: "hello"})
+    if err != nil {
+        log.Infof("SayHello: error %v\n", err)
+        return
+    }
+    log.Infof("SayHello: %s\n", reply.GetMsg())
+
+    // Streaming
+    stream, err := client.Echo(ctx)
+    if err != nil {
+        log.Errorf("%v", err)
+    }
+
+    stream.Send(&echo.EchoRequest{
+        Msg: "hello",
+    })
+
+    i := 1
+    for {
+        reply, err := stream.Recv()
+        if err != nil {
+            log.Errorf("Echo: err %s", err)
+            break
+        }
+        log.Infof("EchoReply: reply.Msg => %s, count => %v", reply.Msg, i)
+
+        i++
+        if i <= 100 {
+            stream.Send(&echo.EchoRequest{
+                Msg: fmt.Sprintf("hello-%v", i),
+            })
+        }
+    }
+
+
+}
+```
+
+- gRPC over NATS 的 Server 与 Client
+
+// Server
+
+```golang
+import (
+    "github.com/cloudwebrtc/nats-grpc/pkg/rpc"
+    "github.com/nats-io/nats.go"
+)
+
+func main() {
+    nc, err := nats.Connect("nats://127.0.0.1:4222")
+    if err != nil {
+        log.Errorf("%v", err)
+    }
+    defer nc.Close()
+
+    s := rpc.NewServer(nc, "svcid")
+    echo.RegisterEchoServer(s, &echoServer{})
+
+    // Keep running until ^C.
+    fmt.Println("server is running, ^C quits.")
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    <-c
+    close(c)
+}
+```
+
+// Client 
+
+```golang
+import (
+    "github.com/cloudwebrtc/nats-grpc/pkg/rpc"
+    "github.com/nats-io/nats.go"
+)
+
+func main() {
+        nc, err := nats.Connect("nats://127.0.0.1:4222")
+    	if err != nil {
+    		log.Errorf("%v", err)
+    	}
+    	defer nc.Close()
+    
+    	ncli := nrpc.NewClient(nc, "svcid", "nodeid")
+    
+    	client := echo.NewEchoClient(ncli)
+    
+    	ctx, cancel := context.WithTimeout(context.Background(), 100000*time.Millisecond)
+    	defer cancel()
+    
+    	// Request
+    	reply, err := client.SayHello(ctx, &echo.HelloRequest{Msg: "hello"})
+    	if err != nil {
+    		log.Infof("SayHello: error %v\n", err)
+    		return
+    	}
+    	log.Infof("SayHello: %s\n", reply.GetMsg())
+    
+    	// Streaming
+    	stream, err := client.Echo(ctx)
+    	if err != nil {
+    		log.Errorf("%v", err)
+    	}
+    
+    	stream.Send(&echo.EchoRequest{
+    		Msg: "hello",
+    	})
+    
+    	i := 1
+    	for {
+    		reply, err := stream.Recv()
+    		if err != nil {
+    			log.Errorf("Echo: err %s", err)
+    			break
+    		}
+    		log.Infof("EchoReply: reply.Msg => %s, count => %v", reply.Msg, i)
+    
+    		i++
+    		if i <= 100 {
+    			stream.Send(&echo.EchoRequest{
+    				Msg: fmt.Sprintf("hello-%v", i),
+    			})
+    		}
+    	}
+}
+```
+
+小结:
+
+原生的 gRPC 是通过 TCP 连接传递数据的, Client 通过 ip:port 来连接 Server, 然后进行请求的交互.
+
+nats-RPC 是通过 nats 连接传递数据的, Client 和 Server 都需要先连接到 NATS 服务器. 创建 Server 时需要确定 srvid. 在 Client 进行调用
+时, 是通过 srvid 来确定服务端是谁. 在这个过程中产生了节点的概念.
+
+### NATS registry
+
+github.com/cloudwebrtc/nats-discovery/pkg/registry, 注册中心
+
+注册中心需要提供两个 Handler 函数:
+
+- `handleNodeAction(action discovery.Action, node discovery.Node) (bool, error)`, 处理 Node 动作消息(Save, Update, Delete)
+
+- `handleGetNodes(service string, params map[string]interface{}) ([]discovery.Node, error)`, 处理获取 Node 请求
+
+> 注: `subscribe "node.publish.>"`, 每次执行完成 Save, Update, Delete 动作处理之后, 会 `publish "node.discovery.$service.$nid"`
+
+
+github.com/cloudwebrtc/nats-discovery/pkg/client, 注册中心客户端:
+
+- KeepAlive, 节点定期更新, 保证节点存活. (定期发送 Update 动作, `publish "node.publish.$service.$nid"`)
+
+- Watch, 监测 Node 状态, 并进行 Callback. (订阅 Node 状态变更消息, 状态发生变更, 回调 callback, `subscribe "node.discovery.$service.>"`)
+
+- Get, 获取节点信息. (`publish "node.publish.$service"`)
+
+### ION 
+
+![image](/images/webrtc_nats_ion.png)
+
+islb, 注册中心, 将注册的节点存储到 redis 当中. 参考 `NATS registry` 内容.
+
+signal, 对外统一的服务, websocket 连接, 进行 rpc 调用转发.
+
+sfu, 提供 RTC 服务, 主要负责 WebRTC 推流, 信令协商, 信令服务等内容.
+
+room, ROOM 服务(主要包含两部分, RoomService(服务, CreateRoom等), RoomSignal(流, Join, Leave, SendMessage, UpdateRoom)), 数据会存储到 Redis 当中
 
