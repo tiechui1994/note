@@ -39,6 +39,8 @@ access_log /logs/access.log main;
 access_log /path/to/log.gz combined gzip flush=5m;
 ```
 
+> 注: 如果要想实现 flush 属性, 一定要先带上 buffer 属性.
+
 
 ### log_format
 

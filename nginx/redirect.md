@@ -1,4 +1,4 @@
-## nginx的重定向功能的实现
+## nginx 重定向
 
 首先说明两个概念: **地址重写**和**地址转发**.
 
@@ -36,11 +36,18 @@
 错误.
 
 
-### rewrite 语法
+### rewrite 
 
 ```
 rewrite regex replacement [flag]
 ```
+
+如果正则表达式 regex 匹配请求 URI, 则 URI 将按照 replacement 字符串当中指定的规则进行更改.
+
+> 如果 replacement 以 "http://", "https://" 或 "$schema" 开头, 则停止处理并将重定向返回给客户端.
+>
+> regex 当中是不能包含变量的. 
+> replacement 可以使用 regex 匹配的结果, 使用 $1..$9 表示.
 
 flag标志位:
 
@@ -48,6 +55,8 @@ flag标志位:
 - `break`: 停止执行 **当前虚拟主机** 的 **后续rewrite指令集**
 - `redirect`: 返回302临时重定向, 地址栏会显示跳转后的地址
 - `permanent`: 返回301永久重定向, 地址栏会显示跳转后的地址
+
+作用上下文: server, location, if
 
 > 说明: 因为301和302不能简单的只返回状态码, 还必须有重定向的URI, 这就是return指令无法返回301, 302的原因.
 
@@ -72,7 +81,85 @@ last vs break:
 > - `~`表示正则表达式匹配, `~*`不区分大小写的正则匹配, `!~` 不匹配
 
 
-### 常用案例
+### rewrite_log
+
+```
+rewrite_log on|off;
+```
+
+启用 rewrite_log, 会将 ngx_http_rewrite_module 模块指令处理结果记录到 error_log 当中(日志级别是 notice) 
+
+作用上下文: 	http, server, location, if
+
+
+### if
+
+```
+if (condition) { ... }
+```
+
+作用上下文: server, location
+
+condition 可以是以下当中的任何一种:
+
+```
+1. 变量名, 如果变量的值为空字符串或"0", 则为false
+
+2. 使用 "=" 或 "!=" 运算符比较变量和字符串;
+
+3. 使用 "~" (区分大小写匹配) 和 "~*"(不区分大小写匹配) 运算符将变量与正则表达式进行匹配. 正则表达式可以使用 $1..$9 捕获匹配的值. 如果正
+则表达式包含 "}" 或 ";" 字符, 整个表达式要使用单引号括起来.
+
+4. 使用 "-f" 和 "!-f" 运算符检查文件是否存在
+
+5. 使用 "-d" 和 "!-d" 运算符检查目录是否存在
+
+6. 使用 "-e" 和 "!-e" 运算符检查文件, 目录或符号链接是否存在
+```
+
+例子:
+
+```
+if ($http_user_agent ~ MSIE) {
+    rewrite ^(.*)$ /msie/$1 break;
+}
+
+if ($http_cookie ~* "id=([^;]+)(?:;|$)") {
+    set $id $1;
+}
+
+if ($request_method = POST) {
+    return 405;
+}
+
+if ($slow) {
+    limit_rate 10k;
+}
+
+if ($invalid_referer) {
+    return 403;
+}
+```
+
+
+### return
+
+```
+return code [text];
+return code URL;
+return URL;
+```
+
+停止处理, 并将指定的代码返回给客户端. 可以重定向URL(code 为 301, 302, 303, 307, 308 ) 或响应正文文本(其他code). 响应正文和重定向URL
+可以包含变量. 作为一种特殊情况, 可以将重定向 URL 指定为该服务本地的 URI, 这种情况下, 完整的重定向 URL 是根据请求 schema ($schema) 以及
+server_name_in_redirect 和 port_in_redirect 指令生成的.
+
+另外, URL 当中还是可以包含变量的.
+
+作用上下文: server, location, if
+
+
+### 经典案例
 
 1.将到 `test` 环境的请求转发到 `staging` 环境当中. 两个环境的请求API一样, 但是域名不一样. 一般是用来调试web页面.
 
@@ -134,6 +221,43 @@ location / {
 }
 ```
 
+3. 统一将 ws 请求转发到一个后端地址
+
+```
+server {
+   server_name 127.0.0.1;
+   listen 9090;
+   
+   rewrite_log on; 
+   location / {
+        if ( $http_upgrade = websocket ) {
+            rewrite ^/(.*)$ /ws$request_uri last;
+            return 200;
+        } 
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        
+        proxy_pass http://192.168.2.182:9090;
+   }
+  
+   location /ws { 
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        
+        proxy_connect_timeout 1d;
+        proxy_send_timeout 1d;
+        proxy_read_timeout 1d;  
+        
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade websocket;
+        proxy_set_header Connection Upgrade;
+        
+        proxy_pass http://192.168.2.182:9090$request_uri;
+   }
+}
+```
 
 ### 常用的全局变量
 

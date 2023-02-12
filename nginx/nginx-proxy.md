@@ -1,4 +1,4 @@
-## 正向代理配置
+## proxy
 
 #### resolver
 
@@ -33,13 +33,13 @@ resolver_timeout TIME;
 
 #### proxy_pass
 
-`proxy_pass`用于设置代理服务器的协议和地址, `它不仅仅用于nginx服务器的代理服务,更主要的是用于反向代理服务`
+`proxy_pass`用于设置代理服务器的协议和地址, `它不仅仅用于nginx服务器的代理服务, 更主要的是用于反向代理服务`
 
 ```
 proxy_pass URL;
 ```
 
-*URL*, 即为设置的`代理服务器协议和地址`. 在代理服务器配置当中, 该指令的设置相对固定.
+*URL*, 即为设置的 `代理服务器协议和地址`. 在代理服务器配置当中, 该指令的设置相对固定.
 
 ```
 proxy_pass http://$http_host$request_uri;
@@ -60,18 +60,18 @@ server {
 }
 ```
 
----
-
 
 ## 反向代理配置
 
 #### proxy_pass
 
-`proxy_pass`用来设置被代理服务器的地址. 可以是主机名,IP地址加端口号等形式.
+`proxy_pass` 用来设置被代理服务器的地址. 可以是主机名,IP地址加端口号等形式.
 
 ```
 proxy_pass URL;
 ```
+
+作用上下文: http, server, location
 
 > 该指令可以在location, if in location, limit_except 中进行配置.
 
@@ -155,7 +155,7 @@ server {
 
 #### proxy_pass_request_headers(请求)
 
-`proxy_pass_request_headers`用于配置是否将 `原始请求的Header`发送给上游服务器.
+`proxy_pass_request_headers` 用于配置是否将 `原始请求的Header`发送给上游服务器.
 
 ```
 proxy_pass_request_headers on|off;
@@ -174,6 +174,8 @@ proxy_set_header Host       $proxy_host;
 proxy_set_header Connection close;
 ```
 
+作用上下文: http, server, location
+
 如果启用了缓存, 则会从原始请求Header当中的"If-Modified-Since","If-Unmodified-Since","If-None-Match","If-Match",
 "Range", 和"If-Range"不会传递到代理服务器.
 
@@ -183,10 +185,10 @@ proxy_set_header FIELD VALUE;
 *FIELD*, 要修改的头域.
 *VALUE*, 更改的值, 支持使用文本, 变量或者变量的组合.
 
-`proxy_set_header`和`add_header`的区别:
+`proxy_set_header` 和 `add_header`的区别:
 
-- `proxy_set_header`是nginx设置`请求头`信息给上游服务器, `add_header`是nginx设置`响应头`信息给客户端.
-- `proxy_set_header`针对的是请求头, `add_header`针对的是响应头.
+- `proxy_set_header` 是nginx设置 `请求头` 信息给上游服务器, `add_header` 是nginx设置 `响应头` 信息给客户端.
+- `proxy_set_header` 针对的是请求头, `add_header` 针对的是响应头.
 
 #### proxy_pass_header, proxy_hide_header (响应)
 
