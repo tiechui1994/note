@@ -41,15 +41,16 @@ D---E---F---G master
 
 拆分后的效果:
 ```
-D---E---F1---F2---G master
+D---E---F1---F2---G' master
 ```
 
 操作:
+
 ```
 # 交互模式下, 使用 edit 命令修改需要拆分的提交
 git rebase -i E [master|HEAD]
 
-# 重置当前提交
+# 重置当前提交(注: 这里不是hard模式)
 git reset HEAD^
 
 # after do change 1
@@ -58,6 +59,7 @@ git add -A && git commit -m "F1"
 # after do change 2
 git add -A && git commit -m "F2"
 
+# 继续变基. 直到所有变基操作完成. (完成变基操作后, 会应用到当前分支)
 git rebase --continue
 ```
 
@@ -78,6 +80,9 @@ D---EF---G master
 ```
 # 交互模式下, 使用 squash 合并提交, 注意 commit 提交的顺序
 git rebase -i D [master|HEAD]
+
+# 给变基重新命名分支
+git checkout -b new
 ```
 
 3. 将某几个提交应用到某个分支上
@@ -96,7 +101,6 @@ D---E---F---G master
 D---E---F---G---B'---C' master
 ```
 
-操作:
 
 操作:
 ```
@@ -106,3 +110,4 @@ git rebase -i --onto master A C
 # 切换, 重置
 git rebase HEAD master 
 ```
+
