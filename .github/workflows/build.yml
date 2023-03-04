@@ -1,4 +1,4 @@
-name: Node.js Build
+name: Blog Build
 on:
   push:
     branches: [ master ]
@@ -33,7 +33,7 @@ jobs:
           repository: tiechui1994/note
           fetch-depth: 5
           ref: master
-          path: static/md/note
+          path: static/markdown
           persist-credentials: false
 
       - name: Restore Cache
@@ -53,6 +53,13 @@ jobs:
           fi
         shell: bash
 
+      - name: Deploy vercel [note]
+        timeout-minutes: 30
+        if: ${{ success() }}
+        run: |
+          npm i axios-retry --save-dev
+          node src/deploy/vercel.js --project note --domain blog --token ${{secrets.VERCEL}}
+
       - name: Store Cache
         uses: actions/cache@v3
         if: ${{ success() && steps.install.outputs.store == 1 }}
@@ -60,7 +67,3 @@ jobs:
           path: ./node_modules
           key: ${{github.repository}}-vercel_note_blog
 
-      - name: Deploy vercel [note]
-        timeout-minutes: 30
-        if: ${{ success() }}
-        run: node src/deploy/vercel.js --project note --domain blog --token ${{secrets.VERCEL}}
