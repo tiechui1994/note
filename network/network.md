@@ -1,4 +1,4 @@
-# NetworkManager
+# Linux 下网络管理器
 
 ## 网口配置 
 
