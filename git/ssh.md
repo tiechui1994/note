@@ -24,6 +24,9 @@ Host host
     ProxyCommand command 
     ServerAliveInterval interval
     ServerAliveCountMax count
+    ControlMaster auto | autoask | yes | ask | no
+    ControlPath ~/.ssh/master-%r@%h:%p
+    ControlPersist  0 | yes | no 
 ```
 
 `Host host`: 主机匹配, 其中 host 可以使用正则表达式.
@@ -102,6 +105,18 @@ Host test
 
 `ServerAliveCountMax` 设置客户端可以发送 keepalive 消息的数量, 而客户端不会从服务器接收任何消息. 当达到此阈值时, 客户
 端将终止会话.
+
+---
+
+`ControlMaster`, 允许通过单个网络连接共享多个会话. 当设置为 yes 时, ssh 连接将共享使用 `ControlPath` 参数指定的套接字连接. 当中设置为 
+no 时候, 则每次都会使用 `ControlPath` 参数指定的套接字去建立新的连接. 设置为 ask, 表示每次都会询问. 当设置为 auto, autoask 时, 允许多
+路复用. **共享连接时, 只需要在第一次输入密码, 后续连接可以共享时则不需要再输入密码.**
+
+`ControlPath`, 指定用于共享连接的控制套接字路径. `%h` 表示目标主机, `%p`, 表示目标端口号, `%r` 表示目标用户。
+
+`ControlPersist`, 当与 ControlMaster 一起使用时, 指定 Master 连接在初始客户端连接关闭后在后台保持打开状态(等待将来的客户端连接). 如果
+设置为 no, 则 Master 连接将不会置于后台, 并在初始客户端连接关闭后立即关闭. 如果设置为 yes 或 0, 则 Master 连接将无限期地保留在后台(直到
+通过诸如 `ssh -O exit` 之类的机制被杀死或关闭). 设置的数值是以秒为单位的时间. 支持时间格式配置, 例如 `2h, 1d 等`
 
 ## 与 ssh 相关命令
 
