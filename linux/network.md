@@ -1,4 +1,4 @@
-# 网络
+# linux 网络工具(dig, nslookup, host, netstat, ss, telnet, nc)
 
 ## DNS 解析
 
