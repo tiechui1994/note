@@ -24,6 +24,10 @@ v2ray-plugin:
 - path, 路径
 - mux, websocket 模式下是否启用多路复用
 - headers, 请求 header
+
+obfs:
+- mode: tls
+- host, 伪装域名
 ```
 
 
