@@ -4,13 +4,28 @@
 
 ### ss 类型
 
-- server, 代理节点的 IP 地址
+- server, 服务器 IP 地址
 
-- port, SS 服务器监听的端口
+- port, 服务器监听的端口
 
-- password, SS 服务器设置的连接密码
+- password, 服务器设置的连接密码
 
 - udp, 是否启用UDP
+
+- plugin: v2ray-plugin, obfs
+
+- plugin-opts: plugin 配置参数, map
+
+```
+v2ray-plugin:
+- mode: websocket | quic
+- tls, 是否启用 tls
+- host, 伪装域名
+- path, 路径
+- mux, websocket 模式下是否启用多路复用
+- headers, 请求 header
+```
+
 
 ### vmess 类型
 
