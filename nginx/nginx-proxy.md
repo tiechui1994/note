@@ -71,9 +71,8 @@ server {
 proxy_pass URL;
 ```
 
-作用上下文: http, server, location
+作用上下文: location, if in location, limit_except
 
-> 该指令可以在location, if in location, limit_except 中进行配置.
 
 设置上游服务器的协议和地址, 还可以设置可选的URI以定义本地路径和上游服务器的映射关系. 可以设置的协议是"http"或"https". 
 而地址既可以使用域名或者IP地址加端口号(可选)的形式来定义:
@@ -155,13 +154,15 @@ server {
 
 #### proxy_pass_request_headers(请求)
 
-`proxy_pass_request_headers` 用于配置是否将 `原始请求的Header`发送给上游服务器.
+`proxy_pass_request_headers` 用于配置是否将 `原始请求的Header` 发送给上游服务器.
 
 ```
 proxy_pass_request_headers on|off;
 ```
 
-> 默认是开启(on), 该指令可以在http块, server块,或者location块中进行配置.
+作用上下文: http, server, location
+
+> 默认是开启(on).
 
 
 #### proxy_set_header(请求)
@@ -192,39 +193,42 @@ proxy_set_header FIELD VALUE;
 
 #### proxy_pass_header, proxy_hide_header (响应)
 
-默认情况下, nginx不会将`上游服务器`的响应中的标头字段"Date","Server","X-Pad"和"X-Accel-..."传递给客户端.`proxy_hide_header`
-设置了不会传递的其他字段. 相反, 如果需要允许传递上面的字段, 则可以使用`proxy_pass_header`指令.
+默认情况下, nginx不会将 `上游服务器` 的响应中的标头字段 "Date", "Server", "X-Pad" 和 "X-Accel-..." 传递给客户端.
+`proxy_hide_header` 可以设置其他的不要传递给客户端字段的名称. 
 
-> 言外之意是 `proxy_pass_header` 的值只能是"Date","Server","X-Pad"和"X-Accel-..."当中一个. 
+相反, 如果需要允许传递相应的字段给客户端, 则可以使用 `proxy_pass_header` 指令.
+
+> 言外之意是 `proxy_pass_header` 的值只能是 "Date", "Server", "X-Pad" 和 "X-Accel-..." 当中一个. 
 
 ```
 prox_pass_header FIELD;
 proxy_hide_header FIELD;
 ```
 
+作用上下文: http, server, location
+
 *FIELD*是需要发送的头域.
-
-> 该指令可以在http块, server块,或者location块中进行配置.
-
 
 #### proxy_ignore_headers(响应)
 
-`proxy_ignore_headers`设置不处理`上游服务器`返回的指定响应头.
+`proxy_ignore_headers` 设置忽略 `上游服务器` 返回的指定响应头.
 
 ```
 proxy_ignore_headers FIELD ...;
 ```
+
+作用上下文: http, server, location
 
 *FIELD*是要设置的HTTP响应头的头域. 可选的值包含:"X-Accel-Redirect","X-Accel-Expires","X-Accel-Limit-Rate" 
 "X-Accel-Buffering","X-Accel-Charset","Expires","Cache-Control","Set-Cookie","Vary".
 
 如果不被取消, 这些头部的处理可能产生下面的结果:
 
-- "X-Accel-Expires","Expires","Cache-Control"和"Set-Control",设置响应缓存的参数;
-- "X-Accel-Redirect",执行到指定URI的内部跳转
-- "X-Accel-Limit-Rate",设置响应到客户端的传输速率限制
-- "X-Accel-Buffering",启动或者关闭响应缓冲
-- "X-Accel-Charset",设置响应所需的字符集
+- "X-Accel-Expires", "Expires", "Cache-Control" 和 "Set-Control",设置响应缓存的参数;
+- "X-Accel-Redirect", 执行到指定URI的内部跳转
+- "X-Accel-Limit-Rate", 设置响应到客户端的传输速率限制
+- "X-Accel-Buffering", 启动或者关闭响应缓冲
+- "X-Accel-Charset", 设置响应所需的字符集
 
 
 上述的header之间关系:
@@ -259,10 +263,9 @@ proxy_ignore_headers (上游服务器->nginx, 可以忽略的响应头, 可选�
 proxy_pass_request_body on|off;
 ```
 
-默认是开启(on).
+作用上下文: http, server, location
 
->该指令可以在http块, server块,或者location块中进行配置.
-
+> 默认是开启(on).
 
 #### proxy_set_body
 
@@ -272,10 +275,9 @@ proxy_pass_request_body on|off;
 proxy_set_body VALUE;
 ```
 
+作用上下文: http, server, location
+
 *VALUE*, 更改的信息, 支持使用文本, 变量或者变量的组合.
-
-
----
 
 
 #### proxy_connect_timeout
@@ -322,10 +324,10 @@ proxy_redirect default;
 proxy_redirect off;
 ```
 
-REDIRECT匹配Location头域值的字符串, `支持变量使用和正则表达式`.
-REPLACE用于替换REDIRECT变量内容的字符串, `支持变量的使用`.
+作用上下文: http, server, location
 
-> 作用于 http, server, location
+REDIRECT 匹配 Location 头域值的字符串, `支持变量使用和正则表达式`.
+REPLACE 用于替换 REDIRECT 变量内容的字符串, `支持变量的使用`.
 
 `proxy_redirect` 设置上游服务器"Location"响应头和"Refresh"响应头的替换文本. 假设上游服务器返回的响应头是:
 
@@ -383,7 +385,10 @@ proxy_redirect http://www.example.com/ /;
 proxy_cookie_domain off;
 proxy_cookie_domain DOMAIN REPLACE;
 ```
-*DOMAIN*和*REPLACE*配置字符串, 以及`domain`属性中起始的点将被忽略. 匹配过程大小写不敏感.
+
+作用上下文: http, server, location
+
+*DOMAIN* 和 *REPLACE*配置字符串, 以及`domain`属性中起始的点将被忽略. 匹配过程大小写不敏感.
 
 `proxy_cookie_domain`设置`Set-Cookie`响应头的`domain`属性的替换文本. 假设上游服务器返回的"Set-Cookie"响应头包
 含有属性"domain=localhost", 那么指令`proxy_cookie_domain localhost example.org`将改变这个属性改为"domain=example.org". 
