@@ -78,18 +78,23 @@ nginx指定文件路径的方式: root 和 alias
 
 - root
 
+语法:
 ```
-语法: root path
-默认值: root html
-可以配置的位置: http, server, location, if
+root path;
 ```
+
+作用上下文: http, server, location, if
+
+> 默认值: root html;
 
 - alias
 
+语法:
 ```
-语法: root path
-可以配置的位置: location
+root path;
 ```
+
+作用上下文: location
 
 ### alias 与 root 区别
 
@@ -126,13 +131,13 @@ location ^~ /t/ {
 按顺序检查文件是否存在, 返回第一个找到的文件 或 文件夹(结尾加"/"表示为文件夹), 如果所有的文件或文件夹都找不到, 会进行
 一个内部重定向到最后一个参数.
 
-```
 语法:
+```
 try_files file ... uri;     
 try_files file ... =code;
-     
-配置的位置: server, location
 ```
+
+作用上下文: server, location
 
 > **只有最后一个参数可以引起一个内部重定向**, 之前的参数都只设置内部 URI 的指向. 最后一个参数是回退 URI 且必须存在,  
 否则会出现内部500错误. 
@@ -199,17 +204,59 @@ server {
 
 指定默认文档的文件名, 可以在文件名处使用变量. 如果指定多个文件, 按照指定的顺序逐个查找. 可以在列表末尾加上一个绝对路径名的文件.
 
+语法:
 ```
-语法: 
 index file [file...];
-
-配置的位置: http, server, location
 ```
 
-默认值: `index index.html`
+作用上下文: http, server, location
+
+案例:
+```
+# 默认值
+index index.html
+
+index index.$geo.html  index.0.html  /index.html;
+```
+
+## listen
 
 ```
-index  index.$geo.html  index.0.html  /index.html;
+listen address[:port] [default_server] [ssl] [http2] [backlog=number] [rcvbuf=size] [sndbuf=size] 
+[bind] [ipv6only=on|off] [reuseport];
+
+listen port [default_server] [ssl] [http2] [backlog=number] [rcvbuf=size] [sndbuf=size] 
+[bind] [ipv6only=on|off] [reuseport];
+
+
+listen unix:path [default_server] [ssl] [http2] [backlog=number] [rcvbuf=size] [sndbuf=size] 
+[bind];
+```
+
+作用上下文: server
+
+default_server, 将使 server 成为 address:port 的默认 server. 如果所有的指令都没有 default_server 参数, 那么
+将 address:port 的第一个 server 成成为默认 server.
+
+ssl, 允许指定在此端口上接受的所有连接都应在 SSL 模式下工作. 这允许为处理 HTTP 和 HTTPS 请求的服务器提供更紧凑的配置.
+
+http2, 将端口配置为接受 HTTP/2 连接. 通常, 为了使它起作用, 还应该指定 ssl 参数. 但 nginx 也可以配置为接受没有 SSL 
+的 HTTP/2 连接.
+
+backlog=number 在 listen() 调用中设置 backlog 参数, 以限制挂起连接队列的最大长度. 默认情况下, backlog 在 FreeBSD, 
+DragonFly BSD 和 macOS 上设置为 -1, 在其他平台上设置为 511.
+
+rcvbuf=size, sndbuf=size, TCP 连接的接收和发送缓冲区大小.
+
+案例:
+
+```
+listen *:80;
+
+listen 127.0.0.1:8000;
+listen 127.0.0.1;
+listen 8000;
+listen *:8000;
 ```
 
 ## client 相关指令
