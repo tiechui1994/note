@@ -195,7 +195,6 @@ server {
 }
 ```
 
-
 ## index
 
 指定默认文档的文件名, 可以在文件名处使用变量. 如果指定多个文件, 按照指定的顺序逐个查找. 可以在列表末尾加上一个绝对路径名的文件.
@@ -211,4 +210,109 @@ index file [file...];
 
 ```
 index  index.$geo.html  index.0.html  /index.html;
+```
+
+## client 相关指令
+
+### client_max_body_size
+
+客户端 request body 的最大值. 如果 request body 超过该配置值, 将向客户端返回 41 (请求体太大) 错误. 
+
+```
+client_max_body_size SIZE;
+```
+
+作用上下文: http, server, location
+
+注: 如果将 SIZE 设置为 0, 表示禁止对客户端 request body 大小检查.
+
+默认:
+
+```
+client_max_body_size 1m;
+```
+
+### client_body_buffer_size 
+
+设置读取 request body 的缓冲区大小. 如果 request body 大小超过缓冲区, 则将整个 request body 或其部分写入到临时
+文件. 默认情况下, 缓冲区打钱等于两个内存页. 
+
+```
+client_body_buffer_size SIZE;
+```
+
+作用上下文: http, server, location
+
+例子:
+
+```
+client_max_body_size 16k;
+client_max_body_size 8k;
+```
+
+### client_body_timeout 
+
+定义读取客户端 request body 的超时时间. **超时仅仅两次连续读取操作之间的时间间隔设置, 而不是真的整个 request body 
+的传输.** 
+
+```
+client_body_timeout TIME;
+```
+
+作用上下文: http, server, location
+
+默认:
+
+```
+client_body_timeout 60s;
+```
+
+### client_header_buffer_size 
+
+设置读取客户端请求 Header 的缓冲区大小. 对于大多数请求, 1K 字节的缓冲区就足够了. 但是, 如果请求包含长 cookie, 则
+它可能不适合 1k. 
+
+```
+client_header_buffer_size SIZE;
+```
+
+作用上下文: http, server
+
+默认:
+
+```
+client_header_buffer_size 1k;
+```
+
+### client_header_timeout
+
+定义读取客户端请求 Header 的超时时间. 如果客户端没有在这段时间内传输整个 Header, 请求将终止并出现 408(请求超时) 错
+误.
+
+```
+client_header_timeout TIME;
+```
+
+作用上下文: http, server
+
+默认:
+
+```
+client_header_timeout 60s;
+```
+
+### keepalive_timeout 
+
+```
+keepalive_timeout TIMEOUT [header_timeout];
+```
+
+作用上下文: http, server, location
+
+第一个参数设置一个超时时间, 在此期间 `keep-alive` 客户端连接将在服务端保持打开状态. 0 表示禁止保持 `keep-alive` 
+客户端连接. 第二个参数在 `Keep-Alive:timeout=time` 响应 Header 中设置一个值. 
+
+默认:
+```
+keepalive_timeout 75s;
 ```
