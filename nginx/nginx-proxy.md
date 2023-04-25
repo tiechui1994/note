@@ -2,11 +2,13 @@
 
 #### resolver
 
-`resolver`用于指定DNS服务器的IP地址. DNS服务器主要工作是进行域名解析, 将域名映射为对应的IP地址. 语法结构如下:
+`resolver` 用于设置DNS服务器的IP地址. DNS服务器主要工作是进行域名解析, 将域名映射为对应的IP地址. 语法如下:
 
 ```
-resolver ADDRESS ... [valid=TIME];
+resolver ADDRESS ... [valid=TIME] [ipv4=on|off] [ipv6=on|off];
 ```
+
+作用上下文: http, server, location
 
 *ADDRESS*, DNS服务器的IP地址. 如果不指定端口号, 默认使用53端口号.
 
@@ -16,7 +18,6 @@ resolver ADDRESS ... [valid=TIME];
 
 
 例子:
-
 ```
 resolver 127.0.0.1 [::1]:5353 valid=30s;
 ```
@@ -24,20 +25,29 @@ resolver 127.0.0.1 [::1]:5353 valid=30s;
 
 #### resolver_timeout
 
-`resolver_timeout`用于设置DNS服务器域名解析超时时间.
+`resolver_timeout` 用于设置DNS服务器域名解析超时时间.
 
 ```
 resolver_timeout TIME;
 ```
 
+作用上下文: http, server, location
+
+例子:
+```
+resolver_timeout 30s;
+```
+
 
 #### proxy_pass
 
-`proxy_pass`用于设置代理服务器的协议和地址, `它不仅仅用于nginx服务器的代理服务, 更主要的是用于反向代理服务`
+`proxy_pass` 用于设置代理服务器的协议和地址, `它不仅仅用于nginx服务器的代理服务, 更主要的是用于反向代理服务`
 
 ```
 proxy_pass URL;
 ```
+
+作用上下文: location, if in location, limit_except
 
 *URL*, 即为设置的 `代理服务器协议和地址`. 在代理服务器配置当中, 该指令的设置相对固定.
 
@@ -45,10 +55,10 @@ proxy_pass URL;
 proxy_pass http://$http_host$request_uri;
 ```
 
-其中, 代理服务器协议设置为HTTP,$http_host和$request_uri两个变量是NGINX配置支持的用于自动获取主机和URI的变量.
+其中, 代理服务器协议设置为 HTTP, $http_host 和 $request_uri 两个变量是 NGINX 配置支持的用于自动获取主机和URI的变量.
 
 
-案例展示:
+案例:
 
 ```
 server {
