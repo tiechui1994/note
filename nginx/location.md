@@ -221,6 +221,7 @@ index index.$geo.html  index.0.html  /index.html;
 
 ## listen
 
+语法:
 ```
 listen address[:port] [default_server] [ssl] [http2] [backlog=number] [rcvbuf=size] [sndbuf=size] 
 [bind] [ipv6only=on|off] [reuseport];
@@ -257,6 +258,47 @@ listen 127.0.0.1:8000;
 listen 127.0.0.1;
 listen 8000;
 listen *:8000;
+```
+
+## error_page
+
+定义指定错误显示的 URI. uri 值可以包含变量.
+
+语法:
+```
+error_page code ... [=[responseCode]] uri;
+```
+
+作用上下文: http, server, location, if in location
+
+`=[responseCode]`, 可以修改响应的错误码(当 uri 是本地 location, responseCode 缺省值为200, 当 uri 是一个 
+http 链接, responseCode 缺省值为302). 默认情况下, 响应错误码不会被修改.
+
+案例1:
+
+```
+# 定义 404, 50x 的错误码 uri
+error_page 404             /404.html;
+error_page 500 502 503 504 /50x.html;
+```
+
+这会导致内部重定向到指定的 uri, 并将客户端请求方法更改为 "GET" (对于 "GET" 和 "HEAD" 以外的所有方法).
+
+
+案例2:
+```
+# 将 50x 的响应错误码修改为 200
+error_page 500 502 503 504 =200 /50x.html;
+```
+
+案例3:
+```
+# 重定向到命名 location
+error_page 404 =200 @fallback;
+
+location @fallback {
+    proxy_pass http://backend;
+}
 ```
 
 ## client 相关指令
