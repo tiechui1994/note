@@ -1,4 +1,4 @@
-## MySQL命令 - GRANT
+## MySQL命令 - GRANT, REVOKE, CREATE USER
 
 ### grant
 
@@ -128,7 +128,6 @@ user:
     host_name 可以使用主机名或IP地址. 并且主机名和IP地址可以使用 '%' 和 '_' 通配符(与LIKE运算匹配相同)
     host_name使用子网掩码, 格式是 host_ip/netmask, 其中host_ip 是网络地址, 例如 '192.168.10.0/255.255.255.0'
 ```
-
 
 ### user
 
