@@ -15,7 +15,7 @@ GRANT PROXY ON user
       [WITH GRANT OPTION]
 
 privilege_type:
-    ALL [PRIVILLEGES]
+    ALL PRIVILLEGES
     INSERT   levels: global, database, table, column
     UPDATE   levels: global, database, table, column
     SELECT   levels: global, database, table, column
@@ -64,22 +64,24 @@ resource_option:
 
 column_list, 只有当 `privilege_type` 是**column级别**的权限的时候,才可能会出现.
 
-object_type, 默认是 `TABLE`
+object_type, 默认是 `TABLE`.
 
 
 例1: 数据库级别权限
 ```
-GRANT ALL ON db.* TO 'username'@'192.168.1.1.' WITH GRANT OPTION;
+GRANT ALL PRIVILLEGES ON db.* TO 'username'@'192.168.1.1.' WITH GRANT OPTION;
+
+GRANT ALL PRIVILLEGES ON db.* TO 'username'@'192.168.1.1.' WITH IDENTIFIED BY '1234567';
 ```
 
 例2: 带限定性质权限
 ```
-GRANT ALL ON db.* TO 'username'@'192.168.1.1.' WITH MAX_USER_CONNECTIONS 128;
+GRANT ALL PRIVILLEGES ON db.* TO 'username'@'192.168.1.1.' WITH MAX_USER_CONNECTIONS 128;
 ```
 
 例3: 数据库管理员
 ```
-GRANT ALL ON * TO 'admin'@'127.0.0.1' WITH GRANT OPTION;
+GRANT ALL PRIVILLEGES ON * TO 'admin'@'127.0.0.1' WITH GRANT OPTION;
 ```
 
 ### reovke
@@ -91,11 +93,11 @@ REVOKE privilege_type [(column_list)], privilege_type [(column_list)] ...
     ON [object_type] privilege_level
     FROM user, user ...
 
-REVOKE ALL [PRIVILLEGES], GRANT OPTION
+REVOKE ALL PRIVILLEGES, GRANT OPTION
     FROM user, user ....
 
 privilege_type:
-    ALL [PRIVILLEGES]
+    ALL PRIVILLEGES
     INSERT   levels: global, database, table, column
     UPDATE   levels: global, database, table, column
     SELECT   levels: global, database, table, column
@@ -128,6 +130,13 @@ user:
     host_name 可以使用主机名或IP地址. 并且主机名和IP地址可以使用 '%' 和 '_' 通配符(与LIKE运算匹配相同)
     host_name使用子网掩码, 格式是 host_ip/netmask, 其中host_ip 是网络地址, 例如 '192.168.10.0/255.255.255.0'
 ```
+
+案例:
+
+```
+REVOKE ALL PRIVILLEGES ON '*'.'*' FROM 'admin'@'%';
+```
+
 
 ### user
 
