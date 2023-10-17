@@ -5,9 +5,9 @@
 binlog写入逻辑比较简单: 事务执行过程中, 先把日志写入 binlog cache, 事务提交时, 再将 binlog cache 写入到 binlog 文
 件中.
 
-**一个事务的 binlog 是不能被拆分的**, 因此不论这个事务多大, 也要确保一次性写入. 
+**一个事务的 binlog 是不能被拆分的, 因此不论这个事务多大, 也要确保一次性写入.** 
 
-系统给 binlog cache分配了一片内存, 每个线程一个, 参数 binlog_cache_size 用于控制单个线程内 binlog cache 所占内存
+系统给 binlog cache 分配了一片内存, 每个线程一个, 参数 binlog_cache_size 用于控制单个线程内 binlog cache 所占内存
 的大小. 如果超过了这个参数规定的大小, 就要暂存到磁盘.
 
 事务提交的时候, 执行器把 binlog cache 里的完整事务写入到 binlog 中, 并清空 binlog cache.
@@ -16,9 +16,9 @@ binlog写入逻辑比较简单: 事务执行过程中, 先把日志写入 binlog
 
 从图中看到, 每个线程都有自己的 binlog cache, 但是公用一份 binlog 文件.
 
-1)图中的write, 指的是把binlog cache写入到文件系统的page cache, 并没有把数据持久化到磁盘, 因此速度比较快.
+a) 图中的 write, 指的是把binlog cache写入到文件系统的page cache, 并没有将数据持久化到磁盘, 因此速度比较快.
 
-2)图中的fsync, 将数据持久化到磁盘的操作. 一般情况下, fysnc 才占用磁盘的 IOPS.
+b) 图中的 fsync, 将数据持久化到磁盘的操作. 一般情况下, fysnc 才占用磁盘的 IOPS.
 
 write 和 fsync 的时机, 是参数 sync_binlog 控制的:
 
@@ -35,7 +35,7 @@ write 和 fsync 的时机, 是参数 sync_binlog 控制的:
 
 ### redo log 写入时机
 
-事务在执行过程中, 生成的 redo log 是要写到 redo log buffer 的.
+事务在执行过程中, 生成的 redo log 是要写到 redo log buffer(全局共享的 `innodb_buffer_pool_size` 参数控制)的.
 
 在 redo log 持久化过程中, 会存在三个状态:
 
@@ -45,7 +45,7 @@ b) 写入到磁盘(write), 但没有持久化(fsync), 物理上是在文件系�
 
 c) 持久化到磁盘, 物理上是在磁盘当中.
 
-redo log 在写入到 redo log buffer 和 系统 page cache 是很快的, 但是持久化到磁盘的速度要慢一些.
+redo log 在写入到 redo log buffer 和系统 page cache 是很快的, 但是持久化到磁盘的速度要慢一些.
 
 为了控制 redo log 的写入策略, InnoDB 提供了 innodb_flush_log_at_trx_commit 参数, 它有三种取值:
 
@@ -71,9 +71,16 @@ b) **另一种是, 并行的事务提交的时候, 顺带将这个事务的 redo
 按照这个参数的逻辑, 事务B要把 redo log buffer 里的日志全部持久化到磁盘. 这个时候, 就会带上事务A在 redo log buffer 里
 的日志一起持久化到磁盘.
 
+### 两阶段提交
+
+在 InnoDB 的两阶段提交中, 不管是 redo log 还是 binlog, 都需要确切地将数据写入磁盘中, 而不是系统 page cache.
+
+![image](/images/mysql_log_order.png)
+
+
 ### 组提交
 
-**在事务的两阶段提交中, 时序上先进行redo log prepare, 然后写入 binlog, 最后是 redo log commit**. 
+**在事务的两阶段提交中, 时序上先进行 redo log prepare, 然后写入 binlog, 最后是 redo log commit**. 
 
 如果将 innodb_flush_log_at_trx_commit 设置为1, 那么在 redo log prepare 阶段就要持久化一次, 因为崩溃恢复逻辑依赖
 于 redo log prepare 日志, 再加上 binlog 来恢复的. 
@@ -87,31 +94,31 @@ page cache 中就够了.
 现在有个疑问, 如果看到MySQL的TPS是2w/s的话, 每秒就会有4w次刷盘. 但是, 使用工具测试出来, 磁盘能力也就在2w左右, 怎么能
 实现2w的TPS?
 
-这个问题, 与组提交机制相关.
+解释这个问题, 与组提交(group commit)机制相关.
 
-日志逻辑序列号(LSN), 是单调递增的, 用来对应 redo log的一个个写入点. 每次的写入长度为 length 的 redo log, LSN 的值
-就会加上 length.
+先介绍日志逻辑序列号(log sequence number, LSN) 概念, LSN 是单调递增的, 用来对应 redo log 的一个个写入点. 每次的
+写入长度为 length 的 redo log, LSN 的值就会加上 length.
 
-LSN会写入到InnoDB的数据页中, 来确保数据页不会被多次执行重复的redo log. 
+LSN 也会写入到 InnoDB 的数据页中, 来确保数据页不会被多次执行重复的 redo log. 
 
-如下图所示, 三个并发事务(trx1, trx2, trx3)在 prepare 阶段, 都写完了 redo log buffer, 持久化到磁盘的过程, 对应的
-LSN分别是 50, 120, 160.
+如下图所示, 3 个并发事务(trx1, trx2, trx3)在 prepare 阶段, 都写完了 redo log buffer, 持久化到磁盘的过程, 对应的
+LSN 分别是 50, 120, 160.
 
 ![image](/images/mysql_log_redolog_groupcommit.png)
 
-可以看到:
+从图中可以看到:
 
-1.trx1是第一个到达, 会被选为这组的leader,
+a) trx1 是第一个到达, 它会被选为这组的leader,
 
-2.等trx1要开始写盘的时候, 这个组里面已有三个事务,这个时候LSN也变成了160
+b) 等 trx1 要开始写盘的时候, 这个组里面已经有了三个事务(trx1, trx2, trx3), 这个时候LSN也变成了160.
 
-3.trx1去写入磁盘的时候, 带上的是LSN=160, 因此等trx1返回时, 所有LSN小于等于160的redo log, 都已经被持久化到磁盘.
+c) trx1 去写入磁盘的时候, 带上的是LSN=160, 因此等trx1返回时, 所有 LSN 小于等于160的 redo log, 都已经被持久化到磁盘.
 
-4.这时候trx2和trx3就可以直接返回了.
+d) 此时 trx2 和 trx3 就可以直接返回了.
 
-所以,一次组提交里面, 组成员越多, 节约磁盘的IOPS的效果就越好. 对于单线程压测, 只能是一个事物对应一次持久化操作了.
+所以, 一次组提交里面, 组成员越多, 节约磁盘的IOPS的效果就越好. 对于单线程压测, 只能是一个事物对应一次持久化操作了.
 
-并发场景下, 第一个事务写完redo log buffer之后, 接下这个 fsync 越晚调用, 组员可能越多, 节约IOPS的效果就越好.
+并发场景下, 第一个事务写完 redo log buffer 之后, 接下这个 fsync 越晚调用, 组员可能越多, 节约IOPS的效果就越好.
 
 为了让一次 fsync 带的组员更多, MySQL进行了一次优化: 拖时间. 在进行两阶段提交时, 其过程:
  
@@ -121,7 +128,7 @@ MySQL的优化就是将 `写binlog` 拆分为2步骤:
 
 a) 先将 binlog 从 binlog cache 写入到系统的 page cache.
 
-b) 调用 fsync 持久化binlog.
+b) 调用 fsync 持久化 binlog.
 
 MySQL 为了让组提交效果更好, 把 redo log 做 fsync 的时间拖延到了 `binlog 写入系统 page cache` 之后, MySQL 的两阶段
 提交就变成了这样的:
