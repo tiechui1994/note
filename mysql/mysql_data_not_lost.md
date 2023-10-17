@@ -39,49 +39,49 @@ write 和 fsync 的时机, 是参数 sync_binlog 控制的:
 
 在 redo log 持久化过程中, 会存在三个状态:
 
-1)写入到 redo log buffer 中, 物理上是在 MySQL 进程内存中.
+1) 写入到 redo log buffer 中, 物理上是在 MySQL 进程内存中.
 
-2)写入到磁盘(write), 但是没有持久化(fsync), 物理上是在文件系统的 page cache 里.
+2) 写入到磁盘(write), 但没有持久化(fsync), 物理上是在文件系统的 page cache 里.
 
-3)持久化到磁盘, 物理上是在磁盘当中.
+3) 持久化到磁盘, 物理上是在磁盘当中.
 
 redo log 在写入到 redo log buffer 和 系统 page cache 是很快的, 但是持久化到磁盘的速度要慢一些.
 
 为了控制 redo log 的写入策略, InnoDB 提供了 innodb_flush_log_at_trx_commit 参数, 它有三种取值:
 
-1)设置为0, 表示每次事务提交时只把 redo log 写入到 redo log buffer 中.
+1) 设置为 0, 表示每次事务提交时只把 redo log 写入到 redo log buffer 中.
 
-2)设置为1, 表示每次事务提交时将redo log持久化到磁盘.
+2) 设置为 1, 表示每次事务提交时将 redo log 持久化到磁盘.
 
-3)设置为2, 表示每次事务提交时将redo log写入到系统的page cache.
+3) 设置为 2, 表示每次事务提交时将 redo log 写入到系统的 page cache.
 
-InnoDB 有一个后台线程, 每隔1秒, 就会把 redo log buffer 中的日志, 调用 write 写入到系统的page cache, 然后调用fsync
-持久化到磁盘. 间隔时间是由 innodb_flush_log_at_timeout 控制的.
+InnoDB 有一个后台线程, 每隔1秒, 就会把 redo log buffer 中的日志, 调用 write 写入到系统的 page cache, 然后调用fsync
+持久化到磁盘. 间隔时间是由 `innodb_flush_log_at_timeout` 控制的.
 
 注: 事务执行中间过程中的 redo log 是直接写入在 redo log buffer 中的, 这些 redo log 也会被后台线程一起持久化到磁盘.
 也就说, 一个没有提交的事务的redo log, 也是可能已经持久化到磁盘上的.
 
 除了后台线程的轮询操作外, 还有两种场景会将一个没有提交的事务的 redo log 持久化到磁盘:
 
-1)**一种是, redo log buffer占用的空间即将达到 innodb_log_buffer_size一半的时候, 后台线程会主动写盘**. 注意, 由
-于这个事务还没有提交, 所以这个写盘动作只是 write, 而没有调用 fsync, 也就是只留在了系统的page cache.
+1)**一种是, redo log buffer占用的空间即将达到 innodb_log_buffer_size 一半的时候, 后台线程会主动写盘**. 注意, 由
+于这个事务还没有提交, 所以这个写盘动作只是 write, 而没有调用 fsync, 也就是只留在了系统的 page cache.
 
-2)**另一种是, 并行的事务提交的时候, 顺带将这个事务的redo log buffer持久化到磁盘.** 假设一个事务A执行到一半, 已经写了
+2)**另一种是, 并行的事务提交的时候, 顺带将这个事务的 redo log buffer 持久化到磁盘.** 假设一个事务A执行到一半, 已经写了
 一些redo log到redo log buffer, 这个时候有另外一个线程的事务B提交, 如果 innodb_flush_kog_at_trx_commit=1, 那么
-按照这个参数的逻辑, 事务B要把 redo log buffer里的日志全部持久化到磁盘. 这个时候, 就会带上事务A在 redo log buffer里
+按照这个参数的逻辑, 事务B要把 redo log buffer 里的日志全部持久化到磁盘. 这个时候, 就会带上事务A在 redo log buffer 里
 的日志一起持久化到磁盘.
 
 ### 组提交
 
-在事务的两阶段提交中, 时序上先进行redo log prepare, 然后写入 binlog, 最后是 redo log commit. 
+**在事务的两阶段提交中, 时序上先进行redo log prepare, 然后写入 binlog, 最后是 redo log commit**. 
 
 如果将 innodb_flush_log_at_trx_commit 设置为1, 那么在 redo log prepare 阶段就要持久化一次, 因为崩溃恢复逻辑依赖
 于 redo log prepare 日志, 再加上 binlog 来恢复的. 
 
 每秒1次后台线程轮询刷盘, 再加上崩溃恢复, InnoDB 认为 redo log commit 的时候就不需要 fsync 了, 只会 write 到系统的
-page cache中就够了.
+page cache 中就够了.
 
-**通常所说 MySQL 的"双1"配置, 指的是sync_binlog和innodb_flush_log_at_trx_commit都设置为1. 也就是,一次完整的事
+**通常所说 MySQL 的"双1"配置, 指的是 sync_binlog 和 innodb_flush_log_at_trx_commit 都设置为1. 也就是,一次完整的事
 务提交前, 需要等待两次刷盘, 一次是redo log(prepare阶段), 一次是binlog**.
 
 现在有个疑问, 如果看到MySQL的TPS是2w/s的话, 每秒就会有4w次刷盘. 但是, 使用工具测试出来, 磁盘能力也就在2w左右, 怎么能
