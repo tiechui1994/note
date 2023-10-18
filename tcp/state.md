@@ -6,7 +6,7 @@ TCP的状态转换图:
 
 TCP 状态转换的两条主线:
 
-对客户端(也可以是服务器, 客户端主动打开链接, 服务器被动打开):
+对客户端(主动关闭连接方):
 
 ```
 CLOSED -> SYN_SENT -> ESTABLISHED -> FIN_WAIT_1 -> FIN_WAIT_2 -> TIME_WAIT -> CLOSED
@@ -15,7 +15,7 @@ CLOSED -> SYN_SENT -> ESTABLISHED -> FIN_WAIT_1 -> FIN_WAIT_2 -> TIME_WAIT -> CL
 > 注: 若客户端到达 FIN_WAIT_1, 它同时接收到服务器的FIN, ACK, 则它会直接跳过FIN_WAIT_2而到达
 TIME_WAIT状态
 
-对服务端:
+对服务端(被动关闭连接方:
 
 ```
 CLOSED -> LISTEN -> SYN_RCVD -> ESTABLISHED -> CLOSE_WAIT -> LAST_ACK -> CLOSED
@@ -42,14 +42,17 @@ ESTABLISHED - 表示 TCP 连接已经成功建立, 数据可以传送给用户;
 
 **FIN_WAIT_1** - 其实 FIN_WAIT_1 和 FIN_WAIT_2 两种状态的真正含义都是表示等待对方的 FIN 报文. 而这两种状态的区别
 是: FIN_WAIT_1 状态实际上是当 SOCKET 在 ESTABLISHED 状态时, 它想主动关闭连接, 向对方发送了 FIN 报文, 此时该 SOCKET 
-进入到 FIN_WAIT_1 状态. 而当对方回应 ACK 报文后, 则进入到 FIN_WAIT_2 状态. 当然在实际的正常情况下, 无论对方处于任
-何种情况下, 都应该马上回应 ACK 报文, 所以 FIN_WAIT_1 状态一般是比较难见到的, 而 FIN_WAIT_2 状态有时仍可以用 netstat 
-看到.
+进入到 FIN_WAIT_1 状态. 而当对方回应 ACK 报文后, 则进入到 FIN_WAIT_2 状态. 
+
+> 当然在实际的正常情况下, 无论对方处于任何种情况下, 都应该马上回应 ACK 报文, 所以 FIN_WAIT_1 状态一般是比较难见到的, 
+而 FIN_WAIT_2 状态有时仍可以用 netstat 看到.
 
 
-**FIN_WAIT_2** - 上面已经解释了这种状态的由来, 实际上 FIN_WAIT_2 状态下的 SOCKET 表示半连接, 即有一方调用close() 
-主动要求关闭连接. 注意: `FIN_WAIT_2 是没有超时的 (不像 TIME_WAIT 状态), 这种状态下如果对方不关闭(不配合完成 4 次挥手
-过程), 那这个 FIN_WAIT_2 状态将一直保持到系统重启, 越来越多的 FIN_WAIT_2 状态会导致内核崩溃.`
+**FIN_WAIT_2** - 上面已经解释了这种状态的由来, 实际上 FIN_WAIT_2 状态下的 SOCKET 表示半连接, 即有一方调用shutdown() 
+主动要求关闭连接. 
+
+>注: `FIN_WAIT_2 是没有超时的 (不像 TIME_WAIT 状态), 这种状态下如果对方不关闭(不配合完成 4 次挥手过程), 那这个 
+FIN_WAIT_2 状态将一直保持到系统重启, 越来越多的 FIN_WAIT_2 状态会导致内核崩溃.`
 
 
 **CLOSE_WAIT** - 表示正在等待关闭. 当对方 close() 一个 SOCKET 后发送 FIN 报文给自己, 你的系统毫无疑问地将会回应一
@@ -59,12 +62,6 @@ ESTABLISHED - 表示 TCP 连接已经成功建立, 数据可以传送给用户;
 看到.
 
 
-**CLOSING** - 这种状态在实际情况中应该很少见, 属于一种比较罕见的例外状态. 正常情况下, 当一方发送 FIN 报文后, 按理来说
-是应该先收到(或同时收到)对方的 ACK 报文, 再收到对方的 FIN 报文. 但是 CLOSING 状态表示一方发送 FIN 报文后, 并没有收到
-对方的 ACK 报文, 反而却也收到了对方的 FIN 报文. 什么情况下会出现此种情况呢? 那就是当双方几乎在同时 close() 一个 SOCKET 
-的话, 就出现了双方同时发送 FIN 报文的情况, 这时就会出现 CLOSING 状态, 表示双方都正在关闭 SOCKET 连接.
-
-
 **LAST_ACK** - 当被动关闭的一方在发送 FIN 报文后, 等待对方的 ACK 报文的时候, 就处于 LAST_ACK 状态. 当收到对方的 
 ACK 报文后, 也就可以进入到 CLOSED 可用状态了.
 
@@ -72,9 +69,15 @@ ACK 报文后, 也就可以进入到 CLOSED 可用状态了.
 **TIME_WAIT** - 等待足够的时间以确保远程 TCP 接收到连接中断请求的确认; 表示收到了对方的 FIN 报文, 并发送出了 ACK 报文.
 TIME_WAIT 状态下的 TCP 连接会等待 2*MSL (Max Segment Lifetime, 最大分段生存期, 指一个 TCP 报文在 Internet 上的
 最长生存时间. 每个具体的 TCP 协议实现都必须选择一个确定的 MSL 值, RFC 1122 建议是 2 分钟, 但 BSD 传统实现采用了 30 秒,
-Linux 可以 `cat /proc/sys/net/ipv4/tcp_fin_timeout` 看到本机的这个值), 然后即可回到 CLOSED 可用状态了. 
-如果 FIN_WAIT_1 状态下, 收到了对方同时带 FIN 标志和 ACK 标志的报文时, 可以直接进入到 TIME_WAIT 状态, 而无须经过 
+Linux 可以 `net.ipv4.tcp_fin_timeout` 设置该值), 然后即可回到 CLOSED 可用状态了. 
+
+> 如果 FIN_WAIT_1 状态下, 收到了对方同时带 FIN 标志和 ACK 标志的报文时, 可以直接进入到 TIME_WAIT 状态, 而无须经过 
 FIN_WAIT_2 状态.
+
+**CLOSING** - 这种状态在实际情况中应该很少见, 属于一种例外状态. 正常情况下, 当一方发送 FIN 报文后, 按理来说是应该
+先收到(或同时收到)对方的 ACK 报文, 再收到对方的 FIN 报文. 但是 CLOSING 状态表示一方发送 FIN 报文后, 并没有收到
+对方的 ACK 报文, 反而却也收到了对方的 FIN 报文. 什么情况下会出现此种情况呢? 那就是当双方几乎在同时 close() 一个 SOCKET 
+的话, 就出现了双方同时发送 FIN 报文的情况, 这时就会出现 CLOSING 状态, 表示双方都正在关闭 SOCKET 连接.
 
 ## 三次握手
 
@@ -97,17 +100,66 @@ CLOSED -> SYN_SENT -> ESTABLISHED
 
 ## 四次挥手
 
-- 一般状况:(4次)
+### 一般状况
 
-```
-主动方:
-ESTABLISHED -> FIN_WAIT_1 -> FIN_WAIT_2 -> TIME_WAIT -> CLOSED
+![image](https://cdn.xiaolincoding.com//mysql/other/18635e15653a4affbdab2c9bf72d599e.png)
 
-被动方:
-ESTABLISHED -> CLOSE_WAIT -> LASK_ACK -> CLOSED
-```
+a) 客户端主动调用关闭连接函数, 会发送 FIN 报文. FIN 表示客户端不会再发送数据了, 进入 FIN_WAIT_1 状态.
 
-- 双方基本同时关闭:(4次)
+b) 服务端收到 FIN 报文, 然后立即回复一个 ACK 确认报文, 此时服务端进入 CLOSE_WAIT 状态. 收到 FIN 报文后, TCP 协
+议栈会插入一个文件结束符EOF到接收缓冲区中, 服务端应用程序通过 read() 调用来感知这个 FIN 包, **这个 EOF 会放在已排队
+等候其他已接收收据之后, 因此必须要继续 read 接收缓冲区已接收的数据.**
+
+c) 客户端收到服务端的 ACK 包后, 进入 FIN_WAIT_2 状态.
+
+d) 服务端在 read 数据时, 最后必然会读到 EOF, 接着**read() 返回0, 此时, 如果服务端应用程序有数据要发送, 就发完数
+据后才调用关闭连接的函数, 如果服务端应用程序没有数据要发送, 直接调用关闭连接的函数. 这时服务端就会发送一个 FIN 包,
+这个 FIN 报文代表服务端不会再发送数据了**, 之后服务端进入 LAST_ACK 状态.
+
+e) 客户端收到服务端的 FIN 包, 并发送一个 ACK 包给服务端, 此时客户端进入 TIME_WAIT 状态.
+
+f) 服务端收到 ACK 包后, 进入最后的 CLOSE 状态.
+
+g) 客户端经过 2MSL 时间后, 也会进入 CLOSE 状态.
+
+
+### 粗暴关闭 vs 优雅关闭
+
+关于关闭连接函数, 有两种:
+
+close 函数, 同时关闭 socket 的发送方向和读取方向, 也就是 socket 不再有发送和接收的能力. 如果有多线程/进程共享同一个 socket,
+如果有一个进程调用了 close 只是让 socket 引用计数-1, 并不会导致 socket 不可用, 同时也不会发送 FIN 报文, 其他进程
+还是可以正常读写该 socket, 直到引用计数变为 0, 才会发送 FIN 报文.
+
+
+shutdown 函数, 可以指定 socket 只关闭发送方向而不关闭读取方向, 也就是 socket 不再有发送数据的能力, 但还是具有接收
+数据的能力. 如果有多线程/进程共享同一个 socket, shutdown 不管引用计数, 直接使得该 socket 不可用, 然后发送 FIN 报
+文. 如果其他进程试图使用该 socket, 将会受到影响.
+
+
+> 如果客户使用 close 函数关闭连接, 在 TCP 四次挥过程中, 如果收到了服务端发送的数据, 由于客户端已经不再具有发送和接收
+数据的能力, 因此客户端的内核会回 RST 报文给服务端, 然后内核释放连接, 这时不会经历完完整的 TCP 四次挥手, 因此, 调用 
+close 是粗暴的关闭.
+
+![image](https://cdn.xiaolincoding.com//mysql/other/3b5f1897d2d74028aaf4d552fbce1a74.png)
+
+
+服务端收到 RST 报文后, 内核也会立即释放连接, 当应用程序再次发起 read 或 write 操作时, 就能感知到这个连接已经被释放
+了:
+
+- 如果是 read 操作, 会返回 RST 的报错, 也就是常见的 Connection reset by peer.
+
+- 如果是 write 操作, 程序产生 SIGPIPE 信息, 应用层代码可以捕获并处理信号. 如果不处理, 默认情况下进程会终止, 异常退出.
+(在 Go 当中, 也就是常见的 broken pipe)
+
+
+> shutdown 函数可以指定只关闭发送方向而不关闭读取方向, 所以即便是在 TCP 四次挥手过程中, 如果收到了服务端发送的数据, 客
+户端也是可以正常读取到该数据的, 然后经历完整的 TCP 四次挥手. 因此, 调用 shutdown 是优雅关闭.
+
+![image](https://cdn.xiaolincoding.com//mysql/other/71f5646ec58849e5921adc08bb6789d4.png)
+
+
+### 双方基本同时关闭:(4次)
 
 当双方同时断开连接时, 都会主动发送 `FIN`. 
 
@@ -115,9 +167,8 @@ ESTABLISHED -> CLOSE_WAIT -> LASK_ACK -> CLOSED
 ESTABLISHED -> FIN_WAIT_1 -> CLOSING -> TIME_WAIT -> CLOSED
 ```
 
-- 特殊状况:(3次)
+### 实际当中的连接关闭
 
-当主动方准备断开连接时, 被动方刚好数据传输完毕(但是未发送FIN). 此时被动方在接收到`FIN`后, 回复`FIN+ACK`
 
 ```
 主动方:
