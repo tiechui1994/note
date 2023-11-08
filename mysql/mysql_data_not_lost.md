@@ -73,14 +73,40 @@ b) **另一种是, 并行的事务提交的时候, 顺带将这个事务的 redo
 
 ### 两阶段提交
 
-在 InnoDB 的两阶段提交中, 不管是 redo log 还是 binlog, 都需要确切地将数据写入磁盘中, 而不是系统 page cache.
+在 InnoDB 的两阶段提交中, 不管是 redo log 还是 binlog, 都需要确切地将数据写入磁盘中(不是系统 page cache)
 
-![image](/images/mysql_log_order.png)
+Prepare 阶段: InnoDB 将回滚段设置为 prepare 状态; 将 redo log 写文件(write)并刷盘(fsync);
+
+Commit 阶段: binlog 写入文件(write)并刷盘(fsync); InnoDB 回滚段设置为 commit 状态;
+
+
+MySQL 存在两个日志系统: server 层的 binlog 日志和 storage 层的事务日志(例如, InnoDB 的 redolog 日志), 并且支
+持多个存储引擎. 这样产生的问题是, 如何保证事务在多个日志中的原子性? 即要么都提交, 要么都中止.
+
+在单个 MySQL 实例中, 使用了`两阶段提交`方式来解决该问题, 其中 server 层作为事务协调器, 而多个存储引擎作为事务参与者.
+
+关于事务协调: 
+
+如果开启了 binlog, 并且有事务引擎, 则事务协调器为 mysql_bin_log 对象, 使用 binlog 物理文件记录事务状态;
+
+如果关闭了 binlog, 并且有事务引擎, 则事务协调器为 tc_log_nmap 对象, 使用内存数据结构来记录事务状态;
+
+两阶段提交保证了事务在多个引擎和 binlog 之间的原子性, 以 binlog 写入成功作为事务提交的标志, 而 InnoDB 的 commit 
+标志并不是事务成功与否的标志.
+
+在崩溃恢复中, 是以 binlog 中的 xid 和 redolog 当中的 xid 进行比较, xid 在 binlog 里存在则提交, 不存在则回滚.
+恢复的具体情况:
+
+a) 在 prepare 阶段崩溃, 即已经写入了 redolog, 在写入 binlog 之前崩溃, 则回滚.
+
+b) 在 commit 阶段, 当没有成功写入 binlog 时崩溃, 则回滚.
+
+c) 如果已经写入了 binlog, 在写入 InnoDB commit 标志时崩溃, 则重新写入 commit 标志, 完成提交.
 
 
 ### 组提交
 
-**在事务的两阶段提交中, 时序上先进行 redo log prepare, 然后写入 binlog, 最后是 redo log commit**. 
+**在事务的两阶段提交中, 时序上 `先进行 redo log prepare, 写入 redo log`, `然后写入 binlog, 进行 redo log commit`**. 
 
 如果将 innodb_flush_log_at_trx_commit 设置为1, 那么在 redo log prepare 阶段就要持久化一次, 因为崩溃恢复逻辑依赖
 于 redo log prepare 日志, 再加上 binlog 来恢复的. 
