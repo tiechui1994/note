@@ -106,16 +106,30 @@ c) 如果已经写入了 binlog, 在写入 InnoDB commit 标志时崩溃, 则重
 
 ### 组提交
 
-**在事务的两阶段提交中, 时序上 `先进行 redo log prepare, 写入 redo log`, `然后写入 binlog, 进行 redo log commit`**. 
+为了提高并发性能, 将两阶段提交进行了优化(组提交的本质):
 
-如果将 innodb_flush_log_at_trx_commit 设置为1, 那么在 redo log prepare 阶段就要持久化一次, 因为崩溃恢复逻辑依赖
-于 redo log prepare 日志, 再加上 binlog 来恢复的. 
+prepare阶段: InnoDB 将回滚段设置为 prepare 状态, redo log 文件写入(不刷盘)
 
-每秒1次后台线程轮询刷盘, 再加上崩溃恢复, InnoDB 认为 redo log commit 的时候就不需要 fsync 了, 只会 write 到系统的
-page cache 中就够了.
+commit 阶段拆分为为3个stage, 分别是 flush, sync, commit. 每个stage设置一个队列, 第一个进入该队列的线程成为leader,
+后续进入的线程会阻塞直至完成提交. leader 线程会领导队列中所有线程执行该stage任务, 并带领所有 follower 进入到下一个
+stage 去执行. 
+
+```
+flush:
+1) 收集组提交队列, 得到 leader 现成, 其余 follower 现成进入阻塞
+2) leader 进行一次 redo log 的 fsync, 即一次将所有线程的 redo log 刷盘;
+3) 将队列当中所有的 binlog 写入的文件当中(只进行write, 不刷盘)
+
+sync:
+1) 对 binlog 文件进行一次 fsync 操作(多个线程的 binlog 合并一次刷盘)
+
+commit:
+1) 各个线程按顺序做InnoDB commit 操作.
+```
+
 
 **通常所说 MySQL 的"双1"配置, 指的是 sync_binlog 和 innodb_flush_log_at_trx_commit 都设置为1. 也就是,一次完整的事
-务提交前, 需要等待两次刷盘, 一次是redo log(prepare阶段), 一次是binlog**.
+务提交前, 需要等待两次刷盘, 一次是redo log(prepare阶段), 一次是binlog(commit阶段)**.
 
 现在有个疑问, 如果看到MySQL的TPS是2w/s的话, 每秒就会有4w次刷盘. 但是, 使用工具测试出来, 磁盘能力也就在2w左右, 怎么能
 实现2w的TPS?
@@ -148,7 +162,7 @@ d) 此时 trx2 和 trx3 就可以直接返回了.
 
 为了让一次 fsync 带的组员更多, MySQL进行了一次优化: 拖时间. 在进行两阶段提交时, 其过程:
  
-`写redolog(处于prepare阶段)` => `写binlog` => `提交事务(处于commit阶段)`
+`写redolog(处于prepare阶段)` =>  `写binlog, 提交事务(处于commit阶段)`
 
 MySQL的优化就是将 `写binlog` 拆分为2步骤:
 
@@ -178,7 +192,7 @@ MySQL 为了让组提交效果更好, 把 redo log 做 fsync 的时间拖延到�
 
 WAL 机制主要得益于两个方面:
 
-1.redo log和binlog都是顺序写, 磁盘顺序写比随机写速度要快.
+1.redo log 和 binlog都是顺序写, 磁盘顺序写比随机写速度要快.
 
 2.组提交机制, 可以大幅度降低磁盘IOPS消耗.
 
@@ -187,9 +201,9 @@ WAL 机制主要得益于两个方面:
 - 设置 binlog_group_commit_sync 和 binlog_group_commit_no_sync_count 参数, 减少binlog的写盘此书. 这个方法是
 基于"额外的故意等待"来实现的, 因此可能增加语句的响应时间, 但没有丢失数据的风险.
 
-- 将sync_binLog设置为大于1的值(常见100~1000). 这个的风险, 主机掉电时会丢失binlog日志.
+- 将 sync_binlog 设置为大于1的值(常见100~1000). 这个的风险, 主机掉电时会丢失binlog日志.
 
-- 将innodb_flush_log_at_trx_commit设置为2. 这样做的风险, 主机掉电的时候会丢数据(redo log丢失).
+- 将 innodb_flush_log_at_trx_commit 设置为2. 这样做的风险, 主机掉电的时候会丢数据(redo log丢失).
 
 不建议将 innodb_flush_log_at_trx_commit 设置为0. 因为这个参数为 0, 表示 redo log 只保存到 redo log buffer 当中, 在
 MySQL本身异常重启也会丢数据, 风险太大. 而设置为 2, 与设置成 0 性能差不太多, 但是 MySQL 异常重启不会丢数据.
