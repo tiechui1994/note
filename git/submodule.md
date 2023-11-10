@@ -209,12 +209,13 @@ $ git submodule
 -94babad95c5832f747b14e16fbc664258c5a3919 alarm
  ed32cdbf5e778e213f78d7126159147417e3c45d xxx (v1.0.0-9-ged32cdb)
 -8c8272f678bf2ab50d0e8229dc37dbc479ef7d68 testtool
-
-`+`, ` `, `-` 的含义如下 
-带有 `+` 表示 submodule 版本未提交
-带有 ` ` 表示 submodule 已经提交/初始化
-带有 `-` 表示 submodule 未被初始化, 需要进行初始化
 ```
+
+`+`, ` `, `-` 的含义如下:
+
+1) 带有 `+` 表示 submodule 版本未提交
+2) 带有 ` ` 表示 submodule 已经提交/初始化
+3) 带有 `-` 表示 submodule 未被初始化, 需要进行初始化
 
 解决方案之二: (如果只是配置了 ssh 秘钥, 没有 http 拉取子模块的权限, 则可以更新 pull 代码方式)
 
