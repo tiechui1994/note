@@ -21,7 +21,7 @@
 使用 `git submodule add <remote_url>` 命令可以在项目中创建一个子模块.
 
 ```
-$ git submodule add  git@github.com:tiechui1994/tool.git tool
+$ git submodule add git@github.com:tiechui1994/tool.git tool
 正克隆到 '/tmp/www/project/tool'...
 remote: Enumerating objects: 791, done.
 remote: Counting objects: 100% (188/188), done.
@@ -37,8 +37,8 @@ remote: Total 791 (delta 113), reused 112 (delta 60), pack-reused 603
 
 ```
 [submodule "tool"]
-        path = tool
-        url = git@github.com:tiechui1994/tool.git
+    path = tool
+    url = git@github.com:tiechui1994/tool.git
 ```
 
 此时在 `.git/config` 当中会增加一条子模块信息 `[submodule "tool"]`, 在 `.git/modules` 文件夹下记录子模块 `tool`
@@ -52,7 +52,7 @@ remote: Total 791 (delta 113), reused 112 (delta 60), pack-reused 603
 使用 `git clone <remote_url>` 获取仓库, 但是此时子模块只是一个空文件夹. 下面是在主项目下更新子模块操作:
 
 ```
-# clone project, submodule status
+# before clone project, submodule status
 $ git submodule status 
 -edcc3323fc44ed33b8ae89a18c5dc38a0efd4885 tool
 
@@ -60,7 +60,7 @@ $ git submodule status
 $ git submodule update --init tool
 
 # after init, submodule status
-$  git submodule status
+$ git submodule status
  edcc3323fc44ed33b8ae89a18c5dc38a0efd4885 tool (remotes/origin/develop)
 ```
 
@@ -195,28 +195,28 @@ index d8fbfde..933a178 160000
 1) 问题 `fatal: Needed a single revision, Unable to find current revision in submodule path 'xxx'` 或
 `Fetched in submodule path 'xxx', ... Direct fetching of that commit failed`
 
-解决方案一: (手动 clone submodule)
+解决方案之一: (手动 clone submodule)
 
 ```
-# remove old dir
+# 删除老的目录
 rm -rf xxx
 
-# use recurse clone submodule git repo
+# clone 到指定 commit 的提交
 git clone git@github.com:example/xxx.git --branch=develop xxx
-git clone --recurse-submodules git@github.com:example/xxx.git --branch=develop xxx
 
-# init
-git submodule update --init xxx
-
-# check submodule version
+# 检查 submodule 的版本
 $ git submodule 
 -94babad95c5832f747b14e16fbc664258c5a3919 alarm
  ed32cdbf5e778e213f78d7126159147417e3c45d xxx (v1.0.0-9-ged32cdb)
 -8c8272f678bf2ab50d0e8229dc37dbc479ef7d68 testtool
-user@master:/tmp/www/dx/leo$ 
+
+`+`, ` `, `-` 的含义如下 
+带有 `+` 表示 submodule 版本未提交
+带有 ` ` 表示 submodule 已经提交/初始化
+带有 `-` 表示 submodule 未被初始化, 需要进行初始化
 ```
 
-解决方案二: (如果只是配置了 ssh 秘钥, 没有 http 拉取子模块的权限, 则可以更新 pull 代码方式)
+解决方案之二: (如果只是配置了 ssh 秘钥, 没有 http 拉取子模块的权限, 则可以更新 pull 代码方式)
 
 ```
 [url "ssh://git@github.com"]
