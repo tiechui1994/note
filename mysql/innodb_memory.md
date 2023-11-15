@@ -121,22 +121,79 @@ I/O sum[0]:cur[0], unzip sum[0]:cur[0]
 
 ### Change Buffer 
 
-Change Buffer是一种特殊的数据结构, 它会对不在Buffer Pool当中的Secondary Index页的更改进行缓存. 缓存更改, 可能是由 
-INSERT, UPDATE 或 DELETE 操作(DML)引起的, 稍后在页面通过其他读取操作加载到 Buffer Pool 时被合并.
+Change Buffer(写缓冲) 一种特殊的数据结构, 它是一种应用在非唯一普通索引页(non-unique secondary index page)不在缓冲
+池中时, 对页进行了写操作, 并不会立刻将磁盘页加载到缓冲池, 而仅仅记录缓冲变更(Buffer Changes), 在未来数据被读取时, 再将
+数据合并(Merge)恢复到缓冲池中的技术. Change Buffer(写缓冲)的目的是降低写操作的磁盘IO, 提升数据库性能.
+
+写缓冲更改, 可能是由INSERT, UPDATE 或 DELETE 操作(DML)引起的, 稍后在页面通过其他读取操作加载到 Buffer Pool 时被合并.
 
 ![image](/images/mysql_innodb_change_buffer.png)
 
-与聚集索引不同, 二级索引通常是非唯一的, 并且插入二级索引以随机的顺序发生. 类似的, 删除和更新也可能会影响索引树中不相邻的
-二级索引页面. 
+与聚集索引不同, none-unique secondary index 是非唯一的, 并且插入二级索引以随机的顺序发生. 类似的, 删除和更新也可
+能会影响索引树中不相邻的二级索引页面. 
 
-在内存中, Change Buffer占用了Buffer Pool的一部分. 在磁盘上, Change Buffer是system tablespace的一部分, 当数据库
-服务关闭时, 索引更改将存储在其中.
+在内存中, Change Buffer 占用了Buffer Pool的一部分. 在磁盘上, Change Buffer是system tablespace(ibdata文件)的一部分, 
+当数据库服务关闭时, 索引更改将存储在其中.
 
 Change Buffer中的数据类型由 `innodb_change_buffering` 变量控制. 
 
-如果 "索引包含降序索引列" 或 "主键包含降序索引列", 则二级索引不支持Buffer Pool.
+如果 "索引包含降序索引列" 或 "主键包含降序索引列", 则二级索引不支持 Buffer Pool.
 
-配置:
+
+Change Buffer 工作原理:
+
+考虑一个场景: 假设要修改的页40不在缓冲池当中.
+
+![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210923_640930ea-1c04-11ec-bf6a-38f9d3cd240d.png)
+
+通常的处理过程是:
+
+- 先需要为 40 的索引页从磁盘加载到缓冲池, 一次磁盘随机读取操作;
+- 修改缓冲池中的页, 一次内存操作;
+- 写入 redo log, 一次磁盘顺序写操作;
+
+这种场景, 至少产生一次磁盘IO, 对于写多读少的业务场景, 是否还有优化的空间?
+
+InnoDB 当中使用写缓冲优化后, 操作流程为:
+
+![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210923_64154c0e-1c04-11ec-bf6a-38f9d3cd240d.png)
+
+- 在写缓冲中记录这个操作, 一次内存操作;
+- 写入 redo log, 一次磁盘顺序写操作;
+
+> 其性能与这个索引页在缓冲池中, 相近
+
+上述的优化是否会出现一致性问题? 不会. 1)数据库异常崩溃, 能够从 redo log 当中恢复数据; 2)写缓冲不只是一个内存结构, 
+它也会被定期刷写到系统表空间; 3)数据读取是, 有其他的流程, 将数据合并到缓冲池;
+
+假设在稍后的时间, 有请求查询索引页40的数据:
+
+- 载入索引页, 缓冲池未命中, 这次磁盘IO不可避免;
+- 从写缓冲读取相关信息;
+- 恢复索引页, 放到缓冲池 LRU 里, 此时40这一页才被真正的读取到缓冲池当中.
+
+其他问题:
+
+- 为什么写缓冲优化, 仅适用于非唯一普通索引页?
+
+InnoDB 当中, 聚餐索引(Clustered index)与普通索引(Secondary index) 存在差异. 如果索引设置了唯一(Unique) 属性, 
+在进行修改操作时, InnoDB 必须进行唯一性检查. 也就是说, 索引页即使不在缓冲池, 磁盘上的页读取无法避免(否则怎么校验是否
+唯一), 此时就应该直接把相应的页放入缓冲池再进行修改.
+
+- 触发 Change Buffer 当中数据被刷写的场景?
+
+1) 数据页被访问, 数据被合并到缓冲池当中
+
+2) 后台线程, 定时刷写到系统表空间
+
+3) 数据库缓冲池不够用时, 写到系统表空间
+
+4) 数据库正常关闭, 写到系统表空间
+
+5) redo log 写满(几乎不会出现redo log写满, 此时整个数据库处于无法写入的不可用状态)
+
+
+详细设置:
 
 当对表执行INSERT, UPDATE 和 DELETE 操作时, 索引列的值(尤其是二级索引列的值)通常是未排序的, 这时需要大量IO才能使二级
 索引保持最新. 当相关页面不在Buffer Pool时, Change Buffer缓存对二级索引条目的修改, 从而通过不立即从磁盘读取页面来避免
@@ -146,11 +203,11 @@ Change Buffer中的数据类型由 `innodb_change_buffering` 变量控制.
 因为它可以减少磁盘读取和写入, 所以Change Buffer对IO密集型的工作很有用. 例: 具有大量DML操作(例如批量插入)的程序得益于
 Change Buffer.
 
-但是, Change Buffer占用了Buffer Pool的一部分, 从而减少了可用于缓存数据页的内存. 如果工作数据集几乎适合Buffer Pool, 
-或者数据库的表具有相对较少的二级索引, 则禁用Change Buffer可能很有用. 如果工作数据集完全适合Buffer Pool, 则Change 
-Buffer不会带来额外的开销, 因为它仅适用于不在Buffer Pool中的页面.
+Change Buffer 占用 Buffer Pool 的一部分, 从而减少了可用于缓存数据页的内存. 如果工作数据集几乎适合 Buffer Pool, 
+或者数据库的表具有相对较少的 none-unique secondary index, 则禁用 Change Buffer 比较有用. 
+如果工作数据集完全适合Buffer Pool, 则 Change Buffer 不会带来额外的开销, 因为它仅适用于不在 Buffer Pool 中的页面.
 
-`innodb_change_buffering` 变量控制 InnoDB 执行 Change Buffer 的程度. 你可以在插入, 删除操作(索引记录最初标记为
+`innodb_change_buffering` 变量控制 InnoDB 执行 Change Buffer 的操作. 可以在插入, 删除操作(索引记录最初标记为
 删除)和清除操作(索引记录被物理删除)启用或禁用缓存. 更新操作是插入和删除的组合. `innodb_change_buffering` 默认值是 
 all.
 
@@ -172,22 +229,10 @@ f) purge: 缓存在后台发生的物理删除操作.
 考虑在具有大量插入, 更新和删除操作的MySQL服务器上增加 `innodb_change_buffer_max_size`, 其中Change Buffer合并无
 法跟上新的Change Buffer条目, 会导致Change Buffer达到其最大大小限制.
 
-考虑在具有用于报告的静态数据的MySQL服务器上减少 `innodb_change_buffer_max_size`, 或者如果Change Buffer消耗了
-过多的Buffer Pool, 导致页面比预期更早地从Buffer Pool中老化.
+考虑在静态数据的MySQL服务器上减少 `innodb_change_buffer_max_size`, 或者如果Change Buffer消耗了过多的Buffer Pool, 
+导致页面比预期更早地从Buffer Pool中老化.
 
 使用具有代表性的工作负载测试不同的设置值以确定最佳配置. `innodb_change_buffer_max_size` 变量可以动态调整.
-
-监控:
-
-1. InnoDB标准监控包括Change Buffer状态信息. `show engine innodb status`. 
-
-Change Buffer 位于 `INSERT BUFFER AND ADAPTIVE HASH INDEX` 下方.
-
-2. 在 `INFORMATION_SCHEMA.INNODB_METRICS` 中大部分数据点以及其他数据点提供了 Change Buffer 指标和相关描述. 
-
-```
-> SELECT NAME, COMMENT FROM INFORMATION_SCHEMA.INNODB_METRICS WHERE NAME LIKE '%ibuf%';
-```
 
 ### Log Buffer
 
