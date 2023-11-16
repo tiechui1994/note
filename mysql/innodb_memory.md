@@ -234,6 +234,58 @@ f) purge: 缓存在后台发生的物理删除操作.
 
 使用具有代表性的工作负载测试不同的设置值以确定最佳配置. `innodb_change_buffer_max_size` 变量可以动态调整.
 
+### Doublewrite Buffer
+
+关于 IO 的最小单位:
+- 数据库 IO 的最小单位页是 16K(MySQL 默认)
+- Linux 文件系统 IO 的最小单位页是 4K(通过 `getconf PAGESIZE` 获取)
+- 磁盘 IO 的最小单位页是 512 字节.
+
+**MySQL 将 Buffer Pool 中一页数据刷入磁盘, 需要 4 个文件系统的页(也可以说成一个 MySQL 数据页映射 4 个系统页)**
+
+![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210927_9da3acda-1f25-11ec-ae4b-38f9d3cd240d.png)
+
+如图所示, MySQL 里 Page1 的页, 物理对应磁盘的 Page1, Page2, Page3, Page4 四个页. 刷写操作并非原子, 如果执行到
+一半断电, 就会出现所谓的 "页数据损坏". 这种 "页数据损坏" 会导致数据完整性被破坏.(redo log 无法修复这类"页数据损坏"
+的异常, 修复的前提是"页数据正确" 并且 redo 日志正常)
+
+针对上述出现的情况, MySQL 使用 Doublewriter Buffer(用于存储数据页的"副本") 来解决该问题.
+
+Doublewrite Buffer 工作:
+
+![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210927_9dbec02e-1f25-11ec-ae4b-38f9d3cd240d.png)
+
+当有数据页要刷盘时:
+1. 页数据西安 memcopy 到 Doublewrite Buffer 的内存里; (速度很快)
+2. Doublewrite Buffer 内存里的数据页, 先刷写到 Doublewrite Buffer 的磁盘上(系统表空间, 顺序写入)
+3. Doublewrite Buffer 内存里的数据页, 再刷写到数据磁盘存储 .ibd 文件上. (随机写, 必须要做), 完成后, 会将第一步的
+Doublewrite Buffer标记为可覆盖.
+
+注: Doublewrite Buffer 内存结构由128个页(Page) 构成, 所以容量只有 16KB x 128 = 2MB. 128页的Doublewrite Buffer
+内存会分两次刷入磁盘, 每次最多64页, 即 1M 的数据(图中将 Doublewrite Buffer 磁盘结构拆分成两个部分).
+
+Doublewrite Buffer 当中的 `Doublewrite` 是由于步骤2和步骤3当中需要2次刷盘由来的.
+
+Doublewrite Buffer 开启会增加两步额外的操作(也就是步骤1和2), 这两步是执行是非常快的, 因此 Doublewrite Buffer 并
+不会导致数据库的性能急剧下降, 但是性能会有一定的损耗.
+
+Doublewrite Buffer 相关参数:
+
+- innodb_doublewrite, Doublewrite Buffer开启/关闭的开关, 默认是开启的. InnoDB 将所有的数据存储两次, 首先到双
+写缓冲区, 然后到实际数据文件.
+
+- innodb_dblwr_pages_written, 记录写入到 Doublewrite Buffer 中的页数量(累加值)
+
+- innodb_dblwr_writes, 记录写入到 Doublewrite Buffer 写操作的次数.
+
+innodb_dblwr_pages_written/innodb_dblwr_writes 的比例是可以判断系统的负载情况. 如果约等于64, 说明系统的写压力
+非常大, 有大量的脏页要往磁盘上写. 如果值比较小, 说明写脏页比较少, 系统压力比较小.
+
+哪些情况下适合关闭 doublewrite buffer? 海量的 DML; 不惧怕数据损坏和丢失; 系统写负载成为主要负载;
+
+> 由于 redo log 写入的单位是 512 字节(磁盘的最小单位), 不存在数据页损坏的情况, 因此不需要将在 redo 写入时去支持
+> doublewrite buffer.
+
 ### Log Buffer
 
 ### Adaptive Hash Index
