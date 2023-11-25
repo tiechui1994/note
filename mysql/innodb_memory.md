@@ -1,4 +1,4 @@
-## InnoDB 内存结构
+## InnoDB 内存
 
 InnoDB 架构模型:
 
@@ -6,10 +6,14 @@ InnoDB 架构模型:
 
 ### Buffer Pool
 
-Buffer Pool 是主内存中的一个区域, 用于在InnoDB访问时缓存表和索引数据. Buffer Pool允许直接从内存访问经常使用的数据,
-从而加快处理速度. 在专用服务器上, 多达80%的物理内存通常分配给Buffer Pool.
+Buffer Pool 是在 MySQL 启动时, 向操作系统申请的一片连续的内存空间, 默认配置下 Buffer Pool 只有128MB(可以通过调
+整 `innodb_buffer_pool_size` 来设置 Buffer Pool 的大小), 用于在 InnoDB 访问时缓存表和索引数据. Buffer Pool
+允许直接从内存访问经常使用的数据,从而加快处理速度. 
 
-Buffer Pool 被划分为page. 使用链表的方式管理页面. 使用 LRU 算方法从缓存当中淘汰老的数据.
+Buffer Pool 被划分为page, 以 page 作为磁盘和内存交互的基本单位, 一个 page 的默认大小是16KB(可以使用`innodb_page_size`
+来调整 page 的大小). 使用链表的方式管理页面. 使用 LRU 算方法从缓存当中淘汰老的数据.
+
+Buffer Pool 除了缓存 `索引页`, `数据页`, 还包括 `undo页`, `change buffer`, `锁信息`, `自适应哈希索引` 等
 
 - LRU 算法
 
@@ -144,7 +148,7 @@ Change Buffer 工作原理:
 
 考虑一个场景: 假设要修改的页40不在缓冲池当中.
 
-![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210923_640930ea-1c04-11ec-bf6a-38f9d3cd240d.png)
+![image](/images/mysql_innodb_mem_changebuffer_pagenotin.png)
 
 通常的处理过程是:
 
@@ -156,7 +160,7 @@ Change Buffer 工作原理:
 
 InnoDB 当中使用写缓冲优化后, 操作流程为:
 
-![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210923_64154c0e-1c04-11ec-bf6a-38f9d3cd240d.png)
+![image](/images/mysql_innodb_mem_changebuffer_pagenotin_op.png)
 
 - 在写缓冲中记录这个操作, 一次内存操作;
 - 写入 redo log, 一次磁盘顺序写操作;
@@ -243,7 +247,7 @@ f) purge: 缓存在后台发生的物理删除操作.
 
 **MySQL 将 Buffer Pool 中一页数据刷入磁盘, 需要 4 个文件系统的页(也可以说成一个 MySQL 数据页映射 4 个系统页)**
 
-![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210927_9da3acda-1f25-11ec-ae4b-38f9d3cd240d.png)
+![image](/images/mysql_innodb_mem_doublebuffer_eg.png)
 
 如图所示, MySQL 里 Page1 的页, 物理对应磁盘的 Page1, Page2, Page3, Page4 四个页. 刷写操作并非原子, 如果执行到
 一半断电, 就会出现所谓的 "页数据损坏". 这种 "页数据损坏" 会导致数据完整性被破坏.(redo log 无法修复这类"页数据损坏"
@@ -253,7 +257,7 @@ f) purge: 缓存在后台发生的物理删除操作.
 
 Doublewrite Buffer 工作:
 
-![image](https://oss-emcsprod-public.modb.pro/wechatSpider/modb_20210927_9dbec02e-1f25-11ec-ae4b-38f9d3cd240d.png)
+![image](/images/mysql_innodb_mem_doublebuffer_work.png)
 
 当有数据页要刷盘时:
 1. 页数据西安 memcopy 到 Doublewrite Buffer 的内存里; (速度很快)
@@ -287,5 +291,3 @@ innodb_dblwr_pages_written/innodb_dblwr_writes 的比例是可以判断系统的
 > doublewrite buffer.
 
 ### Log Buffer
-
-### Adaptive Hash Index
