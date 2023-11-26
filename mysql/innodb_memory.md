@@ -13,15 +13,42 @@ Buffer Pool 是在 MySQL 启动时, 向操作系统申请的一片连续的内�
 Buffer Pool 被划分为page, 以 page 作为磁盘和内存交互的基本单位, 一个 page 的默认大小是16KB(可以使用`innodb_page_size`
 来调整 page 的大小). 使用链表的方式管理页面. 使用 LRU 算方法从缓存当中淘汰老的数据.
 
-Buffer Pool 除了缓存 `索引页`, `数据页`, 还包括 `undo页`, `change buffer`, `锁信息`, `自适应哈希索引` 等
+Buffer Pool 除了缓存 `索引页`, `数据页`, 还包括 `undo页`, `change buffer`, `锁信息`, `自适应哈希索引` 等.
+
+Buffer Pool 页管理:
+
+为了管理 Buffer Pool 中的缓存页, InnoDB 为每一个缓存页创建了一个`控制块`, 控制块信息包括缓存页的表空间, 页号, 缓存
+页地址, 链表节点等等. 控制块也需要占用内存空间, 它是放在 Buffer Pool 的最前面, 接下来才是缓存页.
+
+![image](https://cdn.xiaolincoding.com/gh/xiaolincoder/ImageHost4@main/mysql/innodb/缓存页.drawio.png)
+
+Buffer Pool 页面的管理是通过三类链表管理的, 分别是 Free 链表, Flush 链表, LRU 链表.
+
+Free 链表用于管理空闲页, 链表的节点就是一个个控制块, 每个控制块包含对应缓存页的地址, 所以相当于 Free 链表节点都对应
+一个空闲的缓存页.
+
+Flush 链表, 与 Free 链表类似, 区别在于 Flush 链表的每个节点对应的是一个脏页, 后续会进行刷盘操作.
+
+LRU 链表, 这个主要为了提高缓存命中率设计的. 由于 Buffer Pool 的大小是有限的, 对于频繁访问的数据希望一直留在 Buffer
+Pool 当中, 而很少访问的数据希望被淘汰掉, 为了达到这个目的, 使用了 LRU 算法.
+
+Buffer Pool 当中有三种页:
+
+Free Page(空闲页), 表示此页未被使用, 位于 Free 链表;
+
+Clean Page(干净页), 表示此页已被使用, 但是页面未发生修改, 位于 LRU 链表.
+
+Dirty Page(脏页), 表示此页已被使用且已被修改, 其数据和磁盘上的数据已经不一致. 当脏页上的数据写入磁盘后, 内存数据和
+磁盘数据一致, 那么该页就变成了 Clean Page. 脏页同时存在于 LRU 链表和 Flush 链表.
+
 
 - LRU 算法
 
 使用LRU算法的变体, 将 Buffer Pool 作为链表进行管理. 当需要想空间将新页面添加到Buffer Pool时, 最近最少使用的页面将被
 淘汰, 并将新页面添加到链表的中间. 这个中点插入策略将链表视为两个子链表:
 
-1. 头部是最近访问过的新("年轻")子链表
-2. 在尾部. 是最近访问较少的旧子链表.
+1. 头部是最近访问过的 young 区域子链表(热点数据)
+2. 尾部是最近访问较少的 old 区域子链表
 
 ![image](/images/mysql_innodb_buffer_pool_list.png)
 
@@ -29,38 +56,32 @@ Buffer Pool 除了缓存 `索引页`, `数据页`, 还包括 `undo页`, `change 
 
 默认情况下,算法操作如下:
 
-1) 3/8的Buffer Pool用于旧的子列表.
+1) 3/8 Buffer Pool用于 old 区域子链表(old区域子链表占比数量的配置是 innodb_old_blocks_pct, 默认是 37).
 
-2) 链表的中点是新子链表的尾部与旧子链表头部的边界.
+2) 链表的 "中点" 是 young区域子链表的尾部与 old区域子链表头部的边界.
 
-3) 当InnoDB 将一个页面读入到Buffer Pool时, 它最初会将页面插入到中点(旧子链表的头部). 可以读取一个页面, 因为它是用户
-发起的操作(如SQL查询)所需要的, 或者是InnoDB执行预读操作的一部分.
+3) 当InnoDB 将一个页面读入到Buffer Pool时, 最初会将页面插入到 "中点" (old区域子链表的头部). 读取一个页面, 因为它
+是用户发起的操作(如SQL查询)所需要的, 或者是InnoDB执行预读操作的一部分.
 
-4) 访问旧子链表的页面会使其"年轻", 将其移动到新子链表的头部. 如果页面是因为用户发起的操作需要它而被读取, 则第一次访问立
-即发生, 并且页面会变得年轻. 如果页面是由于预读操作而读取的, 则第一次访问不会立即发生, 并且在该页面被删除之前根本不会进行
-一次访问.
+4) 访问 old区域子链表的页面会使其变得 "young", 将其移动到 young区域子链表的头部. 如果页面是因为用户发起的操作需要它
+而被读取, 则第一次访问立即发生, 并且页面会变得"young". 如果页面是由于预读操作而读取的, 则第一次访问不会立即发生, 并
+且在该页面被删除之前根本不会进行一次访问.
 
-5) 随着数据库的运行, Buffer Pool 中未被访问的的页面通过向链表尾部移动来"老化". 新旧子链表中的页面随着其他页面的更新而
-老化. 旧子链表中的页面也会随着页面插入中点而老化. 最终, 一个未使用的页面到达使得旧子链表的尾部被淘汰.
+> 对于某个处于 old 区域的缓存页进行第一次访问时, 会在其对应的控制块中记录访问时间, 如果在后续的访问时间与第一次访问
+> 时间间隔小于 "innodb_old_blocks_time", 那么`该缓存页不会从 old 区域子链表移动到 young 区域子链表的头部`. 否
+> 则, `该缓存页从 old 区域子链表移动到 young 区域子链表的头部`.
+> innodb_old_blocks_time 默认是 1000ms. 上述的限制条件是为了解决 Buffer Pool 污染的问题, 防止因为全表
+> 扫描查询导致整个 Buffer Pool 的热点数据被淘汰.
 
-默认情况下, 查询读取的页面会立即移动到新子链表中, 这意味着它们在Buffer Pool中停留的时间更长. 例如, mysqldump 操作或
-没有WHERE子句的SELECT语句执行的表扫描, 可能将大量数据加载到Buffer Pool, 并淘汰等量的旧数据, 即使新数据永远不会再次使
-用. 类似地, 由预读后台线程加载并仅访问移除的页面将被移动到新子链表的头部. 这些情况可能会将经常使用的页面推到旧子列表中,在
-那里被淘汰. 
+5) 随着数据库的运行, Buffer Pool 中未被访问的的页面通过向链表尾部移动来 "old". young区域子链表中的页面随着其他页面的更新而
+老化. old区域子链表中的页面也会随着页面插入中点而老化. 最终, 一个未使用的页面到达使得 old区域子链表的尾部被淘汰.
 
 - Bufer Pool配置
 
-1. 配置 InnoDB Bufer Pool大小
+1. 配置 InnoDB Bufer Pool 大小, `innodb_buffer_pool_size`, 默认是128MB
 
-2. 配置多个Bufer Pool实例
-
-3. 使用 Bufer Pool Scan Resistant
-
-4. 配置 InnoDB Buffer Pool Prefetching (Read-Ahead). 
-
-5. 配置 Buffer Pool Flushing. 控制后台刷新已经根据工作负载动态调整刷新速率.
-
-6. 保存和恢复Buffer Pool状态. 保留Buffer Pool状态避免服务器重启后的长时间预热.
+2. 配置多个Bufer Pool实例, 参数 `innodb_buffer_pool_instances`, 默认值是1. 在 InnoDB 当中当 Buffer Pool
+的大小小于 1GB 时, 此参数无效.
 
 - 使用 InnoDB 标准监视器监测Buffer Pool
 
