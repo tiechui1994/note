@@ -1,4 +1,4 @@
-# InnoDB 锁与事务模型
+# InnoDB 锁与事务
 
 锁的种类一般分为乐观锁和悲观锁两种:
 
@@ -221,13 +221,6 @@ Record lock, heap no 3 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
 > `n_fields 3` 表示记录的字段数, `0:...`, 第一个字段 id, 值是102, `1:...`, 第二个在字段, 事务id, `2:...`, 第
 三个字段, undo_log 位置.
 
-### AUTO-INC Lock
-
-AUTO-INC锁定是由插入到具有 `AUTO_INCREMENT` 列的表中的事务所采用的特殊表级锁. 在最简单的情况下, 如果一个事务正在向表
-中插入值, 则任何其他事务必须等待对该表执行自己的插入, 以便第一个事务插入的行接收连续的主键值.
-
-`innodb_autoinc_lock_mode` 选项控制用于自动增量锁定的算法. 它允许您选择如何在可预测的自动增量值序列和插入操作的最大
-并发之间进行权衡.
 
 # TRANSACTION MODEL
 
@@ -251,35 +244,35 @@ InnoDB使用不同的锁定策略支持此处描述的每个事务隔离级别. 
 
 ### REPEATABLE READ
 
-这是InnoDB的默认隔离级别. 同一事务中的一致读取读取第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通 (非锁定)
+这是 InnoDB 默认隔离级别. 同一事务中的"一致读"是在第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通 (非锁定)
 SELECT 语句, 则这些SELECT语句也相互一致.
 
-对于锁定读取(使用`FOR UPDATE` 或 `LOCK IN SHARE MODE`的 SELECT), UPDATE 和 DELETE 语句, 锁定取决于语句是使用
-具有唯一搜索条件的唯一索引还是范围类型搜索条件.
+对于"锁定读"(使用`FOR UPDATE` 或 `LOCK IN SHARE MODE`的 SELECT), UPDATE 和 DELETE 语句, lock 取决于语句是使用
+`具有唯一搜索条件的唯一索引` 还是 `范围类型搜索条件`.
 
-- 对于具有唯一搜索条件的唯一索引, InnoDB仅锁定找到的索引记录, 而不是间隙.
+- 对于具有唯一搜索条件的唯一索引, InnoDB 仅 lock 找到的索引记录(Record Lock), 而不是间隙(Gap Lock).
 
-- 对于其他搜索条件, InnoDB锁定扫描的索引范围, 使用间隙锁或下一键锁来阻止其他会话插入范围所覆盖的间隙.
+- 对于其他搜索条件, InnoDB 锁定扫描的索引范围, 使用间隙锁(Gap Lock) 或下一键锁 (Next-key Lock) 来阻止其他会话插入范围所覆盖的间隙.
 
 ### READ COMMITTED
 
-即使在同一事务中, 每个一致的读取也会设置和读取自己的新快照.
+即使在同一事务中, 每次 "一致读" 都会设置和读取自己的新快照.
 
-对于锁定读取(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的SELECT), UPDATE 语句和DELETE语句, InnoDB仅锁定索引
-记录, 而不锁定它们的间隙, 因此允许在锁定记录旁边自由插入新记录. 间隙锁定仅用于外键约束检查和重复键检查.
+对于锁定读(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的SELECT), UPDATE 和 DELETE 语句, **InnoDB 仅锁定索引
+记录, 而不锁定它们的间隙, 因此允许在锁定记录旁自由插入新记录**. 间隙锁定仅用于外键约束检查和重复键检查.
 
-由于禁用了间隙锁定, 因此可能会出现幻像问题, 因为其他会话可以在间隙中插入新行.
+由于禁用了间隙锁(Gap Lock), 因此可能会出现幻像问题, 因为其他会话可以在间隙中插入新行.
 
 READ COMMITTED 隔离级别仅支持基于行的二进制日志记录. 如果对binlog_format=MIXED使用READ COMMITTED, 则服务器会自
 动使用基于行的日志记录.
 
 使用 READ COMMITTED 其他影响:
 
-- 对于UPDATE或DELETE语句, InnoDB仅为其更新或删除的行保留锁定. MySQL评估WHERE条件后, 将释放不匹配行的记录锁. 这大大
-降低了死锁的可能性, 但它们仍然可以发生.
+- 对于 UPDATE 或 DELETE语句, InnoDB仅为其更新或删除的行保留锁定. MySQL评估WHERE条件后, 将释放不匹配行的记录锁. 这
+大大降低了死锁的可能性, 但它们仍然可以发生.
 
-- 对于UPDATE语句, 如果一行已被锁定, InnoDB将执行"semi-consistent(半一致)"读取, 将最新提交的版本返回给MySQL, 以便
-MySQL可以确定该行是否与 UPDATE 的 WHERE 条件匹配. 如果行匹配(必须更新), MySQL再次读取该行, 这次InnoDB将其锁定或等
+- 对于 UPDATE 语句, 如果一行已被锁定, InnoDB将执行 "semi-consistent(半一致)" 读取, 将最新提交的版本返回给MySQL, 以
+便 MySQL 可以确定该行是否与 UPDATE 的 WHERE 条件匹配. 如果行匹配(必须更新), MySQL再次读取该行, 这次InnoDB将其锁定或等
 待锁定.
 
 案例:
@@ -301,10 +294,10 @@ UPDATE t SET b=5 WHERE b=3;
 假设第二个会话通过执行第一个会话的语句后执行UPDATE:
 ```
 # Session B
-UPDATE t SET b=4; WHRER b=2;
+UPDATE t SET b=4 WHRER b=2;
 ```
 
-当InnoDB执行每个UPDATE时, 它首先为它读取的每一行获取一个互斥锁, 然后确定是否修改它. 如果InnoDB没有修改该行, 它将释放
+当InnoDB执行每个UPDATE时, 它首先为它读取的每一行获取一个互斥锁(X), 然后确定是否修改它. 如果InnoDB没有修改该行, 它将释放
 锁. 否则, InnoDB会保留锁定, 直到事务结束. 这会影响事务处理, 如下所示.
 
 使用默认的隔离级别 `RR`, 第一个UPDATE在它读取的每一行上获取一个X锁, 并且不释放它们中的任何一个:
@@ -371,7 +364,7 @@ SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此,
 
 ### SERIALIZABLE
 
-此级别与 `REPEATABLE READ` 类似, 如果禁用自动提交, InnoDB将隐式地将所有普通 SELECT 语句转换为 
+此级别与 `REPEATABLE READ` 类似, 如果禁用自动提交, InnoDB 将隐式地将所有普通 SELECT 语句转换为 
 `SELECT ... LOCK IN SHARE MODE`. 如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作
 为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. (要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
 
@@ -382,19 +375,19 @@ MySQL 当中, 有两个 "view" 概念:
 1. 一个是 view, 它是一个用查询语句定义的虚拟表, 在调用的时候执行查询语句并生成结果. 创建视图的语法是 `CREATE VIEW`,
 它的查询方法与表是一样的.
 
-2. 另一个是 InnoDB 在实现 MVVC 时用到的"一致性读视图", 即consistent read view, 用于支持 RC(读提交)和RR(可重复读)
+2. 另一个是 InnoDB 在实现 MVCC 时用到的"一致性读视图", 即 consistent read view, 用于支持 RC(读提交)和RR(可重复读)
 隔离级别的实现. 
 
-## Consistent Nonlocking Read(一致性非锁定读, 也称为 Snapshot Read)
+## Consistent Read(一致性非锁定读, 也称为 Snapshot View)
 
 consistent read 取意味着InnoDB使用 MVCC 在某个时间点向查询提供数据库的快照. 查询将查看 "在该时间点之前提交的事务所
-做的更改", 并且不会对 "以后" 或 "未提交" 的事务所做的更改进行更改. 注意: 快照是基于库的. 快照, 就是把当时 trx_sys 状
+做的更改", 并且不会对 "以后" 或 "未提交" 的事务所做的更改进行更改. 注意: 快照视图是基于库的. 快照, 就是把当时 trx_sys 状
 态(包括活跃读写事务事务组)记下来, 之后的所有读操作根据其事务ID(即trx_id)与快照中的trx_sys的状态做比较, 以此判断数据对
 事务的可见性.
 
-> 对于聚簇索引, 每次修改记录时, 都会在记录中保存当前的事务ID,同时旧版本记录存储在Undo Log. 对于二级索引, 则在二级索引
-页中存储更新当前页的最大事务ID, 如果该事务ID大于快照中的最大值, 那么需要回聚簇索引判断记录可见性, 如果该事务ID小于快照中
-的最小值, 该记录总是可见的.
+> 对于聚簇索引, 每次修改记录时, 都会在记录中保存当前的事务ID, 同时旧版本记录存储在undo log. 
+> 对于二级索引, 则在二级索引页中存储更新当前页的最大事务ID, 如果该事务ID大于快照中的最大值, 那么需要回聚簇索引判断记
+录可见性, 如果该事务ID小于快照中的最小值, 该记录总是可见的.
 
 此规则的例外是 "查询同一事务中早期语句所做的更改", 异常导致以的结果: 如果更新表中的某些行, SELECT 将查看更新行的最新版本, 
 但它也可能会看到任何行的旧版本. 如果其他会话同时更新同一个表, 则异常意味着可能会看到该表处于从未存在于数据库中的状态.
@@ -411,9 +404,10 @@ consistent read 是 InnoDB 在 `READ COMMITTED` 和 `REPEATABLE READ` 隔离级�
 将根据该时间点查看数据库. 如果另一个事务删除了一行并在分配了你的时间点后提交, 则你不会将该行视为已删除. 插入和更新的处理方
 式类似.
 
-> 数据库状态的快照适用于事务中的SELECT语句, 不一定适用于DML语句. 如果插入或修改某些行然后提交该事务, 则从另一个并发
-`REPEATABLE READ` 事务发出的DELETE或UPDATE语句可能会影响那些刚刚提交的行, 即使会话无法查询它们. 如果事务确实更新或
-删除了由其他事务提交的行, 则这些更改将对当前事务可见. 例如, 可能会遇到如下情况:
+> 数据库状态的快照适用于事务中的SELECT语句, 不一定适用于DML语句. 
+> 如果插入或修改某些行然后提交该事务, 则从另一个并发 `REPEATABLE READ` 事务发出的 DELETE 或 UPDATE 语句可能会影响那些刚刚提交的行, 即使会话无法查询它们. 
+> 如果事务确实 UPDATE 或 DELETE 了由其他事务提交的行, 则这些更改将对当前事务可见. 
+例如, 可能会遇到如下情况:
 
 ```
 SELECT COUNT(c1) FROM t1 WHERE c1 = 'xyz';
@@ -430,7 +424,7 @@ SELECT COUNT(c2) FROM t1 WHERE c2 = 'cba';
 ```
 
 
-你可以通过提交事务, 然后再执行另一个SELECT 或 `START WITH ACACENT WITH SNAPSHOT` 来提高您的时间点.
+你可以通过提交事务, 然后再执行另一个 `SELECT` 或 `START WITH ACACENT WITH SNAPSHOT` 来提高您的时间点.
 这称为多版本并发控制.
 
 在以下示例中, 会话A仅在 "B已提交插入" 且 "A已提交" 时才看到由B插入的行, 以便时间点超过B的提交.
@@ -535,6 +529,17 @@ SELECT LAST_INSERT_ID();
 ```
 
 SELECT语句仅检索标识符信息(特定于当前连接). 它不访问任何表.
+
+## Semi-Consistent Read(半一致性读)
+
+这是一种夹在"一致读"和"锁定读"之间的一种读取方式. **它只在 READ COMMITTED 隔离级别下(或开启了innodb_locks_unsafe_for_binlog系统变量的情况下)
+使用 UPDATE 语句时才会使用.**
+
+具体的含义就是当 UPDATE 语句读取已经被其他事务加了锁的记录时, InnoDB会将该记录的最新提交的版本读出来, 然后判断该版
+本是否与 UPDATE 语句中的 WHERE 条件相匹配, 如果不匹配则不对该记录加锁, 从而跳到下一条记录; 如果匹配则再次读取该记录
+并对其进行加锁. 这样子处理只是为了让 UPDATE 语句尽量少被别的语句阻塞.
+
+> 半一致性读只适用于对聚簇索引记录加锁的情况, 并不适用于对二级索引记录加锁的情况.
 
 # 在 InnoDB 中通过不同的 SQL 语句设置的锁
 
