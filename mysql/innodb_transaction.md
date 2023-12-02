@@ -73,12 +73,19 @@ TABLE LOCK table `test`.`t` trx id 10080 lock mode IX
 斥锁(IX), 再为行记录添加互斥锁(X), 在这时尝试对全表进行修改时不需要判断表中的每一行数据是否被加锁了, 只需要通过等待意向
 互斥锁(IX)被释放就可以了.
 
-## 锁的算法
+## 锁的类型
 
 锁的算法: Record Lock, Gap Lock, Next-Key Lock
 
 > 在 information_schema 库的 `innodb_locks`(查看当前各个事务加锁状况), `innodb_lock_waits`(查看当前各个事务锁
 等待状态)
+
+| 锁名称 | 引擎日志 | 锁类型(MySQL8.0) |
+| ---- | ---- | ---- |
+| 记录锁 | `locks rec but not gap` | REC_NOT_GAP |
+| 间隙锁 | `locks gap before rec` | GAP |
+| 下一键锁 | `locks rec but not gap` 且 `locks gap before rec` |  |
+| 插入意图锁 | `insert intention` | INSERT_INTENTION |
 
 ### Record Lock (记录锁)
 
@@ -143,7 +150,7 @@ MySQL 可以确定该行是否与 UPDATE 的 WHERE条件匹配.
 > WHERE 条件. 如果行匹配(必须更新), MySQL 再读取该行, 这一次 InnoDB 要么锁定它, 要么等待锁定它. 只有当事务具有 RC
 > 隔离级别或启用`innodb_locks_unsafe_for_binlog`选项时, 才会发生这种类型的读取操作.
 
-### Next-Key Lock (下一键锁定)
+### Next-Key Lock (下一键锁)
 
 下一键锁是 "a record lock on the index record" 和 "a gap lock on the gap before the index record" 的组合.
 
@@ -196,15 +203,15 @@ Record lock, heap no 2 PHYSICAL RECORD: n_fields 3; compact format; info bits 0
 录102之前的间隙锁:
 ```
 mysql> CREATE TABLE child (id int(11) NOT NULL, PRIMARY KEY(id)) ENGINE=InnoDB;
-mysql> INSERT INTO child (id) values (90),(102);
+mysql> INSERT INTO child (id) values (90), (102);
 
-mysql> START TRANSACTION;
+mysql> BEGIN;
 mysql> SELECT * FROM child WHERE id > 100 FOR UPDATE;
 ```
 
 客户端B开始事务, 将记录插入间隙中. 该事务在等待获取互斥锁时采用插入意向锁.
 ```
-mysql> START TRANSACTION;
+mysql> BEGIN;
 mysql> INSERT INTO child (id) VALUES (101);
 ```
 
@@ -244,11 +251,9 @@ InnoDB使用不同的锁定策略支持此处描述的每个事务隔离级别. 
 
 ### REPEATABLE READ
 
-这是 InnoDB 默认隔离级别. 同一事务中的"一致读"是在第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通 (非锁定)
-SELECT 语句, 则这些SELECT语句也相互一致.
+这是 InnoDB 默认隔离级别. 同一事务中的"一致读"是在第一次读取建立的快照. 这意味着如果在同一事务中发出多个普通 (非锁定) SELECT 语句, 则这些SELECT语句也相互一致.
 
-对于"锁定读"(使用`FOR UPDATE` 或 `LOCK IN SHARE MODE`的 SELECT), UPDATE 和 DELETE 语句, lock 取决于语句是使用
-`具有唯一搜索条件的唯一索引` 还是 `范围类型搜索条件`.
+对于"锁定读"(使用`FOR UPDATE` 或 `LOCK IN SHARE MODE`的 SELECT), UPDATE 和 DELETE 语句, lock 取决于语句是使用`具有唯一搜索条件的唯一索引` 还是 `范围类型搜索条件`.
 
 - 对于具有唯一搜索条件的唯一索引, InnoDB 仅 lock 找到的索引记录(Record Lock), 而不是间隙(Gap Lock).
 
@@ -258,15 +263,14 @@ SELECT 语句, 则这些SELECT语句也相互一致.
 
 即使在同一事务中, 每次 "一致读" 都会设置和读取自己的新快照.
 
-对于锁定读(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的SELECT), UPDATE 和 DELETE 语句, **InnoDB 仅锁定索引
-记录, 而不锁定它们的间隙, 因此允许在锁定记录旁自由插入新记录**. 间隙锁定仅用于外键约束检查和重复键检查.
+对于锁定读(使用 `FOR UPDATE` 或 `LOCK IN SHARE MODE` 的 SELECT), UPDATE 和 DELETE 语句, **InnoDB 仅锁定索引记录, 而不锁定它们的间隙(GAP), 
+因此允许在锁定记录旁自由插入新记录**.
 
 由于禁用了间隙锁(Gap Lock), 因此可能会出现幻像问题, 因为其他会话可以在间隙中插入新行.
 
-READ COMMITTED 隔离级别仅支持基于行的二进制日志记录. 如果对binlog_format=MIXED使用READ COMMITTED, 则服务器会自
-动使用基于行的日志记录.
+READ COMMITTED 隔离级别仅支持基于行的二进制日志记录. 如果对binlog_format=MIXED使用READ COMMITTED, 则服务器会自动使用基于行的日志记录.
 
-使用 READ COMMITTED 其他影响:
+使用 READ COMMITTED:
 
 - 对于 UPDATE 或 DELETE语句, InnoDB仅为其更新或删除的行保留锁定. MySQL评估WHERE条件后, 将释放不匹配行的记录锁. 这
 大大降低了死锁的可能性, 但它们仍然可以发生.
@@ -287,7 +291,7 @@ COMMIT;
 假设一个会话使用以下语句执行UPDATE:
 ```
 # Session A
-START TRANSACTION;
+BEGIN;
 UPDATE t SET b=5 WHERE b=3;
 ```
 
@@ -300,7 +304,7 @@ UPDATE t SET b=4 WHRER b=2;
 当InnoDB执行每个UPDATE时, 它首先为它读取的每一行获取一个互斥锁(X), 然后确定是否修改它. 如果InnoDB没有修改该行, 它将释放
 锁. 否则, InnoDB会保留锁定, 直到事务结束. 这会影响事务处理, 如下所示.
 
-使用默认的隔离级别 `RR`, 第一个UPDATE在它读取的每一行上获取一个X锁, 并且不释放它们中的任何一个:
+使用默认的隔离级别 `RR`, 第一个 UPDATE 在它读取的每一行上获取一个X锁, 并且不释放它们中的任何一个:
 ```
 x-lock(1,2); retain x-lock
 x-lock(2,3); update(2,3) to (2,5); retain x-lock
@@ -309,12 +313,12 @@ x-lock(4,3); update(4,3) to (4,5); retain x-lock
 x-lock(5,2); retain x-lock
 ```
 
-第二个UPDATE一旦尝试获取任何锁就会阻塞(因为第一次更新已保留所有行的锁), 并且在第一次UPDATE提交或回滚之前不会继续:
+第二个 UPDATE 一旦尝试获取任何锁就会阻塞(因为第一次更新已保留所有行的锁), 并且在第一次UPDATE提交或回滚之前不会继续:
 ```
 x-lock(1,2); block and wait for first UPDATE to commit or roll back
 ```
 
-如果使用隔离级别是 `RC`, 则第一个UPDATE会在其读取的每一行上获取一个X锁, 并释放那些不会修改的行:
+如果使用隔离级别是 `RC`, 则第一个 UPDATE 会在其读取的每一行上获取一个X锁, 并释放那些不会修改的行:
 ```
 x-lock(1,2); unlock(1,2)
 x-lock(2,3); update(2,3) to (2,5); retain x-lock
@@ -359,14 +363,14 @@ UPDATE t SET b = 4 WHERE b = 2 AND c = 4;
 
 ### READ UNCOMMITED
 
-SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此, 使用此隔离级别, 此类读取不一致. 这也称为脏读. 否则, 此隔离级
-别与 `READ COMMITTED` 类似.
+SELECT语句以非锁定方式执行, 但可能使用行的早期版本. 因此, 使用此隔离级别, 此类读取不一致. 这也称为脏读. 否则, 此隔离级别与 `READ COMMITTED` 类似.
 
 ### SERIALIZABLE
 
-此级别与 `REPEATABLE READ` 类似, 如果禁用自动提交, InnoDB 将隐式地将所有普通 SELECT 语句转换为 
-`SELECT ... LOCK IN SHARE MODE`. 如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作
-为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. (要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
+此级别与 `REPEATABLE READ` 类似, 如果禁用自动提交, InnoDB 将隐式地将所有普通 SELECT 语句转换为 `SELECT ... LOCK IN SHARE MODE`. 
+如果启用了自动提交, 则 SELECT 是其自己的事务. 因此, 由于它是只读的, 并且如果作为一致(非锁定)读取执行则可以序列化, 并且不需要阻止其他事务. 
+(要强制普通SELECT阻止其他事务已修改所选行, 请禁用自动提交)
+
 
 ## View
 
