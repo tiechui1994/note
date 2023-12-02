@@ -10,7 +10,7 @@ jobs:
       store: ${{ steps.install.outputs.store }}
     strategy:
       matrix:
-        node: [16.x]
+        node: [16.16.0]
 
     steps:
       - name: Use Node.js ${{ matrix.node }}
@@ -57,7 +57,7 @@ jobs:
         timeout-minutes: 30
         if: ${{ success() }}
         run: |
-          npm i axios-retry@3.3.1 --save-dev
+          npm i axios-retry@3.4.0 --save-dev
           node src/deploy/vercel.js --project note --domain blog --token ${{secrets.VERCEL}}
 
       - name: Store Cache
