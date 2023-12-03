@@ -810,7 +810,10 @@ SELECT * from c WHERE c=6 FOR UPDTAE;
 
 虽然有两个 c=10, 但是它们的主键id是不同的(分别是10和30), 因此这两个c=10的记录之间, 是有间隙的.
 
-![image](/images/mysql_lock_not_unique_exist_equal_value.png)
+```
+BEGIN;
+SELECT * FROM t WHERE c=10 FOR UPDATE;
+```
 
 1)开始查询, 首先查找到第一个 c=10 的索引记录(10,10), 加锁索引范围是 ((5,5), (10,10)]
 
@@ -821,7 +824,10 @@ SELECT * from c WHERE c=6 FOR UPDTAE;
 
 #### 非唯一索引范围
 
-![image](/images/mysql_lock_not_unique_range_value.png)
+```
+BEGIN;
+SELECT * FROM t WHERE c>=10 AND c<11 FOR UPDATE;
+```
 
 1)开始执行, 查找到第一个c=10的记录, 所以锁定范围是 ((5,5) (10,10)]. 注意, c是普通索引不能使用优化1.
 
