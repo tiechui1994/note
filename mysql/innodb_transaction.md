@@ -547,11 +547,11 @@ SELECT语句仅检索标识符信息(特定于当前连接). 它不访问任何�
 
 # 在 InnoDB 中通过不同的 SQL 语句设置的锁
 
-锁定读取, UPDATE或DELETE通常会在SQL语句过程中扫描的每个索引记录上设置record lock. 语句中是否存在将排除该行的WHERE条
-件并不重要. InnoDB不记得确切的WHERE条件, 但只知道扫描了哪些索引范围. 锁通常是next-key lock, 它也会阻止插入到记录之
+锁定读取, UPDATE 或 DELETE 通常会在SQL语句过程中扫描的每个索引记录上设置 record lock. 语句中是否存在将排除该行的 WHERE 
+条件并不重要. InnoDB 不记得确切的 WHERE 条件, 但只知道扫描了哪些索引范围. 锁通常是next-key lock, 它也会阻止插入到记录之
 前的"间隙"中. 但是, 可以显式禁用 gap lock, 这会导致不使用 next-key lock.
 
-如果在搜索中使用了二级索引, 并且要设置的索引记录锁是独占的(X), InnoDB还会检索相应的聚簇索引记录并对它们设置锁定.
+如果在搜索中使用了二级索引, 并且要设置的索引记录锁是独占的(X), InnoDB 还会检索相应的聚簇索引记录并对它们设置锁定.
 
 如果没有使用到适合语句的索引, 并且 MySQL 必须扫描整个表来处理该语句, 则表的每一行都会被锁定, 这反过来会阻止其他用户对表
 的所有插入. 因此, 创建好的索引非常重要, 这样查询就不会不必要地扫描很多行.
@@ -563,7 +563,7 @@ InnoDB设置特定类型的锁, 如下所示:
 句, 只需要设置record lock.
 
 - 对于 `SELECT ... FOR UPDATE` 或 `SELECT ... LOCK IN SHARE MODE`, 为扫描的行获取锁定, 并且对于不符合包含在结
-果集中的行, 预期会释放锁定(例如, 如果它们不符合 WHERE子句中给出的标准). 但是, 在某些情况下, 可能不会立即为行解锁, 因为
+果集中的行, 预期会释放锁定(例如, 如果它们不符合 WHERE 子句中给出的标准). 但是, 在某些情况下, 可能不会立即为行解锁, 因为
 在查询执行期间结果行与其原始源之间的关系会丢失. 例如, 在UNION中, 表中的扫描(并锁定)行可能会在评估之前插入临时表中, 以确
 定它们是否符合结果集的条件. 在这种情况下, 临时表中的行与原始表中的行的关系将丢失, 并且在查询执行结束之前不会解锁后面的行.
 
@@ -573,20 +573,15 @@ InnoDB设置特定类型的锁, 如下所示:
 - `SELECT ... FOR UPDATE` 在搜索遇到的每条记录上设置一个独占的next-key lock. 但是, 对于使用唯一索引锁定行以搜索唯
 一行的语句, 只需要设置 record lock.
 
-对于搜索遇到的索引记录, `SELECT ... FOR UPDATE` 阻止其他会话执行 `SELECT ... LOCK IN SHARE MODE` 语句 或 某些
-事务隔离级别中的读取. 一致性读取将忽略在读取视图中在记录上设置的任何锁定.
-
 - `UPDATE ... WHERE ...` 在搜索遇到的每条记录上设置一个独占的next-key lock. 但是, 对于使用唯一索引锁定行以搜索唯
-一行的语句, 只需要设置 record lock.
-
-- 当UPDATE修改聚簇索引记录时, 将对受影响的二级索引记录上采用隐式锁定. 在 "插入新的二级索引记录之前执行重复检查扫描" 以
-及 "插入新的二级索引记录" 时, UPDATE操作会对受影响的二级索引记录上执行共享锁定.
+一行的语句, 只需要设置 record lock. 当 UPDATE 修改聚簇索引记录时, 将对受影响的二级索引记录上采用隐式锁定. 在 "插入
+新的二级索引记录之前执行重复检查扫描" 以及 "插入新的二级索引记录" 时, UPDATE操作会对受影响的二级索引记录上执行共享锁定.
 
 - `DELETE FROM ... WHERE ...` 在搜索遇到的每条记录上设置一个独占的next-key lock. 但是, 对于使用唯一索引锁定行以
 搜索唯一行的语句, 只需要设置 record lock.
 
-- INSERT 在插入的行上设置独占锁. 此锁是record lock, 而不是next-key record(即没有间隙锁), 并且不会阻止其他会话在插
-入行之前插入到间隙中.
+- INSERT 在插入的行上设置独占锁. 此锁是 record lock, 而不是next-key record(即没有间隙锁), 并且不会阻止其他会话在插
+入行之前插入到间隙中. 
 
 在插入行之前, 设置一种称为"插入意图间隙锁定"的间隙锁定. 该锁定表示以这样的方式插入的意图: 如果插入到相同索引间隙中的多个
 事务不插入间隙内的相同位置, 则不需要等待彼此.  假设存在值为4和7的索引记录. 尝试插入值5和6的单独事务在获取插入行上的排它
@@ -601,19 +596,19 @@ CREATE TABLE t1 (i INT, PRIMARY KEY (i)) ENGINE = InnoDB;
 现在假设三个会话按顺序执行以下操作:
 Session 1:
 ```
-START TRANSACTION;
+BEGIN;
 INSERT INTO t1 VALUES(1);
 ```
 
 Session 2:
 ```
-START TRANSACTION;
+BEGIN;
 INSERT INTO t1 VALUES(1);
 ```
 
 Session 3:
 ```
-START TRANSACTION;
+BEGIN;
 INSERT INTO t1 VALUES(1);
 ```
 
@@ -630,19 +625,19 @@ ROLLBACK;
 如果表已包含键值为1的行并且三个会话按顺序执行以下操作, 则会出现类似情况:
 Session 1:
 ```
-START TRANSACTION;
+BEGIN;
 DELETE FROM t1 WHERE i = 1;
 ```
 
 Session 2:
 ```
-START TRANSACTION;
+BEGIN;
 INSERT INTO t1 VALUES(1);
 ```
 
 Session 3:
 ```
-START TRANSACTION;
+BEGIN;
 INSERT INTO t1 VALUES(1);
 ```
 
@@ -783,7 +778,7 @@ BEGIN;
 SELECT * from c WHERE c=5 FOR UPDTAE;
 ```
 
-1)根据原则1, 加锁单位是next-key lock, session A 锁定范围是 ((0, 0), (5,5)].
+1)根据原则1, 加锁单位是next-key lock, 锁定范围是 ((0, 0), (5,5)].
 
 2)由于 c 是普通索引, 因此仅访问 c=5 这一条记录不能马上停下来, 需要向右边遍历, 查找到10. 根据原则2, 访问到的对象都要加
 锁, 因此 ((5,5), (10,10)] 加锁.
@@ -799,7 +794,7 @@ BEGIN;
 SELECT * from c WHERE c=6 FOR UPDTAE;
 ```
 
-1)根据原则1, 加锁单位是next-key lock, session A 锁定范围是 ((5, 5), (10, 10)].
+1)根据原则1, 加锁单位是next-key lock, 锁定范围是 ((5, 5), (10, 10)].
 
 2)根据优化2, 等值判断, 向右遍历, 最后一个值不满足 c=6 的条件, 退化味为 gap lock, 锁定范围((5, 5), (10,10))
 
