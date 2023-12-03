@@ -776,7 +776,10 @@ insert into t values(0,0,0),(5,5,5),(10,10,10),(15,15,15),(20,20,20),(25,25,25);
 
 ### 案例3: 非唯一索引等值
 
-![image](/images/mysql_lock_not_unique_equal_value.png)
+```
+BEGIN;
+SELECT * from c WHERE c=5 FOR UPDTAE;
+```
 
 1)根据原则1, 加锁单位是next-key lock, session A 锁定范围是 ((0, 0), (5,5)].
 
