@@ -36,7 +36,7 @@ sed的编辑命令可以直接当命令行参数传入, 也可以写成一个脚
 
 sed 中包含两种形式的行寻址: `数字形式表示的行区间` 和 `文本模式匹配行`
 
-命令语法: `[address] command`
+命令语法: `[address] command [; [address] command]`
 
 ### 数字形式的行寻址(以打印`p`命令为例):
 
@@ -81,6 +81,8 @@ sed -n 'p' file
 ### 命令(command):
 
 ```
+=  打印当前行号 
+
 a\text   在当前行 "后面" 添加text
 i\text   在当前行 "前面" 添加text
 c\text   使用 text "替换" 当前行
@@ -92,9 +94,9 @@ p  打印模板块
 P  打印模板块的第一行
 
 # 注: 替换前后的 / 是必须的, 不能缺少
-s/pattern1/pattern2/   将当前匹配行 "第一个" 匹配pattern1的字符串替换为pattern2
-s/pattern1/pattern2/g  将当前匹配行 "所有" 匹配pattern1的字符串替换为pattern2
-s/pattern1/pattern2/p  将当前匹配行 "第一个" 匹配pattern1的字符串替换为pattern2, 并打印输出
+s|pattern1|pattern2|   将当前匹配行 "第一个" 匹配pattern1的字符串替换为pattern2
+s|pattern1|pattern2|g  将当前匹配行 "所有" 匹配pattern1的字符串替换为pattern2
+s|pattern1|pattern2|p  将当前匹配行 "第一个" 匹配pattern1的字符串替换为pattern2, 并打印输出
 
 w file 文件写入命令. 将模式空间中的内容写入到文件. file是文件名称. 当文件不存在时, 会自动创建, 如果文件已经存在,
 则会覆盖原文件的内容
@@ -113,7 +115,7 @@ g  获得内存的缓冲区的内容, 并替换到当前模板块的文本
 G  获得内存的缓冲区的内容, 并追加到当前模板块文本的后面
 ```
 
-### 案例:
+### 案例
 
 1. 在 "匹配的行" 的前一行或后一行添加内容
 
@@ -156,16 +158,16 @@ sed -i '/allow/ {n;d}' the.conf.file
 
 ```bash
 # 匹配的行只替换一次
-sed -i '/allow/ s/^aa/xyz/' the.conf.file
+sed -i '/allow/ s|^aa|xyz|' the.conf.file
 
 # 匹配的行只替换所有
-sed -i '/allow/ s/^aa/xyz/g' the.conf.file
+sed -i '/allow/ s|^aa|xyz|g' the.conf.file
 
 # source源替换
 sed -n '/^[^#]/ s|http://us.archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|p' source.list
 ```
 
-使用模式匹配寻址 `/allow/`, 命令是 `s/^aa/xyz/` 或 `s/^aa/xyz/g`
+使用模式匹配寻址 `/allow/`, 命令是 `s|^aa|xyz|` 或 `s|^aa|xyz|g`
 
 使用模式匹配寻址 `/^[^#]/`, 命令是 `s|http://us.archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|p`,
 这里使用 `|` 作为分隔符, 默认是 `/`
@@ -178,7 +180,7 @@ sed -n '/^[^#]/ s|http://us.archive.ubuntu.com|&.cn|p' source.list
 
 使用模式匹配寻址 `/^[^#]/`,  命令是 `s|http://us.archive.ubuntu.com|&.cn|p`.
 
-> `&` 用来保存搜索字符以其替换其他字符, 如 `s/love/**&**/`, love这成 `**love**`.
+> `&` 用来保存搜索字符以其替换其他字符, 如 `s|love|**&**|`, love这成 `**love**`.
 
 6. 正则匹配(分组匹配)
 
@@ -211,7 +213,7 @@ sshd-link-109:65534::/run/sshd:/usr/sbin/nologin
 > `\1`, `\2` 用来代表分组匹配的结果, 与 `&` 类似.
 
 
-7. 内存拷贝替换
+7. 内存拷贝替换( h 命令与 g 命令的合作操作)
 
 ```bash
 sed  '/root/ h; /mysql/ g' passwd
@@ -230,3 +232,5 @@ mysql:x:999:999::/home/mysql:/bin/sh
 root:x:0:0:root:/root:/bin/bash
 root:x:0:0:root:/root:/bin/bash
 ```
+
+> 注意: 上述的命令是对每一行都执行的. 但是内存区域只有一块, 这也意味者重复拷贝会被覆盖.
