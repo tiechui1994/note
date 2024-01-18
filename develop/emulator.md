@@ -33,10 +33,10 @@ export CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/jre/lib
 # Download Command Tools
 wget -O sdk-tools.zip https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
 unzip sdk-tools.zip && rm sdk-tools.zip
-mv tools $WORKDIR/Android/sdk/tools
 
 # Set Env
 mkdir -p $WORKDIR/Android/sdk
+mv tools $WORKDIR/Android/sdk/tools
 export ANDROID_SDK_ROOT=$WORKDIR/Android/sdk
 export ANDROID_HOME=$WORKDIR/Android/sdk
 
