@@ -235,24 +235,20 @@ ssl_verify_client on | off | optional;
 ```
 server { 
     listen       443;
-    server_name  localhost;
+    server_name  localhost ssl;
     
-    # 开启SSL
-    ssl                     on;
     # 配置证书位置(crt文件)
     ssl_certificate         /root/Lee/keys/server.crt;
-    # 配置秘钥位置
+    # 配置秘钥位置(与证书对应)
     ssl_certificate_key     /root/Lee/keys/server.key;
     
     # 开启双向认证, 以及认证客户端的CA证书(一般是自己私有的CA)
     #ssl_verify_client on;
     #ssl_client_certificate ca.crt;
     
-    # ssl session 超时时间
+    # ssl session 超时时间, 协议, 加密算法
     ssl_session_timeout         5m;
-    # ssl 协议
     ssl_protocols               SSLv2 SSLv3 TLSv1;
-    # ssl 加密算法
     ssl_ciphers                 ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP;
     # server 端加密算法优先于客户端加密算法
     ssl_prefer_server_ciphers   on;
