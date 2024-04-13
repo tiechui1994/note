@@ -30,16 +30,15 @@ clash 配置主要包含 3 部分:
 ```
 // 使用 Go 实现, 目前比较主流.
 v2ray-plugin:
-- mode: websocket | quic
+- mode: websocket
 - tls, 是否启用 tls
 - host, 伪装域名
 - path, 路径
-- mux, websocket 模式下是否启用多路复用
 - headers, 请求 header
 
 // 使用 C 实现, 目前已不推荐使用. 
 obfs:
-- mode: tls, http  // 对应 plugin_opts 当中的 obfs
+- mode: tls | http  // 对应 plugin_opts 当中的 obfs
 - host, 伪装域名    // 对应 plugin_opts 当中的 obfs-host
 ```
 
@@ -72,13 +71,15 @@ obfs:
 
 - name, 组名称, 后续的 Rules 直接对接到组名称
 
-- type, 组类型, 支持的有 fallback(备选方案), url-test(定期测速), select(直接被 rules 使用的组)
+- type, 组类型, 支持的有 fallback(备选方案), url-test(定期测速), select(直接被 rules 使用的组), load-balance(负载均衡)
 
 - url, 进行网速测试的网站. 一般是 http://www.gstatic.cn/generate_204
 
 - proxies, 该 group 当中包含的节点数组(来自 proxies 节点, fallback, url-test 类型的组)
 
 - interval, 测速的周期
+
+- strategy, 在 load-balance 负载均衡策略, consistent-hash, round-robin
 
 - tolerance, 在 fallback, url-test 当中切换节点的容忍度
 
@@ -99,11 +100,22 @@ obfs:
 
 - 'MATCH', MATCH 规则用于路由剩余的数据包. 该规则是必需的, 通常用作最后一条规则. 
 
-# 节点搭建
+# 节点配置
 
 ## ss 节点(sserver + obfs/v2ray-plugin)
 
-ss 协议是一个基于 TCP 的协议.
+ss 协议是一个基于 TCP 的协议. 传输协议层
+
+```
++------------------------------------------------+
+| cipher(chacha20-ietf-poly1305, aes-192-gcm...) |
++------------------------------------------------+
+| tls|http(obfs) websocket(v2ray-plugin)         | 
++------------------------------------------------+  
+| TCP                                            |
++------------------------------------------------+
+```
+
 
 // ss + obfs, 最简单的 ss 节点
 ```
@@ -123,10 +135,20 @@ ss 协议是一个基于 TCP 的协议.
 
 ## vmess 节点 (v2ray)
 
-vmess 协议是一个基于 TCP 的协议.
+vmess 协议是一个基于 TCP 的协议. 传输协议层
 
-// vmess + tcp 
+```
++--------------------------------------------------------+
+| cipher(chacha20-poly1305, aes-192-gcm, none), 封装格式  |
++--------------------------------------------------------+  
+| TCP | TLS | HTTP | WS | H2 | GRPC                      |
++--------------------------------------------------------+
+```
 
+> 注: 第一个请求数据包和响应数据包是没有 cipher 层的(或者是进行特殊加密处理的)
+
+
+// vmess + tcp
 ```
 {
   "inbounds": [
