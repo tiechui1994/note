@@ -1,4 +1,4 @@
-## InnoDB 内存
+## MySQL专题 - InnoDB 内存
 
 InnoDB 架构模型:
 
@@ -52,11 +52,11 @@ Dirty Page(脏页), 表示此页已被使用且已被修改, 其数据和磁盘�
 
 ![image](/images/mysql_innodb_buffer_pool_list.png)
 
-该算法将经常使用的页面保存在新子链表中. 旧子链表包含较少使用的页面, 这些页面可能会被淘汰.
+该算法将经常使用的页面保存在 new 子链表中. old 子链表包含较少使用的页面, 这些页面可能会被淘汰.
 
 默认情况下,算法操作如下:
 
-1) 3/8 Buffer Pool用于 old 区域子链表(old区域子链表占比数量的配置是 innodb_old_blocks_pct, 默认是 37).
+1) 3/8 Buffer Pool用于 old 子链表(old 子链表占比数量的配置是 innodb_old_blocks_pct, 默认是 37).
 
 2) 链表的 "中点" 是 young区域子链表的尾部与 old区域子链表头部的边界.
 
@@ -68,8 +68,8 @@ Dirty Page(脏页), 表示此页已被使用且已被修改, 其数据和磁盘�
 且在该页面被删除之前根本不会进行一次访问.
 
 > 对于某个处于 old 区域的缓存页进行第一次访问时, 会在其对应的控制块中记录访问时间, 如果在后续的访问时间与第一次访问
-> 时间间隔小于 "innodb_old_blocks_time", 那么`该缓存页不会从 old 区域子链表移动到 young 区域子链表的头部`. 否
-> 则, `该缓存页从 old 区域子链表移动到 young 区域子链表的头部`.
+> 时间间隔小于 "innodb_old_blocks_time", 那么`该缓存页不会从 old 子链表移动到 young 子链表的头部`. 否则, `该缓
+> 存页从 old 子链表移动到 young 子链表的头部`.
 > innodb_old_blocks_time 默认是 1000ms. 上述的限制条件是为了解决 Buffer Pool 污染的问题, 防止因为全表
 > 扫描查询导致整个 Buffer Pool 的热点数据被淘汰.
 
@@ -155,14 +155,14 @@ Change Buffer(写缓冲) 一种特殊的数据结构, 它是一种应用在非�
 ![image](/images/mysql_innodb_change_buffer.png)
 
 与聚集索引不同, none-unique secondary index 是非唯一的, 并且插入二级索引以随机的顺序发生. 类似的, 删除和更新也可
-能会影响索引树中不相邻的二级索引页面. 
+能会影响索引树中不相邻的二级索引页面.
 
 在内存中, Change Buffer 占用了Buffer Pool的一部分. 在磁盘上, Change Buffer是system tablespace(ibdata文件)的一部分, 
 当数据库服务关闭时, 索引更改将存储在其中.
 
 Change Buffer中的数据类型由 `innodb_change_buffering` 变量控制. 
 
-如果 "索引包含降序索引列" 或 "主键包含降序索引列", 则二级索引不支持 Buffer Pool.
+如果 "索引包含降序索引列" 或 "主键包含降序索引列", 则二级索引不支持写缓冲.
 
 
 Change Buffer 工作原理:
@@ -189,7 +189,7 @@ InnoDB 当中使用写缓冲优化后, 操作流程为:
 > 其性能与这个索引页在缓冲池中, 相近
 
 上述的优化是否会出现一致性问题? 不会. 1)数据库异常崩溃, 能够从 redo log 当中恢复数据; 2)写缓冲不只是一个内存结构, 
-它也会被定期刷写到系统表空间; 3)数据读取是, 有其他的流程, 将数据合并到缓冲池;
+它也会被定期刷写到系统表空间; 3)数据读取时有其他的流程会将数据合并到缓冲池;
 
 假设在稍后的时间, 有请求查询索引页40的数据:
 
@@ -228,7 +228,7 @@ InnoDB 当中, 聚餐索引(Clustered index)与普通索引(Secondary index) 存
 因为它可以减少磁盘读取和写入, 所以Change Buffer对IO密集型的工作很有用. 例: 具有大量DML操作(例如批量插入)的程序得益于
 Change Buffer.
 
-Change Buffer 占用 Buffer Pool 的一部分, 从而减少了可用于缓存数据页的内存. 如果工作数据集几乎适合 Buffer Pool, 
+Change Buffer占用Buffer Pool的一部分, 从而减少了可用于缓存数据页的内存. 如果工作数据集几乎适合Buffer Pool, 
 或者数据库的表具有相对较少的 none-unique secondary index, 则禁用 Change Buffer 比较有用. 
 如果工作数据集完全适合Buffer Pool, 则 Change Buffer 不会带来额外的开销, 因为它仅适用于不在 Buffer Pool 中的页面.
 
@@ -281,7 +281,7 @@ Doublewrite Buffer 工作:
 ![image](/images/mysql_innodb_mem_doublebuffer_work.png)
 
 当有数据页要刷盘时:
-1. 页数据西安 memcopy 到 Doublewrite Buffer 的内存里; (速度很快)
+1. 页数据 memcopy 到 Doublewrite Buffer 的内存里; (速度很快)
 2. Doublewrite Buffer 内存里的数据页, 先刷写到 Doublewrite Buffer 的磁盘上(系统表空间, 顺序写入)
 3. Doublewrite Buffer 内存里的数据页, 再刷写到数据磁盘存储 .ibd 文件上. (随机写, 必须要做), 完成后, 会将第一步的
 Doublewrite Buffer标记为可覆盖.
