@@ -47,7 +47,7 @@ c) 持久化到磁盘, 物理上是在磁盘当中.
 
 redo log 在写入到 redo log buffer 和系统 page cache 是很快的, 但是持久化到磁盘的速度要慢一些.
 
-为了控制 redo log 的写入策略, InnoDB 提供了 innodb_flush_log_at_trx_commit 参数, 它有三种取值:
+为了控制 redo log 的写入策略, InnoDB 提供了 `innodb_flush_log_at_trx_commit` 参数, 它有三种取值:
 
 a) 设置为 0, 表示每次事务提交时只把 redo log 写入到 redo log buffer 中.
 
@@ -67,7 +67,7 @@ a) **一种是, redo log buffer占用的空间即将达到 innodb_log_buffer_siz
 于这个事务还没有提交, 所以这个写盘动作只是 write, 而没有调用 fsync, 也就是只留在了系统的 page cache.
 
 b) **另一种是, 并行的事务提交的时候, 顺带将这个事务的 redo log buffer 持久化到磁盘.** 假设一个事务A执行到一半, 已经写了
-一些redo log到redo log buffer, 这个时候有另外一个线程的事务B提交, 如果 innodb_flush_kog_at_trx_commit=1, 那么
+一些redo log到redo log buffer, 这个时候有另外一个线程的事务B提交, 如果 `innodb_flush_log_at_trx_commit=1`, 那么
 按照这个参数的逻辑, 事务B要把 redo log buffer 里的日志全部持久化到磁盘. 这个时候, 就会带上事务A在 redo log buffer 里
 的日志一起持久化到磁盘.
 
@@ -108,23 +108,23 @@ c) 如果已经写入了 binlog, 在写入 InnoDB commit 标志时崩溃, 则重
 
 为了提高并发性能, 将两阶段提交进行了优化(组提交的本质):
 
-prepare阶段: InnoDB 将回滚段设置为 prepare 状态, redo log 文件写入(不刷盘)
+prepare 阶段: InnoDB 将回滚段设置为 prepare 状态, redo log 文件写入(不刷盘)
 
-commit 阶段拆分为为3个stage, 分别是 flush, sync, commit. 每个stage设置一个队列, 第一个进入该队列的线程成为leader,
+commit 阶段: 分为3个stage, 分别是 flush, sync, commit. 每个stage设置一个队列, 第一个进入该队列的线程成为leader,
 后续进入的线程会阻塞直至完成提交. leader 线程会领导队列中所有线程执行该stage任务, 并带领所有 follower 进入到下一个
 stage 去执行. 
 
 ```
 flush:
-1) 收集组提交队列, 得到 leader 现成, 其余 follower 现成进入阻塞
+1) 收集组提交队列(线程), 首个为leader线程, 其余follower线程进入阻塞
 2) leader 进行一次 redo log 的 fsync, 即一次将所有线程的 redo log 刷盘;
 3) 将队列当中所有的 binlog 写入的文件当中(只进行write, 不刷盘)
 
 sync:
-1) 对 binlog 文件进行一次 fsync 操作(多个线程的 binlog 合并一次刷盘)
+1) 对 binlog 文件进行一次 fsync 操作(多个线程的binlog合并一次刷盘)
 
 commit:
-1) 各个线程按顺序做InnoDB commit 操作.
+1) 各个线程按顺序做InnoDB Commit 操作.
 ```
 
 
