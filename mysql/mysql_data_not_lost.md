@@ -22,7 +22,7 @@ b) 图中的 fsync, 将数据持久化到磁盘的操作. 一般情况下, fysnc
 
 write 和 fsync 的时机, 是参数 sync_binlog 控制的:
 
-- sync_binlog=0, 表示每次提交事务都只 write, 不 fsync.
+- sync_binlog=0, 表示每次提交事务都只进行 write.
 
 - sync_binlog=1, 表示每次提交事务都会执行 write 和 fsync.
 
@@ -49,11 +49,11 @@ redo log 在写入到 redo log buffer 和系统 page cache 是很快的, 但是�
 
 为了控制 redo log 的写入策略, InnoDB 提供了 `innodb_flush_log_at_trx_commit` 参数, 它有三种取值:
 
-a) 设置为 0, 表示每次事务提交时只把 redo log 写入到 redo log buffer 中.
+a) innodb_flush_log_at_trx_commit=0, 表示每次事务提交时只把 redo log 写入到 `redo log buffer` 中.
 
-b) 设置为 1, 表示每次事务提交时将 redo log 持久化到磁盘.
+b) innodb_flush_log_at_trx_commit=1, 表示每次事务提交时将 redo log 持久化到磁盘(write+sync).
 
-c) 设置为 2, 表示每次事务提交时将 redo log 写入到系统的 page cache.
+c) innodb_flush_log_at_trx_commit=2, 表示每次事务提交时将 redo log 写入到系统的 `page cache`(write).
 
 InnoDB 有一个后台线程, 每隔1秒, 就会把 redo log buffer 中的日志, 调用 write 写入到系统的 page cache, 然后调用fsync
 持久化到磁盘. 间隔时间是由 `innodb_flush_log_at_timeout` 控制的.
@@ -198,7 +198,7 @@ WAL 机制主要得益于两个方面:
 
 现在, 再来回答这个问题: 如果MySQL出现了性能瓶颈, 而且瓶颈在IO上, 可以优化的手段有哪些?
 
-- 设置 binlog_group_commit_sync 和 binlog_group_commit_no_sync_count 参数, 减少binlog的写盘此书. 这个方法是
+- 设置 binlog_group_commit_sync 和 binlog_group_commit_no_sync_count 参数, 减少binlog的写盘次数. 这个方法是
 基于"额外的故意等待"来实现的, 因此可能增加语句的响应时间, 但没有丢失数据的风险.
 
 - 将 sync_binlog 设置为大于1的值(常见100~1000). 这个的风险, 主机掉电时会丢失binlog日志.
@@ -215,33 +215,37 @@ MySQL本身异常重启也会丢数据, 风险太大. 而设置为 2, 与设置�
 
 ### xid, trx_id
 
-Xid 是 MySQL server 层维护的, MySQL 内部维护了一个全局变量 global_query_id, 每次执行语句的时候将它赋值给 Query_id,
-然后这个变量加1. 如果当前语句是这个事务执行的第一条语句, 那么 MySQL 还会同时把 Query_id 赋值给这个事务的 Xid.
+- xid
 
-global_query_id 是一个纯粹的内存变量, 重启之后就清零了. 因此, 在同一个数据库实例中, 不同事务的 Xid 也是有可能相同的.
+**xid 是 MySQL Server 层维护的, MySQL 内部维护了一个全局变量 global_query_id**, 每次执行语句的时候将它赋值给 Query_id,
+然后这个变量加1. 如果当前语句是这个事务执行的第一条语句, 那么 MySQL 还会同时把 Query_id 赋值给这个事务的 xid.
 
-但是 MySQL 重启之后会重新生成新的 binlog 文件, 这就保证了同一个 binlog 文件里, Xid 一定是唯一的.
+global_query_id 是一个纯粹的内存变量, 重启之后就清零了. 因此, 在同一个数据库实例中, 不同事务的 xid 也是有可能相同的.
 
-虽然 MySQL 重启不会导致同一个 binlog 里面出现两个相同的 Xid, 但是如果 global_query_id 达到上限后, 就会继续从 0 开
-始计数. 从理论上讲, 还是会出现在一个 binlog 里面出现相同的 Xid 的场景.
+但是 MySQL 重启之后会重新生成新的 binlog 文件, 这就保证了同一个 binlog 文件里, xid 一定是唯一的.
+
+虽然 MySQL 重启不会导致同一个 binlog 里面出现两个相同的 xid, 但是如果 global_query_id 达到上限后, 就会继续从 0 开
+始计数. 从理论上讲, 还是会出现在一个 binlog 里面出现相同的 xid 的场景.
 
 由于 global_query_id 定义的长度是 8 字节, 自增值的上限是 2^64-1. 要出现这种情况, 必须是这样的过程:
 
-1.执行一个事务, 此时Xid=A
+1.执行一个事务, 此时 xid=A
 
 2.接下来再执行 2^64 次查询语句, 让 global_query_id 回到 A
 
-3.再启动一个事务, 这个事务的 Xid 也是A
+3.再启动一个事务, 这个事务的 xid 也是A
 
 > 2^64 值太大了, 大到这个可能性只会存在理论上.
 
-trx_id 是在 InnoDB 当中维护的. 在 InnoDB 内部使用 Xid, 是为了能够在 InnoDB 事务和 Server 之间关联.
+- trx_id
+
+**trx_id 是在 InnoDB 当中维护的. 在 InnoDB 内部使用 xid, 是为了能够在 InnoDB 事务和 Server 之间关联.**
 
 InnoDB 内部维护了一个 max_trx_id 全局变量, 每次需要申请一个新的 trx_id 时, 就会获得 max_trx_id 的当前值, 然后并将
 max_trx_id 加 1.
 
-InnoDB 数据可见性的核心思想是: 每一行数据都记录了更新它的 trx_id, 当一个事务读到一行数据的时候, 会判断这个数据是否可见
-的方法, 就是通过事务的一致性视图与这行数据的 trx_id 做对比.
+**InnoDB 数据可见性的核心思想是: 每一行数据都记录了更新它的 trx_id, 当一个事务读到一行数据的时候, 会判断这个数据是否可见
+的方法, 就是通过事务的一致性视图与这行数据的 trx_id 做对比.**
 
 对于正在执行的事务, 可以从 information_schema.innodb_trx 当中查找到事务的 trx_id.
 
@@ -259,12 +263,13 @@ trx_id 是 90161), 这是为什么呢?
 
 注意, 除了常见的修改语句外, 如果 select 语句后面加上 for update, 这个事务也不是只读事务.
 
-**T2时刻查到的 trx_id 是个很大数字是怎么来的?**
+
+T2时刻查到的 trx_id 是个很大数字是怎么来的 ?
 
 这个数字是每次查询的时候由系统临时计算出来的. 它的算法是: 把当前事务的 trx 变量的指针转换成整数, 然后加上 2^48. 使用这
 样的算法, 就可以保证两点:
 
-1.吟哦同一个只读事务在执行期间, 它的指针是不会变的, 所以不论是在 innodb_trx 还是 innodb_locks 表中, 同一个只读事务
+1.同一个只读事务在执行期间, 它的指针是不会变的, 所以不论是在 innodb_trx 还是 innodb_locks 表中, 同一个只读事务
 查询出来的 trx_id 是一致的.
 
 2.如果有并行的多个只读事务, 每个事务的 trx 变量的指针肯定不同. 这样, 不同的并发只读事务, 查出来的 trx_id 就不相同了.
@@ -276,12 +281,12 @@ trx_id 是 90161), 这是为什么呢?
 只读事务不分配 trx_id 的目的:
 
 1.减少事务视图里面活跃事务组的大小. 因为当前正在运行的只读事务, 是不影响数据的可见性判断的. 所以, 在创建事务的一致性视图
-时, InnoDB 就只需要拷贝读写事务的 trx_id.
+时, InnoDB 就只需要拷贝写事务的 trx_id.
 
 2.减少trx_id申请次数. InnoDB 当中, 即使只是执行一个普通的 select 语句, 执行过程中, 也是要对应一个只读事务的. 所以只
 读事务优化后, 普通的查询语句就不需要申请 trx_id, 这样可以大大减少并发事务申请 trx_id 的锁冲突.
 
-max_trx_id 会持久化存储, 重启也不会重置为0, 那么从理论上讲, 只要一个 MySQL 服务跑得足够就, 就可能出现 max_trx_id 达
+max_trx_id 会持久化存储, 重启也不会重置为0, 那么从理论上讲, 只要一个 MySQL 服务跑得足够久, 就可能出现 max_trx_id 达
 到 2^48-1 的上限, 然后从0开始的情况.
 
 当达到这个状态之后, MySQL 就会持续出现一个脏读的 bug. (在一个事务执行期间, max_trx_id 跨越了 2^48 变成了0, 这时,在
