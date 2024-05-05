@@ -104,8 +104,8 @@ Closure Table, 一种更为彻底的全路径结构, 分别记录路径上相关
 主表(node): 存储节点的信息
 ```
 {
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	name VARCHAR (255),
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR (255),
 }
 ```
 

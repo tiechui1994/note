@@ -192,7 +192,7 @@ location /api/ {
 
 ```
 location /api/ {
-	return 308 http://stage.web.com$request_uri;
+    return 308 http://stage.web.com$request_uri;
 }
 ```
 
@@ -204,7 +204,7 @@ location /api/ {
 
 ```
 location /api/ {
-	rewrite ^/(.*) http://stage.web.com$request_uri last;
+    rewrite ^/(.*) http://stage.web.com$request_uri last;
 }
 ```
 
@@ -217,7 +217,7 @@ location /api/ {
 
 ```
 location / {
-	rewrite ^/(.*) http://stage.web.com$request_uri break;
+    rewrite ^/(.*) http://stage.web.com$request_uri break;
 }
 ```
 

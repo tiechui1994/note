@@ -36,13 +36,13 @@ stripped
 
 ```
 > ldd /bin/ls
-	linux-vdso.so.1 =>  (0x00007ffc9adf7000)
-	libselinux.so.1 => /lib/x86_64-linux-gnu/libselinux.so.1 (0x00007f5330522000)
-	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f5330158000)
-	libpcre.so.3 => /lib/x86_64-linux-gnu/libpcre.so.3 (0x00007f532fee8000)
-	libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f532fce4000)
-	/lib64/ld-linux-x86-64.so.2 (0x00007f5330744000)
-	libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f532fac7000)
+    linux-vdso.so.1 =>  (0x00007ffc9adf7000)
+    libselinux.so.1 => /lib/x86_64-linux-gnu/libselinux.so.1 (0x00007f5330522000)
+    libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f5330158000)
+    libpcre.so.3 => /lib/x86_64-linux-gnu/libpcre.so.3 (0x00007f532fee8000)
+    libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f532fce4000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007f5330744000)
+    libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f532fac7000)
 ```
 
 ### ltrace

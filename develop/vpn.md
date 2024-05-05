@@ -26,20 +26,20 @@ sudo apt-get install pptpd ppp -y --no-install-recommends --no-upgrade
 
 ```
 # TAG: ppp
-#	Path to the pppd program, default '/usr/sbin/pppd' on Linux
+#    Path to the pppd program, default '/usr/sbin/pppd' on Linux
 ppp /usr/sbin/pppd
 
 # TAG: option
-#	Specifies the location of the PPP options file.
-#	By default PPP looks in '/etc/ppp/options'
+#    Specifies the location of the PPP options file.
+#    By default PPP looks in '/etc/ppp/options'
 option /etc/ppp/pptpd-options
 
 # TAG: debug
-#	Turns on (more) debugging to syslog
+#    Turns on (more) debugging to syslog
 debug
 
 # TAG: stimeout
-#	Specifies timeout (in seconds) on starting ctrl connection
+#    Specifies timeout (in seconds) on starting ctrl connection
 #stimeout 10
 
 # TAG: noipparam
@@ -47,20 +47,20 @@ debug
 #noipparam
 
 # TAG: logwtmp
-#	Use wtmp(5) to record client connections and disconnections.
+#    Use wtmp(5) to record client connections and disconnections.
 #logwtmp
 
 # TAG: vrf <vrfname>
-#	Switches PPTP & GRE sockets to the specified VRF, which must exist
-#	Only available if VRF support was compiled into pptpd.
+#    Switches PPTP & GRE sockets to the specified VRF, which must exist
+#    Only available if VRF support was compiled into pptpd.
 #vrf test
 
 # TAG: bcrelay <if>
-#	Turns on broadcast relay to clients from interface <if>
+#    Turns on broadcast relay to clients from interface <if>
 #bcrelay eth1
 
 # TAG: delegate
-#	Delegates the allocation of client IP addresses to pppd.
+#    Delegates the allocation of client IP addresses to pppd.
 #
 #   Without this option, which is the default, pptpd manages the list of
 #   IP addresses for clients and passes the next free address to pppd.
@@ -77,34 +77,34 @@ debug
 
 # TAG: localip
 # TAG: remoteip
-#	Specifies the local and remote IP address ranges.
+#    Specifies the local and remote IP address ranges.
 #
-#	These options are ignored if delegate option is set.
+#    These options are ignored if delegate option is set.
 #
 #       Any addresses work as long as the local machine takes care of the
 #       routing.  But if you want to use MS-Windows networking, you should
 #       use IP addresses out of the LAN address space and use the proxyarp
 #       option in the pppd options file, or run bcrelay.
 #
-#	You can specify single IP addresses seperated by commas or you can
-#	specify ranges, or both. For example:
+#    You can specify single IP addresses seperated by commas or you can
+#    specify ranges, or both. For example:
 #
-#		192.168.0.234,192.168.0.245-249,192.168.0.254
+#        192.168.0.234,192.168.0.245-249,192.168.0.254
 #
-#	IMPORTANT RESTRICTIONS:
+#    IMPORTANT RESTRICTIONS:
 #
-#	1. No spaces are permitted between commas or within addresses.
+#    1. No spaces are permitted between commas or within addresses.
 #
-#	2. If you give more IP addresses than the value of connections,
-#	   it will start at the beginning of the list and go until it
-#	   gets connections IPs.  Others will be ignored.
+#    2. If you give more IP addresses than the value of connections,
+#       it will start at the beginning of the list and go until it
+#       gets connections IPs.  Others will be ignored.
 #
-#	3. No shortcuts in ranges! ie. 234-8 does not mean 234 to 238,
-#	   you must type 234-238 if you mean this.
+#    3. No shortcuts in ranges! ie. 234-8 does not mean 234 to 238,
+#       you must type 234-238 if you mean this.
 #
-#	4. If you give a single localIP, that's ok - all local IPs will
-#	   be set to the given one. You MUST still give at least one remote
-#	   IP for each simultaneous client.
+#    4. If you give a single localIP, that's ok - all local IPs will
+#       be set to the given one. You MUST still give at least one remote
+#       IP for each simultaneous client.
 #
 # (Recommended)
 localip 172.31.1.1

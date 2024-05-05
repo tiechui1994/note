@@ -57,7 +57,7 @@ wa, cpu等待
 
 ```
 > pidstat -w -p 1 1 5
-Linux 4.15.0-29-generic (work) 	05/16/2020 	_x86_64_	(8 CPU)
+Linux 4.15.0-29-generic (work)     05/16/2020     _x86_64_    (8 CPU)
 
 11:23:19 AM   UID       PID   cswch/s nvcswch/s  Command
 11:23:20 AM     0         1      0.00      0.00  systemd
@@ -76,7 +76,7 @@ Average:        0         1      0.00      0.00  systemd
 
 ```
 > iostat -d -k -x 2
-Linux 4.15.0-29-generic (work) 	05/16/2020 	_x86_64_	(8 CPU)
+Linux 4.15.0-29-generic (work)     05/16/2020     _x86_64_    (8 CPU)
 
 Device:  rrqm/s  wrqm/s   r/s   w/s  rkB/s   wkB/s avgrq-sz avgqu-sz  await r_await w_await  svctm  %util
 loop0      0.00    0.00  0.00  0.00   0.00    0.00     3.20     0.00   0.00    0.00    0.00   0.00   0.00

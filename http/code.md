@@ -103,85 +103,85 @@ HTTP 主要通过请求和响应头当中 Header 字段: Expires, Cache-Control,
 golang测试代码
 ```
 func main() {
-	http.HandleFunc("/api/301", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
-		writer.WriteHeader(http.StatusMovedPermanently)
-		writer.Write([]byte("OK"))
-	})
-	http.HandleFunc("/api/302", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
-		writer.WriteHeader(http.StatusFound)
-		writer.Write([]byte("OK"))
-	})
-	http.HandleFunc("/api/303", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
-		writer.WriteHeader(http.StatusSeeOther)
-		writer.Write([]byte("OK"))
-	})
-	http.HandleFunc("/api/307", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
-		writer.WriteHeader(http.StatusTemporaryRedirect)
-		writer.Write([]byte("OK"))
-	})
-	http.HandleFunc("/api/308", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
-		writer.WriteHeader(http.StatusPermanentRedirect)
-		writer.Write([]byte("OK"))
-	})
+    http.HandleFunc("/api/301", func(writer http.ResponseWriter, request *http.Request) {
+        writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
+        writer.WriteHeader(http.StatusMovedPermanently)
+        writer.Write([]byte("OK"))
+    })
+    http.HandleFunc("/api/302", func(writer http.ResponseWriter, request *http.Request) {
+        writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
+        writer.WriteHeader(http.StatusFound)
+        writer.Write([]byte("OK"))
+    })
+    http.HandleFunc("/api/303", func(writer http.ResponseWriter, request *http.Request) {
+        writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
+        writer.WriteHeader(http.StatusSeeOther)
+        writer.Write([]byte("OK"))
+    })
+    http.HandleFunc("/api/307", func(writer http.ResponseWriter, request *http.Request) {
+        writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
+        writer.WriteHeader(http.StatusTemporaryRedirect)
+        writer.Write([]byte("OK"))
+    })
+    http.HandleFunc("/api/308", func(writer http.ResponseWriter, request *http.Request) {
+        writer.Header().Set("Location", "http://local.net/api/"+strings.ToLower(request.Method))
+        writer.WriteHeader(http.StatusPermanentRedirect)
+        writer.Write([]byte("OK"))
+    })
 
-	http.HandleFunc("/api/get", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodGet {
-			writer.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("This is GET Method"))
-	})
-	http.HandleFunc("/api/post", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodPost {
-			writer.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		data, _ := ioutil.ReadAll(request.Body)
-		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("This is POST Method"))
-		writer.Write(data)
-	})
-	http.HandleFunc("/api/put", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodPut {
-			writer.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		data, _ := ioutil.ReadAll(request.Body)
-		log.Printf("data: %v", string(data))
-		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("This is PUT Method"))
-		writer.Write(data)
-	})
-	http.HandleFunc("/api/delete", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodDelete {
-			writer.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		data, _ := ioutil.ReadAll(request.Body)
-		log.Printf("data: %v", string(data))
-		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("This is DELETE Method"))
-		writer.Write(data)
-	})
-	http.HandleFunc("/api/head", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodHead {
-			writer.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		data, _ := ioutil.ReadAll(request.Body)
-		log.Printf("data: %v", string(data))
-		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("This is HEAD Method"))
-		writer.Write(data)
-	})
+    http.HandleFunc("/api/get", func(writer http.ResponseWriter, request *http.Request) {
+        if request.Method != http.MethodGet {
+            writer.WriteHeader(http.StatusMethodNotAllowed)
+            return
+        }
+        writer.WriteHeader(http.StatusOK)
+        writer.Write([]byte("This is GET Method"))
+    })
+    http.HandleFunc("/api/post", func(writer http.ResponseWriter, request *http.Request) {
+        if request.Method != http.MethodPost {
+            writer.WriteHeader(http.StatusMethodNotAllowed)
+            return
+        }
+        data, _ := ioutil.ReadAll(request.Body)
+        writer.WriteHeader(http.StatusOK)
+        writer.Write([]byte("This is POST Method"))
+        writer.Write(data)
+    })
+    http.HandleFunc("/api/put", func(writer http.ResponseWriter, request *http.Request) {
+        if request.Method != http.MethodPut {
+            writer.WriteHeader(http.StatusMethodNotAllowed)
+            return
+        }
+        data, _ := ioutil.ReadAll(request.Body)
+        log.Printf("data: %v", string(data))
+        writer.WriteHeader(http.StatusOK)
+        writer.Write([]byte("This is PUT Method"))
+        writer.Write(data)
+    })
+    http.HandleFunc("/api/delete", func(writer http.ResponseWriter, request *http.Request) {
+        if request.Method != http.MethodDelete {
+            writer.WriteHeader(http.StatusMethodNotAllowed)
+            return
+        }
+        data, _ := ioutil.ReadAll(request.Body)
+        log.Printf("data: %v", string(data))
+        writer.WriteHeader(http.StatusOK)
+        writer.Write([]byte("This is DELETE Method"))
+        writer.Write(data)
+    })
+    http.HandleFunc("/api/head", func(writer http.ResponseWriter, request *http.Request) {
+        if request.Method != http.MethodHead {
+            writer.WriteHeader(http.StatusMethodNotAllowed)
+            return
+        }
+        data, _ := ioutil.ReadAll(request.Body)
+        log.Printf("data: %v", string(data))
+        writer.WriteHeader(http.StatusOK)
+        writer.Write([]byte("This is HEAD Method"))
+        writer.Write(data)
+    })
 
-	http.ListenAndServe(":1234", nil)
+    http.ListenAndServe(":1234", nil)
 }
 ```
 

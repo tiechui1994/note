@@ -92,33 +92,33 @@ message EchoReply {
 
 ```golang
 type echoServer struct {
-	echo.UnimplementedEchoServer
+    echo.UnimplementedEchoServer
 }
 
 func (e *echoServer) Echo(stream echo.Echo_EchoServer) error {
-	i := int(0)
-	for {
-		req, err := stream.Recv()
-		if err != nil {
-			log.Errorf("err: " + err.Error())
-			return err
-		}
-		i++
-		log.Infof("Echo: req.Msg => %v, count => %v", req.Msg, i)
-		stream.Send(&echo.EchoReply{
-			Msg: req.Msg + fmt.Sprintf(" world-%v", i),
-		})
+    i := int(0)
+    for {
+        req, err := stream.Recv()
+        if err != nil {
+            log.Errorf("err: " + err.Error())
+            return err
+        }
+        i++
+        log.Infof("Echo: req.Msg => %v, count => %v", req.Msg, i)
+        stream.Send(&echo.EchoReply{
+            Msg: req.Msg + fmt.Sprintf(" world-%v", i),
+        })
 
-		if i >= 100 {
-			//stop loop now, close streaming from server side.
-			return nil
-		}
-	}
+        if i >= 100 {
+            //stop loop now, close streaming from server side.
+            return nil
+        }
+    }
 }
 
 func (e *echoServer) SayHello(ctx context.Context, req *echo.HelloRequest) (*echo.HelloReply, error) {
-	fmt.Printf("SayHello: req.Msg => %v\n", req.Msg)
-	return &echo.HelloReply{Msg: req.Msg + " world"}, nil
+    fmt.Printf("SayHello: req.Msg => %v\n", req.Msg)
+    return &echo.HelloReply{Msg: req.Msg + " world"}, nil
 }
 ```
 
@@ -156,16 +156,16 @@ import (
 
 func main() {
     conn, err := grpc.Dial("127.0.0.1:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
+    if err != nil {
+        log.Fatalf("did not connect: %v", err)
+    }
+    defer conn.Close()
 	
     client := echo.NewGreeterClient(conn)
 
-	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+    // Contact the server and print out its response.
+    ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+    defer cancel()
     
     // Request
     reply, err := client.SayHello(ctx, &echo.HelloRequest{Msg: "hello"})
@@ -245,52 +245,52 @@ import (
 
 func main() {
         nc, err := nats.Connect("nats://127.0.0.1:4222")
-    	if err != nil {
-    		log.Errorf("%v", err)
-    	}
-    	defer nc.Close()
+        if err != nil {
+            log.Errorf("%v", err)
+        }
+        defer nc.Close()
     
-    	ncli := nrpc.NewClient(nc, "svcid", "nodeid")
+        ncli := nrpc.NewClient(nc, "svcid", "nodeid")
     
-    	client := echo.NewEchoClient(ncli)
+        client := echo.NewEchoClient(ncli)
     
-    	ctx, cancel := context.WithTimeout(context.Background(), 100000*time.Millisecond)
-    	defer cancel()
+        ctx, cancel := context.WithTimeout(context.Background(), 100000*time.Millisecond)
+        defer cancel()
     
-    	// Request
-    	reply, err := client.SayHello(ctx, &echo.HelloRequest{Msg: "hello"})
-    	if err != nil {
-    		log.Infof("SayHello: error %v\n", err)
-    		return
-    	}
-    	log.Infof("SayHello: %s\n", reply.GetMsg())
+        // Request
+        reply, err := client.SayHello(ctx, &echo.HelloRequest{Msg: "hello"})
+        if err != nil {
+            log.Infof("SayHello: error %v\n", err)
+            return
+        }
+        log.Infof("SayHello: %s\n", reply.GetMsg())
     
-    	// Streaming
-    	stream, err := client.Echo(ctx)
-    	if err != nil {
-    		log.Errorf("%v", err)
-    	}
+        // Streaming
+        stream, err := client.Echo(ctx)
+        if err != nil {
+            log.Errorf("%v", err)
+        }
     
-    	stream.Send(&echo.EchoRequest{
-    		Msg: "hello",
-    	})
+        stream.Send(&echo.EchoRequest{
+            Msg: "hello",
+        })
     
-    	i := 1
-    	for {
-    		reply, err := stream.Recv()
-    		if err != nil {
-    			log.Errorf("Echo: err %s", err)
-    			break
-    		}
-    		log.Infof("EchoReply: reply.Msg => %s, count => %v", reply.Msg, i)
+        i := 1
+        for {
+            reply, err := stream.Recv()
+            if err != nil {
+                log.Errorf("Echo: err %s", err)
+                break
+            }
+            log.Infof("EchoReply: reply.Msg => %s, count => %v", reply.Msg, i)
     
-    		i++
-    		if i <= 100 {
-    			stream.Send(&echo.EchoRequest{
-    				Msg: fmt.Sprintf("hello-%v", i),
-    			})
-    		}
-    	}
+            i++
+            if i <= 100 {
+                stream.Send(&echo.EchoRequest{
+                    Msg: fmt.Sprintf("hello-%v", i),
+                })
+            }
+        }
 }
 ```
 

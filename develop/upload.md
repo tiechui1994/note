@@ -69,86 +69,86 @@ func commonUploadFile(url, filePath string, fields map[string]string) error {
 
 ```
 func uploadFile(url, filePath string, fields map[string]string) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	stat, _ := file.Stat()
-	defer file.Close()
+    file, err := os.Open(filePath)
+    if err != nil {
+        return err
+    }
+    stat, _ := file.Stat()
+    defer file.Close()
 
-	// buffer for store multipart data
-	byteBuf := &bytes.Buffer{}
-	writer := multipart.NewWriter(byteBuf)
+    // buffer for store multipart data
+    byteBuf := &bytes.Buffer{}
+    writer := multipart.NewWriter(byteBuf)
 
-	// part: parameters
-	for k, v := range fields {
-		err = writer.WriteField(k, v)
-		if err != nil {
-			return err
-		}
-	}
+    // part: parameters
+    for k, v := range fields {
+        err = writer.WriteField(k, v)
+        if err != nil {
+            return err
+        }
+    }
 
-	// part: file
-	_, err = writer.CreateFormFile("file", stat.Name())
-	if err != nil {
-		return err
-	}
+    // part: file
+    _, err = writer.CreateFormFile("file", stat.Name())
+    if err != nil {
+        return err
+    }
 
-	contentType := writer.FormDataContentType()
+    contentType := writer.FormDataContentType()
 
-	nheader := byteBuf.Len()
-	header := make([]byte, nheader)
-	_, _ = byteBuf.Read(header)
+    nheader := byteBuf.Len()
+    header := make([]byte, nheader)
+    _, _ = byteBuf.Read(header)
 
-	// part: latest boundary
-	// when multipart closed, latest boundary is added
-	writer.Close()
-	nboundary := byteBuf.Len()
-	boundary := make([]byte, nboundary)
-	_, _ = byteBuf.Read(boundary)
+    // part: latest boundary
+    // when multipart closed, latest boundary is added
+    writer.Close()
+    nboundary := byteBuf.Len()
+    boundary := make([]byte, nboundary)
+    _, _ = byteBuf.Read(boundary)
 
-	// calculate content length
-	totalSize := int64(nheader) + stat.Size() + int64(nboundary)
+    // calculate content length
+    totalSize := int64(nheader) + stat.Size() + int64(nboundary)
 
-	//use pipe to pass request
-	rd, wr := io.Pipe()
-	defer rd.Close()
+    //use pipe to pass request
+    rd, wr := io.Pipe()
+    defer rd.Close()
 
-	go func() {
-		defer wr.Close()
-		// write multipart
-		_, _ = wr.Write(header)
+    go func() {
+        defer wr.Close()
+        // write multipart
+        _, _ = wr.Write(header)
 
-		// write file
-		buf := make([]byte, 16*1024)
-		for {
-			n, err := file.Read(buf)
-			if err != nil {
-				break
-			}
-			_, _ = wr.Write(buf[:n])
-		}
+        // write file
+        buf := make([]byte, 16*1024)
+        for {
+            n, err := file.Read(buf)
+            if err != nil {
+                break
+            }
+            _, _ = wr.Write(buf[:n])
+        }
 
-		// write boundary
-		_, _ = wr.Write(boundary)
-	}()
+        // write boundary
+        _, _ = wr.Write(boundary)
+    }()
 
-	// construct request with rd
-	req, _ := http.NewRequest("POST", url, rd)
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Content-Length", fmt.Sprintf("%v", totalSize))
+    // construct request with rd
+    req, _ := http.NewRequest("POST", url, rd)
+    req.Header.Set("Content-Type", contentType)
+    req.Header.Set("Content-Length", fmt.Sprintf("%v", totalSize))
 
-	// process request
-	client := &http.Client{Timeout: 10 * time.Minute}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+    // process request
+    client := &http.Client{Timeout: 10 * time.Minute}
+    resp, err := client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
 
-	log.Println(resp.StatusCode)
-	log.Println(resp.Header)
-	return nil
+    log.Println(resp.StatusCode)
+    log.Println(resp.Header)
+    return nil
 }
 ```
 
@@ -159,18 +159,18 @@ func uploadFile(url, filePath string, fields map[string]string) error {
 
 ```
 func randomBoundary() string {
-	var buf [30]byte
-	_, err := io.ReadFull(rand.Reader, buf[:])
-	if err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf("%x", buf[:])
+    var buf [30]byte
+    _, err := io.ReadFull(rand.Reader, buf[:])
+    if err != nil {
+        panic(err)
+    }
+    return fmt.Sprintf("%x", buf[:])
 }
 
 var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 
 func escapeQuotes(s string) string {
-	return quoteEscaper.Replace(s)
+    return quoteEscaper.Replace(s)
 }
 
 // Multipart request has the following structure:
@@ -189,71 +189,71 @@ func escapeQuotes(s string) string {
 //  ...
 //  --$boundary--\r\n
 func uploadFile(url string, fields map[string]interface{}) error {
-	boundary := randomBoundary()
-	totalSize := 0
-	contentType := fmt.Sprintf("multipart/form-data; boundary=%s", boundary)
+    boundary := randomBoundary()
+    totalSize := 0
+    contentType := fmt.Sprintf("multipart/form-data; boundary=%s", boundary)
 
-	parts := make([]io.Reader, 0)
-	CRLF := "\r\n"
+    parts := make([]io.Reader, 0)
+    CRLF := "\r\n"
 
-	fieldBoundary := "--" + boundary + CRLF
+    fieldBoundary := "--" + boundary + CRLF
 
-	for k, v := range fields {
-		parts = append(parts, strings.NewReader(fieldBoundary))
-		totalSize += len(fieldBoundary)
-		if v == nil {
-			continue
-		}
-		switch val := v.(type) {
-		case string:
-			header := fmt.Sprintf(`Content-Disposition: form-data; name="%s"`, escapeQuotes(k))
-			parts = append(
-				parts,
-				strings.NewReader(header+CRLF+CRLF),
-				strings.NewReader(val),
-				strings.NewReader(CRLF),
-			)
-			totalSize += len(header) + 2*len(CRLF) + len(val) + len(CRLF)
-			continue
-		case fs.File:
-			stat, _ := val.Stat()
-			contentType := mime.TypeByExtension(filepath.Ext(stat.Name()))
-			header := strings.Join([]string{
-				fmt.Sprintf(`Content-Disposition: form-data; name="%s"; filename="%s"`, escapeQuotes(k), escapeQuotes(stat.Name())),
-				fmt.Sprintf(`Content-Type: %s`, contentType),
-				fmt.Sprintf(`Content-Length: %d`, stat.Size()),
-			}, CRLF)
-			parts = append(
-				parts,
-				strings.NewReader(header+CRLF+CRLF),
-				val,
-				strings.NewReader(CRLF),
-			)
-			totalSize += len(header) + 2*len(CRLF) + int(stat.Size()) + len(CRLF)
-			continue
-		}
-	}
+    for k, v := range fields {
+        parts = append(parts, strings.NewReader(fieldBoundary))
+        totalSize += len(fieldBoundary)
+        if v == nil {
+            continue
+        }
+        switch val := v.(type) {
+        case string:
+            header := fmt.Sprintf(`Content-Disposition: form-data; name="%s"`, escapeQuotes(k))
+            parts = append(
+                parts,
+                strings.NewReader(header+CRLF+CRLF),
+                strings.NewReader(val),
+                strings.NewReader(CRLF),
+            )
+            totalSize += len(header) + 2*len(CRLF) + len(val) + len(CRLF)
+            continue
+        case fs.File:
+            stat, _ := val.Stat()
+            contentType := mime.TypeByExtension(filepath.Ext(stat.Name()))
+            header := strings.Join([]string{
+                fmt.Sprintf(`Content-Disposition: form-data; name="%s"; filename="%s"`, escapeQuotes(k), escapeQuotes(stat.Name())),
+                fmt.Sprintf(`Content-Type: %s`, contentType),
+                fmt.Sprintf(`Content-Length: %d`, stat.Size()),
+            }, CRLF)
+            parts = append(
+                parts,
+                strings.NewReader(header+CRLF+CRLF),
+                val,
+                strings.NewReader(CRLF),
+            )
+            totalSize += len(header) + 2*len(CRLF) + int(stat.Size()) + len(CRLF)
+            continue
+        }
+    }
 
-	finishBoundary := "--" + boundary + "--" + CRLF
-	parts = append(parts, strings.NewReader(finishBoundary))
-	totalSize += len(finishBoundary)
+    finishBoundary := "--" + boundary + "--" + CRLF
+    parts = append(parts, strings.NewReader(finishBoundary))
+    totalSize += len(finishBoundary)
 
-	// construct request with reader
-	req, _ := http.NewRequest("POST", url, io.MultiReader(parts...))
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Content-Length", fmt.Sprintf("%d", totalSize))
+    // construct request with reader
+    req, _ := http.NewRequest("POST", url, io.MultiReader(parts...))
+    req.Header.Set("Content-Type", contentType)
+    req.Header.Set("Content-Length", fmt.Sprintf("%d", totalSize))
 
-	// process request
-	client := &http.Client{Timeout: 10 * time.Minute}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
+    // process request
+    client := &http.Client{Timeout: 10 * time.Minute}
+    resp, err := client.Do(req)
+    if err != nil {
+        return err
+    }
 
-	log.Println(resp.StatusCode)
-	log.Println(resp.Header)
-	defer resp.Body.Close()
-	return nil
+    log.Println(resp.StatusCode)
+    log.Println(resp.Header)
+    defer resp.Body.Close()
+    return nil
 }
 ```
 

@@ -80,10 +80,10 @@ let mut count = 0;
    let mut remain = 10;
    loop {
       if remain == 9 {
-	break;
+    break;
       }
       if remain == 2 {
-      	break 'count_up;
+          break 'count_up;
       }
       remain -= 1;
    }

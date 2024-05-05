@@ -220,7 +220,7 @@ $ git submodule
 
 ```
 [url "ssh://git@github.com"]
-	insteadof = https://github.com
+    insteadof = https://github.com
 ```
 
 > 这种场景就是 .gitmodules 当中配置的 submodule 的 url 是 https 方式的私有仓库, 则需要转换成 git 方式去拉去代码.

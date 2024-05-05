@@ -512,7 +512,7 @@ server {
     root /var/www/example/public;
 	
     location / {
-		proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3000;
     }
     
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -546,15 +546,15 @@ server {
         include fastcgi_params;
         
         # settings
-        fastcgi_pass			unix:/var/run/php/php-fpm.sock | 127.0.0.1:9000;
-        fastcgi_index			index.php;
-        fastcgi_buffers			8 16k;
-        fastcgi_buffer_size		32k;
+        fastcgi_pass            unix:/var/run/php/php-fpm.sock | 127.0.0.1:9000;
+        fastcgi_index            index.php;
+        fastcgi_buffers            8 16k;
+        fastcgi_buffer_size        32k;
         
         # params
         fastcgi_param DOCUMENT_ROOT     $realpath_root;  #root位置
-        fastcgi_param SCRIPT_FILENAME	$realpath_root$fastcgi_script_name; # 脚本文件
-        fastcgi_param PHP_ADMIN_VALUE	"open_basedir=$base/:/usr/lib/php/:/tmp/";
+        fastcgi_param SCRIPT_FILENAME    $realpath_root$fastcgi_script_name; # 脚本文件
+        fastcgi_param PHP_ADMIN_VALUE    "open_basedir=$base/:/usr/lib/php/:/tmp/";
     }
     
     add_header X-Frame-Options "SAMEORIGIN" always;
@@ -578,7 +578,7 @@ server {
     root /var/www/example/public;
 	
     location / {
-		# default uwsgi_params
+        # default uwsgi_params
         include uwsgi_params;
         
         # settings
@@ -586,7 +586,7 @@ server {
         
         # params
         uwsgi_param Host                $host;
-        uwsgi_param X-Real-IP	        $remote_addr;
+        uwsgi_param X-Real-IP            $remote_addr;
         uwsgi_param X-Forwarded-For     $proxy_add_x_forwarded_for;
         uwsgi_param X-Forwarded-Proto   $http_x_forwarded_proto;
     }

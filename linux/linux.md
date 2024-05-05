@@ -7,9 +7,9 @@
 > 禁止自动更新设置, 在 /etc/hosts 文件当中添加如下配置 
 
 ```
-0.0.0.0	    dl.pstmn.io
-0.0.0.0		account.jetbrains.com
-0.0.0.0		www.jetbrains.com
+0.0.0.0        dl.pstmn.io
+0.0.0.0        account.jetbrains.com
+0.0.0.0        www.jetbrains.com
 ```
 
 ### 系统动态库查询

@@ -26,22 +26,22 @@ pipeline {
     stages {
         stage("1") {
             environment {
-              	// 会重写全局环境变量 NAME
+                  // 会重写全局环境变量 NAME
                 NAME = "name.local" 
-              	// 会重写系统内置的环境变量 BUILD_NUMBER
+                  // 会重写系统内置的环境变量 BUILD_NUMBER
                 BUILD_NUMBER = "10"
                 // 局部变量
                 LOCAL = "22"
             }
 
             steps {
-              	// "NAME = name.local"
+                  // "NAME = name.local"
                 echo "global NAME = ${env.NAME}" 
-              	//  "BUILD_NUMBER = 10"
+                  //  "BUILD_NUMBER = 10"
                 echo "system BUILD_NUMBER = ${env.BUILD_NUMBER}" 
 
                 script {
-                  	// 创建一个环境变量
+                      // 创建一个环境变量
                     env.LOCAL = "1" 
                     env.ANONY = "33"
                 }
@@ -54,24 +54,24 @@ pipeline {
                 echo "step1 LOCAL = ${env.LOCAL}, ANONY = ${env.ANONY}" 
                 
                 script {
-                  	// 局部 LOCAL 变量会被重写
+                      // 局部 LOCAL 变量会被重写
                     env.LOCAL = "2" 
                     // 局部 ANONY 变量会被重写
                     env.ANONY = "55"
                 }
 
-              	// "LOCAL = 2 , ANONY = 55"
+                  // "LOCAL = 2 , ANONY = 55"
                 echo "step1 LOCAL = ${env.LOCAL}, ANONY = ${env.ANONY} " 
 
-              	// 全局 FOO 变量会被重写
+                  // 全局 FOO 变量会被重写
                 withEnv(["NAME=${env.LOCAL}"]) { 
-                  	// "NAME = 2"
+                      // "NAME = 2"
                     echo "global NAME = ${env.NAME}" 
                 }
 
-              	// 局部 BUILD_NUMBER 变量会被重写
+                  // 局部 BUILD_NUMBER 变量会被重写
                 withEnv(["BUILD_NUMBER=15"]) {
-                  	//  "BUILD_NUMBER = 15"
+                      //  "BUILD_NUMBER = 15"
                     echo "system BUILD_NUMBER = ${env.BUILD_NUMBER}"
                 }
 

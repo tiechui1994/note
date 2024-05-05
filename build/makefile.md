@@ -23,15 +23,15 @@ command 中.
 案例: (原始)
 ```makefile
 edit : main.o command.o
-	cc -o edit main.o command.o
+    cc -o edit main.o command.o
 
 main.o : main.c
-	cc -c main.c
+    cc -c main.c
 command.o : command.c
-	cc -c command.c
+    cc -c command.c
 
 clean :
-	rm edit main.o command.o
+    rm edit main.o command.o
 ```
 
 
@@ -40,15 +40,15 @@ clean :
 objects = main.o command.o
 
 edit : $(objects)
-	cc -o edit $(objects)
+    cc -o edit $(objects)
 
 main.o : main.c
-	cc -c main.c
+    cc -c main.c
 command.o : command.c
-	cc -c command.c
+    cc -c command.c
 
 clean :
-	rm edit $(objects)
+    rm edit $(objects)
 ```
 
 
@@ -57,14 +57,14 @@ clean :
 objects = main.o command.o
 
 edit : $(objects)
-	cc -o edit $(objects)
+    cc -o edit $(objects)
 
 # 可以省略
 main.o : main.c
 command.o : command.c
 
 clean :
-	rm edit $(objects)
+    rm edit $(objects)
 ```
 
 ### 引用其他的 Makefile
@@ -207,7 +207,7 @@ vpath %.h ../headers
 ```makefile
 .PHONY: clean
 clean:
-	rm -rf *o
+    rm -rf *o
 ```
 
 伪目标一般没有依赖的文件. 但是, 可以为伪目标指定依赖的文件. 伪目标同样可以作为 "默认目录", 只要将其放在第一个.
@@ -222,7 +222,7 @@ all: exe1 exe2
 exe1: exe1.o
     cc -o exe1 exe1.o
 exe2: exe2.o
-	cc -o exe2 exe2.o
+    cc -o exe2 exe2.o
 ```
 
 ### 静态模式
@@ -252,7 +252,7 @@ objects = foo.o bar.o
 all: $(objects)
 
 $(objects) : %.o : %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+    $(CC) -c $(CFLAGS) $< -o $@
 ```
 
 目标是从 $objects 中获取, `%.o` 表面所有以 `.o` 结尾的目标(也就是 `foo.o bar.o`), 而依赖模式 `%.c` 则取模式 `%.o` 
@@ -265,7 +265,7 @@ $(objects) : %.o : %.c
 foo.o : foo.c
     $(CC) -c $(CFLAGS) foo.c -o foo.o
 bar.o : bar.c
-	$(CC) -c $(CFLAGS) bar.c -o bar.o
+    $(CC) -c $(CFLAGS) bar.c -o bar.o
 ```
 
 
@@ -276,7 +276,7 @@ files = foo.elc bar.o lose.o
 $(filter %.o,$(files)) : %.o : %.c
     $(CC) -c $(CFLAGS) $< -o $@
 $(filter %.elc,$(files)) : %.elc : %el
-	emacs -f batch-byte-compile $<
+    emacs -f batch-byte-compile $<
 ```
 
 `$(filter %.o,$(files))` 表示调用 Makefile 的 filter函数, 过滤 `$(files)` 集, 只有其中模式为 `%.o` 的内容.
@@ -333,7 +333,7 @@ Makefile 文件, `.d` 文件中存放对应 `.c` 文件的依赖关系.
 ```
 sources := foo.c bar.c
 
-include	$(sources:.c=.d)
+include    $(sources:.c=.d)
 ```
 
 `$(sources:.c=.d)`, `.c=.d` 意思是做一个替换, 把变量 `$(sources)` 所有的 `.c` 的字符串替换成 `.d`
@@ -468,7 +468,7 @@ make 运行时的系统环境变量可以在make开始运行时被载入到 Make
 ```makefile
 LANGUAGE := other
 test:
-	@echo "LANGUAGE => $(LANGUAGE)"
+    @echo "LANGUAGE => $(LANGUAGE)"
 ```
 
 输出:
@@ -501,10 +501,10 @@ var := var_start
 test : var := var_test
 
 test:
-	@echo "test: var => $(var)"
+    @echo "test: var => $(var)"
 
 another:
-	@echo "another: var => $(var)"
+    @echo "another: var => $(var)"
 ```
 
 输出:
@@ -521,10 +521,10 @@ var := var_start
 test : var := var_test
 
 test: another
-	@echo "test: var => $(var)"
+    @echo "test: var => $(var)"
 
 another:
-	@echo "another: var => $(var)"
+    @echo "another: var => $(var)"
 ```
 
 输出:
@@ -555,13 +555,13 @@ new := new_start
 %e : override new := new_test
 
 test:
-	@echo "test: new => $(new)"
+    @echo "test: new => $(new)"
 
 another:
-	@echo "another: new => $(new)"
+    @echo "another: new => $(new)"
 
 rule:
-	@echo "rule: new => $(new)"
+    @echo "rule: new => $(new)"
 ```
 
 
@@ -581,13 +581,13 @@ new := new_start
 %e : override new := new_test
 
 test: rule
-	@echo "test: new => $(new)"
+    @echo "test: new => $(new)"
 
 another:
-	@echo "another: new => $(new)"
+    @echo "another: new => $(new)"
 
 rule:
-	@echo "rule: new => $(new)"
+    @echo "rule: new => $(new)"
 ```
 
 输出:
@@ -617,9 +617,9 @@ normal_libs =
 
 foo: $(objects)
 ifeq ($(CC),gcc)
-	$(CC) -o foo $(objects) $(libs_for_gcc)
+    $(CC) -o foo $(objects) $(libs_for_gcc)
 else
-	$(CC) -o foo $(objects) $(normal_libs)
+    $(CC) -o foo $(objects) $(normal_libs)
 endif
 ```
 

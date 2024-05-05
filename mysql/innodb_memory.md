@@ -1,4 +1,4 @@
-## MySQL 专题 - InnoDB 内存
+## MySQL go 专题 - InnoDB 内存
 
 InnoDB 架构模型:
 

@@ -11,8 +11,8 @@ Closure Table, 一种更为彻底的全路径结构, 分别记录路径上相关
 主表(node): 存储节点的信息
 ```
 {
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	name VARCHAR (255),
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR (255),
 }
 ```
 
@@ -37,22 +37,22 @@ DELIMITER $$
 DROP PROCEDURE IF EXISTS addnode;
 CREATE PROCEDURE addnode(in parent_name varchar(255), in node_name varchar(255))
 BEGIN
-	DECLARE _child INT;
-	DECLARE _parent INT;
-	IF NOT EXISTS(SELECT id From node WHERE name = node_name)
-	THEN
-	  /** insert node **/
-		INSERT INTO node (name) VALUES(node_name);
-		SET _child = (SELECT id FROM node WHERE name = node_name);
-		INSERT INTO relation (ancestor,child,distance) VALUES(_child,_child,0);
+    DECLARE _child INT;
+    DECLARE _parent INT;
+    IF NOT EXISTS(SELECT id From node WHERE name = node_name)
+    THEN
+      /** insert node **/
+        INSERT INTO node (name) VALUES(node_name);
+        SET _child = (SELECT id FROM node WHERE name = node_name);
+        INSERT INTO relation (ancestor,child,distance) VALUES(_child,_child,0);
 
-		/** insert relation node and parent **/
-		IF EXISTS(SELECT id FROM node WHERE name = parent_name)
-		THEN
-			SET _parent = (SELECT id FROM node WHERE name = parent_name);
-			INSERT INTO relation (ancestor,child,distance) SELECT ancestor,_child,distance+1 FROM relation WHERE child=_parent;
-		END IF;
-	END IF;
+        /** insert relation node and parent **/
+        IF EXISTS(SELECT id FROM node WHERE name = parent_name)
+        THEN
+            SET _parent = (SELECT id FROM node WHERE name = parent_name);
+            INSERT INTO relation (ancestor,child,distance) SELECT ancestor,_child,distance+1 FROM relation WHERE child=_parent;
+        END IF;
+    END IF;
 END $$
 DELIMITER ;
 ```
@@ -137,7 +137,7 @@ FROM node
 INNER JOIN relation r ON node.id = r.ancestor
 INNER JOIN node n ON r.child = n.id
 WHERE
-	node.name = 'Fruit' AND r.distance = 1
+    node.name = 'Fruit' AND r.distance = 1
 ```
 
 - **查询节点所处的层级: (以Pork为例子)**

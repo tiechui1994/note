@@ -107,7 +107,7 @@ done
 
 函数:
 int getopt_long(int argc, char* const argv[], const char *optstring,
-				const struct option *longopts, int *longindex);
+                const struct option *longopts, int *longindex);
 
 argc: 命令参数个数
 argv: 命令行参数

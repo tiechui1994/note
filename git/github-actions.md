@@ -122,7 +122,7 @@ on:
 #   -H 'Authorization: token TOKEN' \
 #   -H 'Content-Type: application/json' \
 #   -d '{
-#	  "ref":"TAG|BRANCH",
+#      "ref":"TAG|BRANCH",
 #     "inputs": {
 #        "name": "NAME",
 #        "url": "URL"

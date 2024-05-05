@@ -52,10 +52,10 @@ config 是一个 git 的一个本地配置文件. 在刚初始化一个git项目
 
 ```toml
 [core]
-	repositoryformatversion = 0
-	filemode = true         # 文件模式, 在跨文件系统的时候, 需要设置为false
-	bare = false            # 是否是裸露的项目, 添加 --bare 参数时, 此值是 true
-	logallrefupdates = true
+    repositoryformatversion = 0
+    filemode = true         # 文件模式, 在跨文件系统的时候, 需要设置为false
+    bare = false            # 是否是裸露的项目, 添加 --bare 参数时, 此值是 true
+    logallrefupdates = true
 ```
 
 `[core]` 还可以设置的内容, `editor` 可以设置为 `vim`, 这样每次 append commit 的时候, 弹出 vim 编辑器, 而不是默
@@ -65,8 +65,8 @@ config 是一个 git 的一个本地配置文件. 在刚初始化一个git项目
 
 ```
 [user]
-	email = xxx@github.com.cn
-	name  = xxx
+    email = xxx@github.com.cn
+    name  = xxx
 ```
 
 这个是配置提交用户名称和邮箱信息. 一般情况下, 邮箱是你的注册 github/gitlab 等的邮箱, 用户名称是你注册的名称. 当然啦,
@@ -76,8 +76,8 @@ config 是一个 git 的一个本地配置文件. 在刚初始化一个git项目
 
 ```
 [remote "origin"]
-	url = git@gitlab.example.com.cn:test.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+    url = git@gitlab.example.com.cn:test.git
+    fetch = +refs/heads/*:refs/remotes/origin/*
 ```
 
 使用命令 `git remote add xxx git@gitlab.cn:test.git`, 会在 config 当中添加一个配置 `[remote "xxx"]`
@@ -92,8 +92,8 @@ config 是一个 git 的一个本地配置文件. 在刚初始化一个git项目
 
 ```
 [branch "master"]
-	remote = origin
-	merge = refs/heads/master
+    remote = origin
+    merge = refs/heads/master
 ```
 
 使用命令 `git checkout -b xxx origin/xxx`, 就可以在 config 当中创建一个 `[branch "xxx"]` 配置. 
