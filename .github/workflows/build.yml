@@ -1,4 +1,4 @@
-name: Blog Build
+name: build
 on:
   push:
     branches: [ master ]
@@ -10,16 +10,16 @@ jobs:
       store: ${{ steps.install.outputs.store }}
     strategy:
       matrix:
-        node: [16.16.0]
+        node: [ 18 ]
 
     steps:
       - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
 
       - name: Checkout [blog]
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: tiechui1994/blog
           fetch-depth: 5
@@ -28,7 +28,7 @@ jobs:
           token: ${{secrets.TOKEN}}
 
       - name: Checkout [note]
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: tiechui1994/note
           fetch-depth: 5
@@ -37,7 +37,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ./node_modules
           key: ${{github.repository}}-vercel_note_blog
@@ -61,7 +61,7 @@ jobs:
           node src/deploy/vercel.js --project note --domain blog --token ${{secrets.VERCEL}}
 
       - name: Store Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         if: ${{ success() && steps.install.outputs.store == 1 }}
         with:
           path: ./node_modules
