@@ -1,4 +1,4 @@
-## MySQL 字符串
+## MySQL 类型 - 字符串
 
 字符串数据类型为 `CHAR`, `VARCHAR`, `BINARY`, `VARBINARY`, `BLOB`, `TEXT`, `LONGTEXT`.
 
