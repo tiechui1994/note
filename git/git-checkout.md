@@ -63,9 +63,6 @@ HEAD的情况下检出该分支).
 切换分支时, 即使索引或工作树与HEAD不同, 也要继续进行. 这用于丢弃本地更改.
 
 从索引中检出路径时, 不要在未合并的条目上失败; 相反, 未合并的条目将被忽略.
-            
-- `--ours, --theirs`
-
 
 - `-b <new_branch>`
 
@@ -84,10 +81,6 @@ HEAD的情况下检出该分支).
 分支的名称. 这将告诉我们在分支 "origin/hack"(或 "remotes/origin/hack", 甚至 "refs/remotes/origin/hack") 时
 使用 "hack" 作为本地分支. 如果给定名称没有斜杠, 或者上述猜测结果为空名称, 则猜测被中止. 在这种情况下, 可以使用 `-b 显
 式命名.
-
-- `--no-track`
-
-即使 `branch.autoSetupMerge` 配置变量为true, 也不要设置 "upstream" 配置.
 
 - `-l`
 

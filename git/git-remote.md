@@ -3,7 +3,7 @@
 管理追踪其分支的存储库集("remotes")
 
 ```
-git remote [-v | --verbose]
+git remote [-v]
 git remote add [-t <branch>] [-m <master>] [-f] [--[no-]tags] [--mirror=<fetch|push>] <name> <url>
 git remote rename <old> <new>
 git remote remove <name>
@@ -13,11 +13,11 @@ git remote get-url [--push] [--all] <name>
 git remote set-url [--push] <name> <newurl> [<oldurl>]
 git remote set-url --add [--push] <name> <newurl>
 git remote set-url --delete [--push] <name> <url>
-git remote [-v | --verbose] show [-n] <name>...
+git remote [-v] show [-n] <name>...
 ```
 
-- `add`, 在 <url> 添加一个名为 <name> 的远程仓库. 然后可以使用命令 `git fetch <name>` 创建和更新远程跟踪分支
-`<name>/<branch>`.
+- `add`, 在 <url> 添加一个名为 <name> 的远程仓库. 然后使用命令 `git fetch <name>` 创建和更新远程跟踪分支 `<name>/<branch>`.
+常用的例子 `git remote add origin git@github.com:gooogle/chrome.git`, 远程仓库
 
 1) `-f` 参数, 在设置 "remote" 信息后立即执行 `get fetch <name>` 命令.
 
