@@ -10,19 +10,17 @@
 
 - `BOOL`, 与 `TINYINT(1)` 具有相同的含义.
 
-- `TINYINT[(M)] [UNSIGNED] [ZEROFILL]`, signed 范围是 `-2^7-1` 到 `2^7-1`, unsigned 区间是 `0` 到 `2^8-1`
+- `TINYINT[(M)] [UNSIGNED] [ZEROFILL]`, 1字节 signed 范围是 `-2^7-1` 到 `2^7-1`, unsigned 区间是 `0` 到 `2^8-1`
 
-- `SMALLINT[(M)] [UNSIGNED] [ZEROFILL]`, signed 范围是 `-2^15-1` 到 `2^15-1`, unsigned 区间是 `0` 到 `2^16-1`
+- `SMALLINT[(M)] [UNSIGNED] [ZEROFILL]`, 2字节 signed 范围是 `-2^15-1` 到 `2^15-1`, unsigned 区间是 `0` 到 `2^16-1`
 
-- `MEDIUMINT[(M)] [UNSIGNED] [ZEROFILL]`, signed 范围是 `-2^31-1` 到 `2^31-1`, unsigned 区间是 `0` 到 `2^32-1`
+- `MEDIUMINT[(M)] [UNSIGNED] [ZEROFILL]`, 3字节 signed 范围是 `-2^23-1` 到 `2^23-1`, unsigned 区间是 `0` 到 `2^24-1`
 
-- `INT[(M)] [UNSIGNED] [ZEROFILL]`, signed 范围是 `-2^63-1` 到 `2^63-1`, unsigned 区间是 `0` 到 `2^64-1`
+- `INT[(M)] [UNSIGNED] [ZEROFILL]`, 4字节 signed 范围是 `-2^31-1` 到 `2^31-1`, unsigned 区间是 `0` 到 `2^32-1`
 
-- `BIGINT[(M)] [UNSIGNED] [ZEROFILL]`, signed 范围是 `-2^127-1` 到 `2^127-1`, unsigned 区间是 `0` 到 `2^128-1`
+- `BIGINT[(M)] [UNSIGNED] [ZEROFILL]`, 8字节 signed 范围是 `-2^63-1` 到 `2^63-1`, unsigned 区间是 `0` 到 `2^64-1`
 
-- `FLOAT[(M,D)] [UNSIGNED] [ZEROFILL]`, 单精度浮点数. M 是总位数, D 是小数点后的位数. 单精度浮点数大约精确到小
-数点后7位
+- `FLOAT[(M,D)] [UNSIGNED] [ZEROFILL]`, 单精度浮点数. M 是总位数, D 是小数点后的位数. 单精度浮点数大约精确到小数点后7位
 
-- `DOUBLE[(M,D)] [UNSIGNED] [ZEROFILL]`, 双精度浮点数. M 是总位数, D 是小数点后的位数. 单精度浮点数大约精确到小
-数点后15位
+- `DOUBLE[(M,D)] [UNSIGNED] [ZEROFILL]`, 双精度浮点数. M 是总位数, D 是小数点后的位数. 单精度浮点数大约精确到小数点后15位
 
